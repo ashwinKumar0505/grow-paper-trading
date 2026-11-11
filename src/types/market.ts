@@ -1,12 +1,12 @@
 export type Exchange = 'NSE' | 'BSE';
 
-export type Timeframe = '1D' | '1W' | '1M' | '1Y' | '3Y' | '5Y' | 'ALL';
+export type Timeframe = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | 'ALL';
 
 export type ChartType = 'line' | 'candlestick';
 
 export type OrderProduct = 'DELIVERY' | 'INTRADAY';
 
-export type OrderType = 'MARKET' | 'LIMIT';
+export type OrderType = 'MARKET' | 'LIMIT' | 'SL' | 'SL-M';
 
 export type OrderAction = 'BUY' | 'SELL';
 
@@ -90,6 +90,24 @@ export interface Order {
   totalAmount: number;
   marginUsed: number;
   note?: string;
+  /** Stop-loss trigger price (SL / SL-M orders) */
+  triggerPrice?: number;
+  /** Whether an SL / SL-M order has been triggered and is now working in the market */
+  triggered?: boolean;
+  /** After Market Order — queued while market is closed, executes at next open */
+  isAmo?: boolean;
+  /** Placed while "simulation" mode was on (outside real market hours) */
+  isSim?: boolean;
+  /** Funds blocked in the wallet while the order is pending */
+  blockedAmount?: number;
+  /** Total statutory charges + brokerage deducted for this order */
+  charges?: number;
+  /** Realised P&L (net of charges) booked by this order, if it closed a position */
+  realizedPnl?: number;
+  /** Realized price movement before fees; used to avoid double-counting fees. */
+  grossRealizedPnl?: number;
+  /** Average fill price */
+  avgPrice?: number;
 }
 
 export interface Holding {

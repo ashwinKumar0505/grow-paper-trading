@@ -1248,103 +1248,203 @@ export const INITIAL_STOCKS: Stock[] = [
 
 /**
  * Generate historical chart data (line + OHLC candles) for a given stock and timeframe
+ * Deterministic per symbol + timeframe with realistic IST session timestamps
  */
 export function generateChartData(stock: Stock, timeframe: Timeframe): ChartPoint[] {
   const points: ChartPoint[] = [];
-  const currentPrice = stock.price;
-  
-  let numBars = 50;
-  let intervalMinutes = 5;
-  let volatility = 0.003;
+  const currentPrice = stock.price > 0 ? stock.price : 1000;
+  const prevClose = stock.previousClose > 0 ? stock.previousClose : currentPrice * 0.99;
+
+  // Deterministic pseudo-random generator seeded by symbol + timeframe
+  let seed = 0;
+  const seedStr = `${stock.symbol}_${timeframe}`;
+  for (let i = 0; i < seedStr.length; i++) {
+    seed = (seed * 31 + seedStr.charCodeAt(i)) | 0;
+  }
+  const nextRand = () => {
+    seed = (seed * 1664525 + 1013904223) | 0;
+    return ((seed >>> 0) % 10000) / 10000;
+  };
+
+  if (timeframe === '1D') {
+    // Compute today's 09:15 AM IST timestamp
+    const now = new Date();
+    const istParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(now);
+    const map: Record<string, string> = {};
+    for (const p of istParts) map[p.type] = p.value;
+
+    const hour = parseInt(map.hour || '15', 10) % 24;
+    const minute = parseInt(map.minute || '30', 10);
+    const curMin = hour * 60 + minute;
+    const isWeekend = map.weekday === 'Sat' || map.weekday === 'Sun';
+
+    // Elapsed session minutes (09:15 = 555, 15:30 = 930 => 375 mins total)
+    let elapsedMins = 375;
+    if (!isWeekend && curMin >= 555 && curMin <= 930) {
+      elapsedMins = Math.max(30, curMin - 555);
+    }
+
+    // 2-minute intervals for a detailed Groww-style intraday curve
+    const stepMins = 2;
+    const numBars = Math.max(20, Math.floor(elapsedMins / stepMins) + 1);
+
+    // Anchor session open (09:15 AM IST)
+    const sessionOpenMs = Date.parse(`${map.year}-${map.month}-${map.day}T09:15:00+05:30`) || (Date.now() - elapsedMins * 60000);
+
+    const startPrice = stock.open > 0 ? stock.open : prevClose;
+    const rawWalk: number[] = new Array(numBars);
+    rawWalk[0] = startPrice;
+    let p = startPrice;
+    const volatility = 0.0018;
+
+    for (let i = 1; i < numBars; i++) {
+      const step = (nextRand() - 0.495) * volatility * p;
+      // Add subtle intraday wave structure
+      const wave = Math.sin((i / numBars) * Math.PI * 3.5) * volatility * 0.35 * p;
+      p = Math.max(1, p + step + wave * 0.25);
+      rawWalk[i] = p;
+    }
+
+    // Bridge walk smoothly so bar[0] = startPrice and bar[numBars-1] = currentPrice
+    const endDiff = currentPrice - rawWalk[numBars - 1];
+    for (let i = 0; i < numBars; i++) {
+      const frac = i / Math.max(1, numBars - 1);
+      const barClose = Number((rawWalk[i] + endDiff * frac).toFixed(2));
+      const barOpen = i === 0 ? prevClose : points[i - 1].close;
+      const wickUp = nextRand() * volatility * 0.9 * barClose;
+      const wickDown = nextRand() * volatility * 0.9 * barClose;
+      const barHigh = Number((Math.max(barOpen, barClose) + wickUp).toFixed(2));
+      const barLow = Number((Math.min(barOpen, barClose) - wickDown).toFixed(2));
+      const ts = sessionOpenMs + i * stepMins * 60 * 1000;
+      const d = new Date(ts);
+      const timeLabel = d.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata',
+      }).toUpperCase();
+
+      points.push({
+        time: timeLabel,
+        timestamp: ts,
+        price: barClose,
+        open: barOpen,
+        high: barHigh,
+        low: barLow,
+        close: barClose,
+        volume: Math.floor((stock.volume / numBars) * (0.5 + nextRand() * 1.1)),
+      });
+    }
+    return points;
+  }
+
+  let numBars = 90;
+  let intervalMinutes = 60;
+  let volatility = 0.005;
+  let totalReturnBias = (stock.changePercent / 100) * 2.5;
 
   switch (timeframe) {
-    case '1D':
-      numBars = 55; // 9:15 to 15:30
-      intervalMinutes = 7;
-      volatility = 0.0025;
-      break;
     case '1W':
-      numBars = 40;
+      numBars = 85;
       intervalMinutes = 60;
-      volatility = 0.006;
+      volatility = 0.0038;
+      totalReturnBias = (stock.changePercent / 100) * 2.2 || 0.018;
       break;
     case '1M':
-      numBars = 30;
+      numBars = 90;
+      intervalMinutes = 360;
+      volatility = 0.0065;
+      totalReturnBias = 0.045;
+      break;
+    case '3M':
+      numBars = 90;
       intervalMinutes = 1440;
-      volatility = 0.012;
+      volatility = 0.011;
+      totalReturnBias = 0.085;
+      break;
+    case '6M':
+      numBars = 120;
+      intervalMinutes = 1440 * 1.5;
+      volatility = 0.013;
+      totalReturnBias = 0.14;
       break;
     case '1Y':
-      numBars = 52;
-      intervalMinutes = 1440 * 7;
-      volatility = 0.022;
+      numBars = 125;
+      intervalMinutes = 1440 * 3;
+      volatility = 0.016;
+      totalReturnBias = 0.22;
       break;
     case '3Y':
-      numBars = 75;
-      intervalMinutes = 1440 * 15;
-      volatility = 0.035;
+      numBars = 130;
+      intervalMinutes = 1440 * 8;
+      volatility = 0.022;
+      totalReturnBias = 0.55;
       break;
     case '5Y':
-      numBars = 60;
-      intervalMinutes = 1440 * 30;
-      volatility = 0.045;
+      numBars = 140;
+      intervalMinutes = 1440 * 13;
+      volatility = 0.026;
+      totalReturnBias = 0.95;
       break;
     case 'ALL':
-      numBars = 80;
-      intervalMinutes = 1440 * 45;
-      volatility = 0.06;
+      numBars = 150;
+      intervalMinutes = 1440 * 20;
+      volatility = 0.03;
+      totalReturnBias = 1.45;
       break;
   }
 
   const now = Date.now();
-  // Build backwards from current price or forwards to current price
   const prices: number[] = new Array(numBars);
   prices[numBars - 1] = currentPrice;
 
-  // Generate walk backwards
   let p = currentPrice;
-  // Day change trend bias
-  const trend = (stock.changePercent / 100) / numBars;
-  
+  const drift = totalReturnBias / numBars;
+
   for (let i = numBars - 2; i >= 0; i--) {
-    const randomStep = (Math.random() - 0.49) * volatility * p;
-    p = p - randomStep - (trend * p);
-    if (p < 1) p = 1;
+    const randomStep = (nextRand() - 0.492) * volatility * p;
+    p = Math.max(5, p - randomStep - drift * p);
     prices[i] = p;
   }
 
-  // Convert to OHLC
   for (let i = 0; i < numBars; i++) {
-    const barClose = prices[i];
-    const prevClose = i > 0 ? prices[i - 1] : barClose * (1 - volatility * 0.5);
-    const barOpen = prevClose;
-    const highWick = Math.random() * volatility * 0.8 * barClose;
-    const lowWick = Math.random() * volatility * 0.8 * barClose;
-    const barHigh = Math.max(barOpen, barClose) + highWick;
-    const barLow = Math.min(barOpen, barClose) - lowWick;
-    
+    const barClose = Number(prices[i].toFixed(2));
+    const barOpen = i > 0 ? points[i - 1].close : Number((barClose * (1 - volatility * 0.4)).toFixed(2));
+    const highWick = nextRand() * volatility * 0.85 * barClose;
+    const lowWick = nextRand() * volatility * 0.85 * barClose;
+    const barHigh = Number((Math.max(barOpen, barClose) + highWick).toFixed(2));
+    const barLow = Number((Math.min(barOpen, barClose) - lowWick).toFixed(2));
+
     const timeOffset = (numBars - 1 - i) * intervalMinutes * 60 * 1000;
     const barTimestamp = now - timeOffset;
     const barDate = new Date(barTimestamp);
 
     let timeLabel = '';
-    if (timeframe === '1D') {
-      timeLabel = barDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    } else if (timeframe === '1W' || timeframe === '1M') {
-      timeLabel = barDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    if (timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '6M') {
+      timeLabel = barDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
     } else {
-      timeLabel = barDate.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      timeLabel = barDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
     }
 
-    const volume = Math.floor(stock.volume / numBars * (0.6 + Math.random() * 0.8));
+    const volume = Math.floor((stock.volume / numBars) * (0.6 + nextRand() * 0.9));
 
     points.push({
       time: timeLabel,
       timestamp: barTimestamp,
-      price: Number(barClose.toFixed(2)),
-      open: Number(barOpen.toFixed(2)),
-      high: Number(barHigh.toFixed(2)),
-      low: Number(barLow.toFixed(2)),
-      close: Number(barClose.toFixed(2)),
+      price: barClose,
+      open: barOpen,
+      high: barHigh,
+      low: barLow,
+      close: barClose,
       volume,
     });
   }

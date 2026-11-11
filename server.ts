@@ -859,59 +859,166 @@ function synthesizeStockChart(symbol: string, timeframe: string, basePrice: numb
     close: number;
     volume: number;
   }[] = [];
-  const now = Date.now();
-  let numBars = 55;
-  let intervalMs = 5 * 60 * 1000;
+
+  let seed = 0;
+  const seedStr = `${symbol}_${timeframe}`;
+  for (let i = 0; i < seedStr.length; i++) {
+    seed = (seed * 31 + seedStr.charCodeAt(i)) | 0;
+  }
+  const nextRand = () => {
+    seed = (seed * 1664525 + 1013904223) | 0;
+    return ((seed >>> 0) % 10000) / 10000;
+  };
 
   if (timeframe === '1D') {
-    numBars = 55;
-    intervalMs = 7 * 60 * 1000;
-  } else if (timeframe === '1W') {
-    numBars = 40;
-    intervalMs = 60 * 60 * 1000;
-  } else if (timeframe === '1M') {
-    numBars = 30;
-    intervalMs = 24 * 60 * 60 * 1000;
-  } else if (timeframe === '1Y') {
-    numBars = 52;
-    intervalMs = 7 * 24 * 60 * 60 * 1000;
-  } else {
-    numBars = 60;
-    intervalMs = 30 * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const istParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(now);
+    const map: Record<string, string> = {};
+    for (const p of istParts) map[p.type] = p.value;
+
+    const hour = parseInt(map.hour || '15', 10) % 24;
+    const minute = parseInt(map.minute || '30', 10);
+    const curMin = hour * 60 + minute;
+    const isWeekend = map.weekday === 'Sat' || map.weekday === 'Sun';
+
+    let elapsedMins = 375;
+    if (!isWeekend && curMin >= 555 && curMin <= 930) {
+      elapsedMins = Math.max(30, curMin - 555);
+    }
+
+    const stepMins = 2;
+    const numBars = Math.max(20, Math.floor(elapsedMins / stepMins) + 1);
+    const sessionOpenMs = Date.parse(`${map.year}-${map.month}-${map.day}T09:15:00+05:30`) || (Date.now() - elapsedMins * 60000);
+
+    const startPrice = prevClose > 0 ? prevClose : basePrice;
+    const rawWalk: number[] = new Array(numBars);
+    rawWalk[0] = startPrice;
+    let p = startPrice;
+    const volatility = 0.0018;
+
+    for (let i = 1; i < numBars; i++) {
+      const step = (nextRand() - 0.495) * volatility * p;
+      const wave = Math.sin((i / numBars) * Math.PI * 3.5) * volatility * 0.35 * p;
+      p = Math.max(1, p + step + wave * 0.25);
+      rawWalk[i] = p;
+    }
+
+    const endDiff = basePrice - rawWalk[numBars - 1];
+    for (let i = 0; i < numBars; i++) {
+      const frac = i / Math.max(1, numBars - 1);
+      const barClose = Number((rawWalk[i] + endDiff * frac).toFixed(2));
+      const barOpen: number = i === 0 ? startPrice : points[i - 1].close;
+      const barHigh = Number((Math.max(barOpen, barClose) + nextRand() * 0.0018 * barClose).toFixed(2));
+      const barLow = Number((Math.min(barOpen, barClose) - nextRand() * 0.0018 * barClose).toFixed(2));
+      const barTimestamp = sessionOpenMs + i * stepMins * 60 * 1000;
+      const barDate = new Date(barTimestamp);
+
+      points.push({
+        time: barDate.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'Asia/Kolkata',
+        }).toUpperCase(),
+        timestamp: barTimestamp,
+        price: barClose,
+        open: barOpen,
+        high: barHigh,
+        low: barLow,
+        close: barClose,
+        volume: Math.floor(8000 + nextRand() * 45000),
+      });
+    }
+    return points;
   }
 
-  let p = prevClose > 0 ? prevClose : basePrice;
-  const trend = ((basePrice - p) / p) / numBars;
+  const now = Date.now();
+  let numBars = 90;
+  let intervalMs = 60 * 60 * 1000;
+  let volatility = 0.005;
+  let totalDrift = 0.05;
+
+  if (timeframe === '1W') {
+    numBars = 85;
+    intervalMs = 60 * 60 * 1000;
+    volatility = 0.0038;
+    totalDrift = 0.02;
+  } else if (timeframe === '1M') {
+    numBars = 90;
+    intervalMs = 6 * 60 * 60 * 1000;
+    volatility = 0.0065;
+    totalDrift = 0.045;
+  } else if (timeframe === '3M') {
+    numBars = 90;
+    intervalMs = 24 * 60 * 60 * 1000;
+    volatility = 0.011;
+    totalDrift = 0.085;
+  } else if (timeframe === '6M') {
+    numBars = 120;
+    intervalMs = 1.5 * 24 * 60 * 60 * 1000;
+    volatility = 0.013;
+    totalDrift = 0.14;
+  } else if (timeframe === '1Y') {
+    numBars = 125;
+    intervalMs = 3 * 24 * 60 * 60 * 1000;
+    volatility = 0.016;
+    totalDrift = 0.22;
+  } else if (timeframe === '3Y') {
+    numBars = 130;
+    intervalMs = 8 * 24 * 60 * 60 * 1000;
+    volatility = 0.022;
+    totalDrift = 0.55;
+  } else if (timeframe === '5Y') {
+    numBars = 140;
+    intervalMs = 13 * 24 * 60 * 60 * 1000;
+    volatility = 0.026;
+    totalDrift = 0.95;
+  } else {
+    numBars = 150;
+    intervalMs = 20 * 24 * 60 * 60 * 1000;
+    volatility = 0.03;
+    totalDrift = 1.45;
+  }
+
+  const prices: number[] = new Array(numBars);
+  prices[numBars - 1] = basePrice;
+  let p = basePrice;
+  const drift = totalDrift / numBars;
+
+  for (let i = numBars - 2; i >= 0; i--) {
+    const noise = (nextRand() - 0.492) * volatility * p;
+    p = Math.max(5, p - noise - drift * p);
+    prices[i] = p;
+  }
 
   for (let i = 0; i < numBars; i++) {
     const barTimestamp = now - (numBars - 1 - i) * intervalMs;
     const barDate = new Date(barTimestamp);
-    const noise = (Math.random() - 0.48) * 0.003 * p;
-    p = i === numBars - 1 ? basePrice : p + noise + (trend * p);
-    if (p < 1) p = basePrice;
-
-    const barClose = p;
-    const barOpen: number = i > 0 ? points[i - 1].close : prevClose;
-    const barHigh = Math.max(barOpen, barClose) + Math.random() * 0.002 * p;
-    const barLow = Math.min(barOpen, barClose) - Math.random() * 0.002 * p;
+    const barClose = Number(prices[i].toFixed(2));
+    const barOpen: number = i > 0 ? points[i - 1].close : Number((barClose * 0.996).toFixed(2));
+    const barHigh = Number((Math.max(barOpen, barClose) + nextRand() * volatility * 0.8 * barClose).toFixed(2));
+    const barLow = Number((Math.min(barOpen, barClose) - nextRand() * volatility * 0.8 * barClose).toFixed(2));
 
     let timeLabel = '';
-    if (timeframe === '1D') {
-      timeLabel = barDate.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Kolkata',
-      });
-    } else if (timeframe === '1W' || timeframe === '1M') {
+    if (timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '6M') {
       timeLabel = barDate.toLocaleDateString('en-IN', {
-        day: 'numeric',
+        day: '2-digit',
         month: 'short',
         timeZone: 'Asia/Kolkata',
       });
     } else {
       timeLabel = barDate.toLocaleDateString('en-IN', {
         month: 'short',
-        year: '2-digit',
+        year: 'numeric',
         timeZone: 'Asia/Kolkata',
       });
     }
@@ -919,12 +1026,12 @@ function synthesizeStockChart(symbol: string, timeframe: string, basePrice: numb
     points.push({
       time: timeLabel,
       timestamp: barTimestamp,
-      price: Number(barClose.toFixed(2)),
-      open: Number(barOpen.toFixed(2)),
-      high: Number(barHigh.toFixed(2)),
-      low: Number(barLow.toFixed(2)),
-      close: Number(barClose.toFixed(2)),
-      volume: Math.floor(10000 + Math.random() * 50000),
+      price: barClose,
+      open: barOpen,
+      high: barHigh,
+      low: barLow,
+      close: barClose,
+      volume: Math.floor(10000 + nextRand() * 50000),
     });
   }
 
@@ -938,12 +1045,12 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
   const yahooSymbol = SYMBOL_MAP[symbol] || `${symbol}.NS`;
 
   let range = '1d';
-  let interval = '5m';
+  let interval = '2m';
 
   switch (timeframe) {
     case '1D':
       range = '1d';
-      interval = '5m';
+      interval = '2m';
       break;
     case '1W':
       range = '5d';
@@ -951,6 +1058,14 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
       break;
     case '1M':
       range = '1mo';
+      interval = '1d';
+      break;
+    case '3M':
+      range = '3mo';
+      interval = '1d';
+      break;
+    case '6M':
+      range = '6mo';
       interval = '1d';
       break;
     case '1Y':

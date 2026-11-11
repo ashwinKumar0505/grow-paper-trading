@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { portfolioQuoteSymbols, mergePortfolioQuote } from '../utils/portfolioQuotes';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   Exchange,
   Holding,
@@ -16,7 +17,25 @@ import {
   Watchlist,
 } from '../types/market';
 import { INITIAL_INDICES, INITIAL_STOCKS } from '../data/mockStocks';
-import { getIndianMarketStatus, MarketStatus } from '../utils/marketHours';
+import {
+  getIndianMarketStatus,
+  MarketStatus,
+  getISTParts,
+  isPastIntradayCutoff,
+  isPastSessionClose,
+  INTRADAY_SQUARE_OFF_MIN,
+} from '../utils/marketHours';
+import {
+  applyFill,
+  computeBlockAmount,
+  evaluatePending,
+  EngineState,
+  newOrderId,
+  roundToTick,
+} from '../utils/orderEngine';
+import { AUTO_SQUARE_OFF_CHARGE } from '../utils/charges';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
 import { auth, db, doc, setDoc, getDoc, onAuthStateChanged, firebaseSignOut } from '../lib/firebase';
 
 export const MAX_WALLET_LIMIT = 1000000; // ₹10,00,000 (10 Lakhs max wallet limit)
@@ -29,6 +48,7 @@ interface ExecuteOrderParams {
   exchange: Exchange;
   quantity: number;
   limitPrice?: number;
+  triggerPrice?: number;
 }
 
 interface ToastMessage {
@@ -91,7 +111,7 @@ interface TradingContextType {
   setIsWalletModalOpen: (open: boolean) => void;
 
   // Trading Actions
-  executeOrder: (params: ExecuteOrderParams) => { success: boolean; message: string; order?: Order };
+  executeOrder: (params: ExecuteOrderParams, opts?: { silent?: boolean }) => { success: boolean; message: string; order?: Order };
   cancelLimitOrder: (orderId: string) => void;
   exitPosition: (positionId: string) => void;
   squareOffPosition: (positionId: string) => void;
@@ -319,6 +339,35 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsRefreshingLive(false);
     }
   }, []);
+
+  // Persisted trades may refer to search results outside INITIAL_STOCKS.
+  // Restore those quotes independently of the default market-list endpoint.
+  const portfolioSymbolsKey = JSON.stringify(portfolioQuoteSymbols(holdings, intradayPositions, orders));
+  useEffect(() => {
+    const symbols: string[] = JSON.parse(portfolioSymbolsKey);
+    if (symbols.length === 0) return;
+    const controller = new AbortController();
+    let running = false;
+    const refresh = async () => {
+      if (running) return;
+      running = true;
+      try {
+        await Promise.allSettled(symbols.map(async symbol => {
+          const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}`, { signal: controller.signal });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!controller.signal.aborted && data.success && data.stock) {
+            setStocks(previous => mergePortfolioQuote(previous, symbol, data.stock));
+          }
+        }));
+      } finally { running = false; }
+    };
+    void refresh();
+    // Retry missing quotes even outside market hours; a failed request is not
+    // evidence that an owned instrument is invalid.
+    const timer = setInterval(() => void refresh(), 30000);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, [portfolioSymbolsKey]);
 
   // Fetch real chart data for given symbol & timeframe
   const fetchRealChart = useCallback(async (symbol: string, timeframe: any) => {
@@ -687,511 +736,381 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [stocks, selectedStock.symbol, selectedStock.price, selectedStock.tickDirection]);
 
-  // Limit Order Matching Engine
+  // ---------------------------------------------------------------------------
+  // ORDER ENGINE (Groww / Angel One style)
+  // ---------------------------------------------------------------------------
+  // A synchronous mirror of wallet / holdings / positions / orders so that
+  // several fills in the same tick always see each other's effects.
+  const engineRef = useRef({ balance, holdings, positions: intradayPositions, orders });
   useEffect(() => {
-    const pendingOrders = orders.filter((o) => o.status === 'PENDING');
-    if (pendingOrders.length === 0) return;
+    engineRef.current = { balance, holdings, positions: intradayPositions, orders };
+  }, [balance, holdings, intradayPositions, orders]);
 
-    pendingOrders.forEach((order) => {
-      const stock = stocks.find((s) => s.symbol === order.symbol);
-      if (!stock) return;
+  const stocksRef = useRef(stocks);
+  useEffect(() => {
+    stocksRef.current = stocks;
+  }, [stocks]);
 
-      let triggered = false;
-      if (order.action === 'BUY' && stock.price <= (order.limitPrice || order.price)) {
-        triggered = true;
-      } else if (order.action === 'SELL' && stock.price >= (order.limitPrice || order.price)) {
-        triggered = true;
+  const commitEngine = useCallback(
+    (next: Partial<{ balance: number; holdings: Holding[]; positions: IntradayPosition[]; orders: Order[] }>) => {
+      engineRef.current = { ...engineRef.current, ...next };
+      if (next.balance !== undefined) setBalance(next.balance);
+      if (next.holdings) setHoldings(next.holdings);
+      if (next.positions) setIntradayPositions(next.positions);
+      if (next.orders) setOrders(next.orders);
+    },
+    []
+  );
+
+  const isTradable = marketStatus.isOpen || isSimulating;
+
+  // Pending order matching: limit, stop-loss (SL / SL-M) and AMO orders for
+  // both Delivery and Intraday are matched against every live tick.
+  useEffect(() => {
+    if (!isTradable) return;
+    const eng = engineRef.current;
+    const pending = eng.orders.filter((o) => o.status === 'PENDING').slice().sort((a, b) => a.timestamp - b.timestamp);
+    if (pending.length === 0) return;
+
+    let state: EngineState = { balance: eng.balance, holdings: eng.holdings, positions: eng.positions };
+    let nextOrders = eng.orders;
+    let changed = false;
+    const notices: { title: string; description: string; type: 'success' | 'error' | 'info' }[] = [];
+
+    for (const o of pending) {
+      if (!isSimulating && !o.isSim && !o.isAmo &&
+          (isPastSessionClose(o.timestamp, Date.now()) || (o.product === 'INTRADAY' && isPastIntradayCutoff(o.timestamp, Date.now())))) {
+        state = { ...state, balance: round2(state.balance + (o.blockedAmount || 0)) };
+        nextOrders = nextOrders.map(x => x.id === o.id ? { ...x, status: 'CANCELLED' as OrderStatus, blockedAmount: 0, note: 'Expired before matching' } : x);
+        changed = true;
+        continue;
+      }
+      const stock = stocks.find((s) => s.symbol === o.symbol);
+      if (!stock || !Number.isFinite(stock.price) || !(stock.price > 0)) continue;
+      const ltp = stock.price;
+      const { fill, triggerNow } = evaluatePending(o, ltp);
+
+      if (!fill) {
+        if (triggerNow) {
+          nextOrders = nextOrders.map((x) =>
+            x.id === o.id ? { ...x, triggered: true, note: `Triggered @ ₹${ltp.toFixed(2)} · Limit order sent to exchange` } : x
+          );
+          changed = true;
+        }
+        continue;
       }
 
-      if (triggered) {
-        // Execute the pending limit order!
-        const executionPrice = stock.price;
-        const totalAmount = executionPrice * order.quantity;
-        
-        if (order.product === 'DELIVERY') {
-          if (order.action === 'BUY') {
-            // Check if still enough balance
-            if (balance >= totalAmount) {
-              setBalance((prev) => prev - totalAmount);
-              setHoldings((prev) => {
-                const existing = prev.find((h) => h.symbol === order.symbol);
-                if (existing) {
-                  const newQty = existing.quantity + order.quantity;
-                  const newInvested = existing.totalInvested + totalAmount;
-                  return prev.map((h) =>
-                    h.symbol === order.symbol
-                      ? {
-                          ...h,
-                          quantity: newQty,
-                          totalInvested: newInvested,
-                          averagePrice: Number((newInvested / newQty).toFixed(2)),
-                        }
-                      : h
-                  );
-                }
-                return [
-                  ...prev,
-                  {
-                    symbol: order.symbol,
-                    stockName: order.stockName,
-                    quantity: order.quantity,
-                    averagePrice: executionPrice,
-                    totalInvested: totalAmount,
-                    exchange: order.exchange,
-                  },
-                ];
-              });
+      const released: EngineState = { ...state, balance: round2(state.balance + (o.blockedAmount || 0)) };
+      const res = applyFill(released, {
+        symbol: o.symbol,
+        stockName: o.stockName,
+        action: o.action,
+        product: o.product,
+        orderType: o.orderType,
+        exchange: o.exchange,
+        quantity: o.quantity,
+        fillPrice: ltp,
+        limitPrice: o.limitPrice,
+        triggerPrice: o.triggerPrice,
+        orderId: o.id,
+        timestamp: Date.now(),
+        isAmo: o.isAmo,
+        isSim: o.isSim,
+        note: o.isAmo ? 'AMO executed at market open' : o.triggerPrice ? `SL triggered @ ₹${o.triggerPrice.toFixed(2)}` : undefined,
+      });
 
-              setOrders((prev) =>
-                prev.map((o) =>
-                  o.id === order.id
-                    ? { ...o, status: 'EXECUTED', price: executionPrice, totalAmount }
-                    : o
-                )
-              );
-              addToast(
-                'Limit Order Executed!',
-                `Bought ${order.quantity} of ${order.symbol} @ ₹${executionPrice.toFixed(2)}`,
-                'success'
-              );
-            }
-          }
-        }
-      }
-    });
-  }, [stocks, orders, balance, addToast]);
-
-  // Execute Order
-  const executeOrder = ({
-    symbol,
-    action,
-    product,
-    orderType,
-    exchange,
-    quantity,
-    limitPrice,
-  }: ExecuteOrderParams) => {
-    const stock = stocks.find((s) => s.symbol === symbol);
-    if (!stock) {
-      return { success: false, message: 'Stock not found' };
-    }
-
-    if (quantity <= 0) {
-      return { success: false, message: 'Quantity must be greater than zero' };
-    }
-
-    const price = orderType === 'MARKET' ? stock.price : (limitPrice || stock.price);
-    const totalAmount = Number((price * quantity).toFixed(2));
-    const leverage = product === 'INTRADAY' ? 5 : 1;
-    const marginRequired = Number((totalAmount / leverage).toFixed(2));
-
-    // Handle Limit orders (save as PENDING if not immediately matched)
-    if (orderType === 'LIMIT' && limitPrice) {
-      const isImmediateBuy = action === 'BUY' && stock.price <= limitPrice;
-      const isImmediateSell = action === 'SELL' && stock.price >= limitPrice;
-
-      if (!isImmediateBuy && !isImmediateSell) {
-        // Verify margin for pending buy
-        if (action === 'BUY' && balance < marginRequired) {
-          return { success: false, message: `Insufficient paper cash. Required: ₹${marginRequired.toLocaleString('en-IN')}` };
-        }
-
-        const newOrder: Order = {
-          id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          symbol: stock.symbol,
-          stockName: stock.name,
-          action,
-          product,
-          orderType: 'LIMIT',
-          exchange,
-          quantity,
-          price: limitPrice,
-          limitPrice,
-          status: 'PENDING',
-          timestamp: Date.now(),
-          totalAmount,
-          marginUsed: marginRequired,
-          note: `Trigger when price ${action === 'BUY' ? '≤' : '≥'} ₹${limitPrice}`,
-        };
-
-        setOrders((prev) => [newOrder, ...prev]);
-        addToast(
-          'Limit Order Placed',
-          `Order for ${quantity} ${stock.symbol} placed @ ₹${limitPrice.toFixed(2)}. Status: Pending`,
-          'info'
+      if (res.ok) {
+        state = res.state;
+        nextOrders = nextOrders.map((x) => (x.id === o.id ? { ...res.order, triggered: o.triggered || triggerNow, blockedAmount: 0 } : x));
+        notices.push(res.toast);
+      } else {
+        state = released;
+        nextOrders = nextOrders.map((x) =>
+          x.id === o.id ? { ...x, status: 'REJECTED' as OrderStatus, blockedAmount: 0, note: res.message } : x
         );
-        return { success: true, message: 'Limit order placed successfully', order: newOrder };
+        notices.push({ title: 'Order rejected', description: `${o.symbol}: ${res.message}`, type: 'error' });
       }
+      changed = true;
     }
 
-    // --- MARKET / IMMEDIATE EXECUTION ---
+    if (changed) {
+      commitEngine({ balance: state.balance, holdings: state.holdings, positions: state.positions, orders: nextOrders });
+      notices.forEach((n) => addToast(n.title, n.description, n.type));
+    }
+  }, [stocks, isTradable, isSimulating, commitEngine, addToast]);
 
-    // 1. DELIVERY BUY
-    if (product === 'DELIVERY' && action === 'BUY') {
-      if (balance < totalAmount) {
-        return {
-          success: false,
-          message: `Insufficient paper cash! Available: ₹${balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}, Required: ₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
-        };
-      }
+  // Risk management (RMS): expire day orders at close and auto square-off
+  // intraday positions at 3:20 PM IST with the ₹59 (₹50 + GST) penalty.
+  useEffect(() => {
+    const runRms = () => {
+      if (isSimulating) return;
+      const now = Date.now();
+      const eng = engineRef.current;
+      let state: EngineState = { balance: eng.balance, holdings: eng.holdings, positions: eng.positions };
+      let changed = false;
+      const notices: { title: string; description: string; type: 'success' | 'error' | 'info' }[] = [];
 
-      setBalance((prev) => Number((prev - totalAmount).toFixed(2)));
-
-      setHoldings((prev) => {
-        const existing = prev.find((h) => h.symbol === stock.symbol);
-        if (existing) {
-          const newQty = existing.quantity + quantity;
-          const newInvested = Number((existing.totalInvested + totalAmount).toFixed(2));
-          return prev.map((h) =>
-            h.symbol === stock.symbol
-              ? {
-                  ...h,
-                  quantity: newQty,
-                  totalInvested: newInvested,
-                  averagePrice: Number((newInvested / newQty).toFixed(2)),
-                }
-              : h
-          );
+      let nextOrders = eng.orders.map((o) => {
+        if (o.status !== 'PENDING' || o.isAmo || o.isSim) return o;
+        const intradayCut = o.product === 'INTRADAY' && isPastIntradayCutoff(o.timestamp, now);
+        if (intradayCut || isPastSessionClose(o.timestamp, now)) {
+          state = { ...state, balance: round2(state.balance + (o.blockedAmount || 0)) };
+          changed = true;
+          return {
+            ...o,
+            status: 'CANCELLED' as OrderStatus,
+            blockedAmount: 0,
+            note: intradayCut ? 'Cancelled by RMS · Intraday cut-off 3:20 PM' : 'Expired · Day order not executed before market close',
+          };
         }
-        return [
-          ...prev,
-          {
-            symbol: stock.symbol,
-            stockName: stock.name,
-            quantity,
-            averagePrice: stock.price,
-            totalInvested: totalAmount,
-            exchange,
-          },
-        ];
+        return o;
       });
 
-      const newOrder: Order = {
-        id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        symbol: stock.symbol,
-        stockName: stock.name,
-        action: 'BUY',
-        product: 'DELIVERY',
-        orderType,
-        exchange,
-        quantity,
-        price: stock.price,
-        status: 'EXECUTED',
-        timestamp: Date.now(),
-        totalAmount,
-        marginUsed: totalAmount,
-      };
-
-      setOrders((prev) => [newOrder, ...prev]);
-      setLastExecutedOrder(newOrder);
-      addToast('Order Executed Successfully', `Bought ${quantity} shares of ${stock.symbol} @ ₹${stock.price}`, 'success');
-      return { success: true, message: 'Order executed', order: newOrder };
-    }
-
-    // 2. DELIVERY SELL
-    if (product === 'DELIVERY' && action === 'SELL') {
-      const existingHolding = holdings.find((h) => h.symbol === stock.symbol);
-      if (!existingHolding || existingHolding.quantity < quantity) {
-        return {
-          success: false,
-          message: `You don't hold enough shares to sell. Available in holdings: ${existingHolding?.quantity || 0}`,
-        };
-      }
-
-      setBalance((prev) => Number((prev + totalAmount).toFixed(2)));
-
-      setHoldings((prev) => {
-        return prev
-          .map((h) => {
-            if (h.symbol === stock.symbol) {
-              const remainingQty = h.quantity - quantity;
-              const remainingInvested = Number((remainingQty * h.averagePrice).toFixed(2));
-              return {
-                ...h,
-                quantity: remainingQty,
-                totalInvested: remainingInvested,
-              };
-            }
-            return h;
-          })
-          .filter((h) => h.quantity > 0);
-      });
-
-      const newOrder: Order = {
-        id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        symbol: stock.symbol,
-        stockName: stock.name,
-        action: 'SELL',
-        product: 'DELIVERY',
-        orderType,
-        exchange,
-        quantity,
-        price: stock.price,
-        status: 'EXECUTED',
-        timestamp: Date.now(),
-        totalAmount,
-        marginUsed: totalAmount,
-      };
-
-      setOrders((prev) => [newOrder, ...prev]);
-      setLastExecutedOrder(newOrder);
-      addToast('Shares Sold Successfully', `Sold ${quantity} shares of ${stock.symbol} @ ₹${stock.price}`, 'success');
-      return { success: true, message: 'Shares sold', order: newOrder };
-    }
-
-    // 3. INTRADAY (MIS) BUY / SELL (Groww-Style Position Netting & Reversing)
-    if (product === 'INTRADAY') {
-      const existingPos = intradayPositions.find((p) => p.symbol === stock.symbol);
-
-      if (existingPos) {
-        // CASE A: User places the SAME side (e.g. BUY on existing Long, or SELL on existing Short) -> Add to position
-        if (existingPos.action === action) {
-          if (balance < marginRequired) {
-            return {
-              success: false,
-              message: `Insufficient paper cash for 5x Intraday margin. Required: ₹${marginRequired.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
-            };
-          }
-
-          setBalance((prev) => Number((prev - marginRequired).toFixed(2)));
-
-          const newQty = existingPos.quantity + quantity;
-          const newEntryPrice = Number(
-            (((existingPos.entryPrice * existingPos.quantity) + (stock.price * quantity)) / newQty).toFixed(2)
-          );
-          const newMargin = Number((existingPos.marginBlocked + marginRequired).toFixed(2));
-
-          setIntradayPositions((prev) =>
-            prev.map((p) =>
-              p.id === existingPos.id
-                ? {
-                    ...p,
-                    quantity: newQty,
-                    entryPrice: newEntryPrice,
-                    marginBlocked: newMargin,
-                  }
-                : p
-            )
-          );
-
-          const newOrder: Order = {
-            id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-            symbol: stock.symbol,
-            stockName: stock.name,
-            action,
-            product: 'INTRADAY',
-            orderType,
-            exchange,
-            quantity,
-            price: stock.price,
-            status: 'EXECUTED',
-            timestamp: Date.now(),
-            totalAmount,
-            marginUsed: marginRequired,
-          };
-          setOrders((prev) => [newOrder, ...prev]);
-          setLastExecutedOrder(newOrder);
-
-          addToast(
-            `Added to Intraday Position`,
-            `${action} ${quantity} ${stock.symbol} @ ₹${stock.price}. Total: ${newQty} shares (Avg: ₹${newEntryPrice})`,
-            'success'
-          );
-          return { success: true, message: 'Added to intraday position', order: newOrder };
-        }
-
-        // CASE B: User places the OPPOSITE side (e.g. SELL on existing Long, or BUY on existing Short) -> Exit / Reduce / Reverse!
-        const closeQty = Math.min(existingPos.quantity, quantity);
-        const pnlPerShare = existingPos.action === 'BUY'
-          ? stock.price - existingPos.entryPrice
-          : existingPos.entryPrice - stock.price;
-        const pnl = Number((pnlPerShare * closeQty).toFixed(2));
-
-        // Margin released for the closed shares
-        const releasedMargin = Number(((existingPos.marginBlocked * closeQty) / existingPos.quantity).toFixed(2));
-        const totalCredit = Number((releasedMargin + pnl).toFixed(2));
-
-        // Return margin + realized P&L to wallet
-        setBalance((prev) => Math.max(0, Number((prev + totalCredit).toFixed(2))));
-
-        // Did it fully close, partially close, or reverse?
-        if (quantity === existingPos.quantity) {
-          // Fully closed / exited position
-          setIntradayPositions((prev) => prev.filter((p) => p.id !== existingPos.id));
-        } else if (quantity < existingPos.quantity) {
-          // Partially reduced position
-          const remQty = existingPos.quantity - quantity;
-          const remMargin = Number((existingPos.marginBlocked - releasedMargin).toFixed(2));
-          setIntradayPositions((prev) =>
-            prev.map((p) =>
-              p.id === existingPos.id
-                ? { ...p, quantity: remQty, marginBlocked: remMargin }
-                : p
-            )
-          );
-        } else {
-          // Reversing position (e.g. held 10 BUY, sold 15 -> closed 10 BUY, opened 5 SELL)
-          const excessQty = quantity - existingPos.quantity;
-          const excessValue = Number((stock.price * excessQty).toFixed(2));
-          const excessMargin = Number((excessValue / 5).toFixed(2));
-
-          setBalance((prev) => Number((prev - excessMargin).toFixed(2)));
-
-          const reversedPos: IntradayPosition = {
-            id: 'POS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-            symbol: stock.symbol,
-            stockName: stock.name,
-            action,
-            quantity: excessQty,
-            entryPrice: stock.price,
-            marginBlocked: excessMargin,
-            leverage: 5,
-            timestamp: Date.now(),
-            exchange,
-          };
-
-          setIntradayPositions((prev) => [
-            ...prev.filter((p) => p.id !== existingPos.id),
-            reversedPos,
-          ]);
-        }
-
-        const newOrder: Order = {
-          id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          symbol: stock.symbol,
-          stockName: stock.name,
-          action,
+      const today = getISTParts(now).dateKey;
+      for (const pos of eng.positions) {
+        if (!isPastIntradayCutoff(pos.timestamp, now)) continue;
+        const stock = stocksRef.current.find((s) => s.symbol === pos.symbol);
+        const sameDay = getISTParts(pos.timestamp).dateKey === today;
+        const price = stock
+          ? !sameDay && marketStatus.isOpen
+            ? stock.previousClose || stock.price
+            : stock.price
+          : pos.entryPrice;
+        const res = applyFill(state, {
+          symbol: pos.symbol,
+          stockName: pos.stockName,
+          action: pos.action === 'BUY' ? 'SELL' : 'BUY',
           product: 'INTRADAY',
-          orderType,
-          exchange,
-          quantity,
-          price: stock.price,
-          status: 'EXECUTED',
-          timestamp: Date.now(),
-          totalAmount,
-          marginUsed: releasedMargin,
-          note: `Exited ${closeQty} shares (P&L: ${pnl >= 0 ? '+' : ''}₹${pnl.toFixed(2)})`,
-        };
-        setOrders((prev) => [newOrder, ...prev]);
-        setLastExecutedOrder(newOrder);
-
-        addToast(
-          pnl >= 0 ? 'Position Exited with Profit' : 'Position Exited with Loss',
-          `${action} ${closeQty} of ${stock.symbol} @ ₹${stock.price} (P&L: ${pnl >= 0 ? '+₹' : '-₹'}${Math.abs(pnl).toFixed(2)})`,
-          pnl >= 0 ? 'success' : 'info'
-        );
-        return { success: true, message: 'Position exited', order: newOrder };
+          orderType: 'MARKET',
+          exchange: pos.exchange,
+          quantity: pos.quantity,
+          fillPrice: price,
+          extraCharge: AUTO_SQUARE_OFF_CHARGE,
+          note: 'Auto square-off by RMS at 3:20 PM · ₹59 charge applied',
+        });
+        if (res.ok) {
+          state = res.state;
+          nextOrders = [res.order, ...nextOrders];
+          changed = true;
+          notices.push({
+            title: 'Intraday position auto squared-off',
+            description: `${pos.symbol} closed @ ₹${price.toFixed(2)} at 3:20 PM. ₹59 auto square-off charge applied.`,
+            type: 'info',
+          });
+        }
       }
 
-      // CASE C: No existing position -> Open fresh Intraday position
-      if (balance < marginRequired) {
-        return {
-          success: false,
-          message: `Insufficient paper cash for 5x Intraday margin. Required: ₹${marginRequired.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
-        };
+      if (changed) {
+        commitEngine({ balance: state.balance, holdings: state.holdings, positions: state.positions, orders: nextOrders });
+        notices.forEach((n) => addToast(n.title, n.description, n.type));
       }
-
-      // Block margin
-      setBalance((prev) => Number((prev - marginRequired).toFixed(2)));
-
-      const newPos: IntradayPosition = {
-        id: 'POS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        symbol: stock.symbol,
-        stockName: stock.name,
-        action,
-        quantity,
-        entryPrice: stock.price,
-        marginBlocked: marginRequired,
-        leverage: 5,
-        timestamp: Date.now(),
-        exchange,
-      };
-
-      setIntradayPositions((prev) => [newPos, ...prev]);
-
-      const newOrder: Order = {
-        id: 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-        symbol: stock.symbol,
-        stockName: stock.name,
-        action,
-        product: 'INTRADAY',
-        orderType,
-        exchange,
-        quantity,
-        price: stock.price,
-        status: 'EXECUTED',
-        timestamp: Date.now(),
-        totalAmount,
-        marginUsed: marginRequired,
-      };
-
-      setOrders((prev) => [newOrder, ...prev]);
-      setLastExecutedOrder(newOrder);
-      addToast(
-        `Intraday ${action} Executed (5x Margin)`,
-        `${action} ${quantity} ${stock.symbol} @ ₹${stock.price} (Margin blocked: ₹${marginRequired.toFixed(2)})`,
-        'success'
-      );
-      return { success: true, message: 'Intraday order executed', order: newOrder };
-    }
-
-    return { success: false, message: 'Unsupported order action' };
-  };
-
-  // Exit Intraday Position (Groww-Style 1-Click Exit)
-  const exitPosition = (positionId: string) => {
-    const pos = intradayPositions.find((p) => p.id === positionId);
-    if (!pos) return;
-
-    const currentStock = stocks.find((s) => s.symbol === pos.symbol);
-    const exitPrice = currentStock ? currentStock.price : pos.entryPrice;
-
-    // Calculate P&L:
-    const pnl = pos.action === 'BUY'
-      ? (exitPrice - pos.entryPrice) * pos.quantity
-      : (pos.entryPrice - exitPrice) * pos.quantity;
-
-    // Return blocked margin + P&L
-    const creditAmount = Number((pos.marginBlocked + pnl).toFixed(2));
-    setBalance((prev) => Math.max(0, Number((prev + creditAmount).toFixed(2))));
-
-    // Record exit order
-    const exitAction = pos.action === 'BUY' ? 'SELL' : 'BUY';
-    const exitOrder: Order = {
-      id: 'ORD-EX-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-      symbol: pos.symbol,
-      stockName: pos.stockName,
-      action: exitAction,
-      product: 'INTRADAY',
-      orderType: 'MARKET',
-      exchange: pos.exchange,
-      quantity: pos.quantity,
-      price: exitPrice,
-      status: 'EXECUTED',
-      timestamp: Date.now(),
-      totalAmount: Number((exitPrice * pos.quantity).toFixed(2)),
-      marginUsed: pos.marginBlocked,
-      note: `Exited position (P&L: ${pnl >= 0 ? '+' : ''}₹${pnl.toFixed(2)})`,
     };
 
-    setIntradayPositions((prev) => prev.filter((p) => p.id !== positionId));
-    setOrders((prev) => [exitOrder, ...prev]);
+    const initial = setTimeout(runRms, 1500); // allow persisted state to load first
+    const timer = setInterval(runRms, 10000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
+  }, [isSimulating, marketStatus.isOpen, commitEngine, addToast]);
 
+  // Place an order (Market / Limit / SL / SL-M, Delivery or Intraday)
+  const executeOrder = (
+    params: ExecuteOrderParams,
+    opts: { silent?: boolean } = {}
+  ): { success: boolean; message: string; order?: Order } => {
+    const { symbol, action, product, orderType, exchange, quantity } = params;
+    const stock =
+      stocks.find((s) => s.symbol === symbol) || (selectedStock.symbol === symbol ? selectedStock : undefined);
+    if (!stock || !Number.isFinite(stock.price) || !(stock.price > 0)) return { success: false, message: 'Stock quote not available' };
+    if (exchange !== stock.exchange) return { success: false, message: 'A quote for this exchange is not available.' };
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) return { success: false, message: 'Enter a valid quantity' };
+
+    const ltp = stock.price;
+    const limitPrice = params.limitPrice ? roundToTick(params.limitPrice) : undefined;
+    const triggerPrice = params.triggerPrice ? roundToTick(params.triggerPrice) : undefined;
+    const needsLimit = orderType === 'LIMIT' || orderType === 'SL';
+    const needsTrigger = orderType === 'SL' || orderType === 'SL-M';
+
+    if (needsLimit && (!Number.isFinite(limitPrice) || !limitPrice || limitPrice <= 0)) return { success: false, message: 'Enter a valid price' };
+    if (needsTrigger && (!Number.isFinite(triggerPrice) || !triggerPrice || triggerPrice <= 0)) return { success: false, message: 'Enter a valid trigger price' };
+
+    // Circuit limits (±20% of previous close)
+    const refPrice = stock.previousClose > 0 ? stock.previousClose : ltp;
+    const lowerCkt = round2(refPrice * 0.8);
+    const upperCkt = round2(refPrice * 1.2);
+    for (const p of [limitPrice, triggerPrice]) {
+      if (p !== undefined && (p < lowerCkt || p > upperCkt)) {
+        return { success: false, message: `Price should be within circuit limits ₹${lowerCkt.toFixed(2)} – ₹${upperCkt.toFixed(2)}` };
+      }
+    }
+
+    if (needsTrigger && triggerPrice) {
+      if (action === 'BUY' && triggerPrice <= ltp) {
+        return { success: false, message: `Trigger price should be higher than LTP (₹${ltp.toFixed(2)}) for a stop-loss buy` };
+      }
+      if (action === 'SELL' && triggerPrice >= ltp) {
+        return { success: false, message: `Trigger price should be lower than LTP (₹${ltp.toFixed(2)}) for a stop-loss sell` };
+      }
+      if (orderType === 'SL' && limitPrice) {
+        if (action === 'BUY' && limitPrice < triggerPrice) return { success: false, message: 'Limit price should be ≥ trigger price for SL buy' };
+        if (action === 'SELL' && limitPrice > triggerPrice) return { success: false, message: 'Limit price should be ≤ trigger price for SL sell' };
+      }
+    }
+
+    const eng = engineRef.current;
+    const realOpen = marketStatus.isOpen;
+    const tradable = realOpen || isSimulating;
+    const ist = getISTParts();
+
+    // Intraday session rules
+    if (product === 'INTRADAY' && !isSimulating) {
+      const pos = eng.positions.find((p) => p.symbol === symbol && p.exchange === exchange);
+      const isExit = !!pos && pos.action !== action && quantity <= pos.quantity;
+      if (!realOpen) {
+        return {
+          success: false,
+          message: 'Market is closed. Intraday orders are allowed only between 9:15 AM and 3:20 PM. Use Delivery to place an AMO.',
+        };
+      }
+      if (ist.minutes >= INTRADAY_SQUARE_OFF_MIN && !isExit) {
+        return { success: false, message: 'New intraday orders are not allowed after 3:20 PM. You can only exit open positions.' };
+      }
+    }
+
+    // Delivery sell: can't sell more than (holdings − qty already in pending sell orders)
+    if (product === 'DELIVERY' && action === 'SELL') {
+      const held = eng.holdings.find((h) => h.symbol === symbol)?.quantity || 0;
+      const reserved = eng.orders
+        .filter((o) => o.status === 'PENDING' && o.product === 'DELIVERY' && o.action === 'SELL' && o.symbol === symbol)
+        .reduce((s, o) => s + o.quantity, 0);
+      const sellable = Math.max(0, held - reserved);
+      if (sellable < quantity) {
+        return {
+          success: false,
+          message: held === 0
+            ? `You don't hold any ${symbol} shares. Short selling is allowed only in Intraday.`
+            : `You can sell up to ${sellable} shares${reserved ? ` (${reserved} already in open sell orders)` : ''}`,
+        };
+      }
+    }
+
+    const isSim = !realOpen && isSimulating;
+    const state: EngineState = { balance: eng.balance, holdings: eng.holdings, positions: eng.positions };
+
+    const isMarketable =
+      orderType === 'MARKET' ||
+      (orderType === 'LIMIT' && !!limitPrice && (action === 'BUY' ? ltp <= limitPrice : ltp >= limitPrice));
+
+    // 1) Immediate execution
+    if (tradable && isMarketable) {
+      const res = applyFill(state, {
+        symbol,
+        stockName: stock.name,
+        action,
+        product,
+        orderType,
+        exchange,
+        quantity,
+        fillPrice: ltp,
+        limitPrice,
+        isSim,
+      });
+      if (!res.ok) return { success: false, message: res.message };
+      commitEngine({
+        balance: res.state.balance,
+        holdings: res.state.holdings,
+        positions: res.state.positions,
+        orders: [res.order, ...eng.orders],
+      });
+      if (!opts.silent) setLastExecutedOrder(res.order);
+      addToast(res.toast.title, res.toast.description, res.toast.type);
+      return { success: true, message: 'Order executed', order: res.order };
+    }
+
+    // 2) Resting order (open limit / stop-loss) or AMO when market is closed
+    const isAmo = !tradable;
+    const restPrice =
+      orderType === 'MARKET' ? ltp : orderType === 'SL-M' ? (triggerPrice as number) : (limitPrice as number);
+    const block = computeBlockAmount(state, { symbol, action, product, quantity, price: restPrice, exchange });
+    if (block > eng.balance) {
+      return {
+        success: false,
+        message: `Insufficient funds. ₹${block.toLocaleString('en-IN', { maximumFractionDigits: 2 })} required, available ₹${eng.balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+      };
+    }
+
+    const cmp = action === 'BUY' ? '≤' : '≥';
+    const trigCmp = action === 'BUY' ? '≥' : '≤';
+    const note = isAmo
+      ? 'AMO · Will be sent to exchange at 9:15 AM'
+      : needsTrigger
+      ? `Waiting for LTP ${trigCmp} ₹${triggerPrice?.toFixed(2)}`
+      : `Open · Executes when LTP ${cmp} ₹${limitPrice?.toFixed(2)}`;
+
+    const order: Order = {
+      id: newOrderId(),
+      symbol,
+      stockName: stock.name,
+      action,
+      product,
+      orderType,
+      exchange,
+      quantity,
+      price: restPrice,
+      limitPrice,
+      triggerPrice,
+      status: 'PENDING',
+      timestamp: Date.now(),
+      totalAmount: round2(restPrice * quantity),
+      marginUsed: block,
+      blockedAmount: block,
+      isAmo,
+      isSim,
+      note,
+    };
+
+    commitEngine({ balance: round2(eng.balance - block), orders: [order, ...eng.orders] });
     addToast(
-      'Position Exited',
-      `Exited ${pos.symbol} position with ${pnl >= 0 ? 'profit of +₹' : 'loss of -₹'}${Math.abs(pnl).toFixed(2)}`,
-      pnl >= 0 ? 'success' : 'info'
+      isAmo ? 'AMO placed' : 'Order placed',
+      `${action} ${quantity} ${symbol} · ${orderType}${isAmo ? ' · Executes at market open' : ' · Open'}`,
+      'info'
     );
+    return { success: true, message: isAmo ? 'AMO placed' : 'Order placed', order };
+  };
+
+  // Exit Intraday Position (Groww-style 1-click exit at market)
+  const exitPosition = (positionId: string) => {
+    const pos = engineRef.current.positions.find((p) => p.id === positionId);
+    if (!pos) return;
+    const res = executeOrder(
+      {
+        symbol: pos.symbol,
+        action: pos.action === 'BUY' ? 'SELL' : 'BUY',
+        product: 'INTRADAY',
+        orderType: 'MARKET',
+        exchange: pos.exchange,
+        quantity: pos.quantity,
+      },
+      { silent: true }
+    );
+    if (!res.success) addToast('Exit failed', res.message, 'error');
   };
 
   const squareOffPosition = exitPosition;
 
-  // Cancel Limit Order
+  // Cancel a pending order and release blocked funds
   const cancelLimitOrder = (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: 'CANCELLED' } : o))
-    );
-    addToast('Order Cancelled', `Pending limit order has been cancelled`, 'info');
+    const eng = engineRef.current;
+    const o = eng.orders.find((x) => x.id === orderId);
+    if (!o || o.status !== 'PENDING') return;
+    commitEngine({
+      balance: round2(eng.balance + (o.blockedAmount || 0)),
+      orders: eng.orders.map((x) =>
+        x.id === orderId ? { ...x, status: 'CANCELLED' as OrderStatus, blockedAmount: 0, note: 'Cancelled by you' } : x
+      ),
+    });
+    addToast('Order cancelled', `${o.action} ${o.quantity} ${o.symbol} cancelled${o.blockedAmount ? ' · Funds released' : ''}`, 'info');
   };
 
   // Sign Up User (Google or Email OTP) with Firebase Firestore persistence
@@ -1337,12 +1256,13 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Add Money to Wallet (Enforces ₹10 Lakhs max limit)
   const addMoneyToWallet = (amount: number, description = 'Funds added via Add Money'): boolean => {
-    if (amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       addToast('Invalid Amount', 'Please enter a valid amount greater than zero.', 'error');
       return false;
     }
 
-    if (balance >= MAX_WALLET_LIMIT) {
+    const cash = engineRef.current.balance;
+    if (cash >= MAX_WALLET_LIMIT) {
       addToast(
         'Wallet Limit Reached',
         'Your paper wallet has already reached the maximum limit of ₹10,00,000 (10 Lakhs). You cannot add more funds.',
@@ -1351,8 +1271,8 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return false;
     }
 
-    if (balance + amount > MAX_WALLET_LIMIT) {
-      const allowedAdd = Math.max(0, MAX_WALLET_LIMIT - balance);
+    if (cash + amount > MAX_WALLET_LIMIT) {
+      const allowedAdd = Math.max(0, MAX_WALLET_LIMIT - cash);
       addToast(
         'Wallet Limit Exceeded',
         `Adding ₹${amount.toLocaleString('en-IN')} exceeds the ₹10,00,000 (10 Lakhs) wallet limit. You can only add up to ₹${allowedAdd.toLocaleString('en-IN')}.`,
@@ -1361,8 +1281,8 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return false;
     }
 
-    const newBalance = Number((balance + amount).toFixed(2));
-    setBalance(newBalance);
+    const newBalance = Number((cash + amount).toFixed(2));
+    commitEngine({ balance: newBalance });
     const tx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
       type: 'DEPOSIT',
@@ -1381,11 +1301,12 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Set Paper Balance
   const setPaperBalance = (amount: number) => {
+    if (!Number.isFinite(amount)) return;
     const clampedAmount = Math.min(MAX_WALLET_LIMIT, Math.max(0, amount));
     if (amount > MAX_WALLET_LIMIT) {
       addToast('Wallet Limit Exceeded', 'Wallet balance cannot exceed ₹10,00,000 (10 Lakhs). Clamped to ₹10,00,000.', 'error');
     }
-    setBalance(clampedAmount);
+    commitEngine({ balance: clampedAmount });
     setInitialBalance(clampedAmount);
     const tx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
@@ -1400,12 +1321,10 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Reset Portfolio
   const resetPortfolio = (startingCash = 500000) => {
+    if (!Number.isFinite(startingCash)) return;
     const clampedCash = Math.min(MAX_WALLET_LIMIT, Math.max(1000, startingCash));
-    setBalance(clampedCash);
+    commitEngine({ balance: clampedCash, holdings: [], positions: [], orders: [] });
     setInitialBalance(clampedCash);
-    setHoldings([]);
-    setIntradayPositions([]);
-    setOrders([]);
     setIsWalletModalOpen(false);
     const resetTx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
@@ -1505,8 +1424,13 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       intradayPnL += posPnL;
     });
 
+    orders.forEach((o) => {
+      if (o.status === 'PENDING' && o.blockedAmount) lockedMargin += o.blockedAmount;
+    });
+
     const totalPnL = (currentHoldingsValue - totalInvested) + intradayPnL;
-    const totalPnLPercent = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+    const capital = totalInvested + intradayPositions.reduce((sum, p) => sum + p.marginBlocked, 0);
+    const totalPnLPercent = capital > 0 ? (totalPnL / capital) * 100 : 0;
     const dayPnL = dayHoldingsPnL + intradayPnL;
     const dayPnLPercent = totalInvested > 0 ? (dayPnL / (totalInvested + lockedMargin)) * 100 : 0;
 
@@ -1520,7 +1444,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       availableCash: Number(balance.toFixed(2)),
       lockedMargin: Number(lockedMargin.toFixed(2)),
     };
-  }, [holdings, intradayPositions, stocks, balance]);
+  }, [holdings, intradayPositions, stocks, balance, orders]);
 
   return (
     <TradingContext.Provider

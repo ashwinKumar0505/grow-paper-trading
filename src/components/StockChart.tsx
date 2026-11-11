@@ -1,639 +1,693 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChartPoint, ChartType, Stock, Timeframe } from '../types/market';
 import { generateChartData } from '../data/mockStocks';
 import { useTrading } from '../context/TradingContext';
-import { BarChart2, LineChart as LineChartIcon } from 'lucide-react';
 
 interface StockChartProps {
   stock: Stock;
 }
 
-// Helper to convert timestamp or time string to elapsed minutes from 09:15 AM IST
-function getMinutesFromMarketOpen(timestamp?: number, timeStr?: string): number {
-  if (timestamp) {
-    try {
-      const d = new Date(timestamp > 1e11 ? timestamp : timestamp * 1000);
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      }).formatToParts(d);
-      const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '9', 10);
-      const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '15', 10);
-      const totalMinutes = hour * 60 + minute;
-      // 09:15 is 555 min, 15:30 is 930 min
-      if (totalMinutes >= 555 && totalMinutes <= 930) {
-        return totalMinutes - 555;
-      }
-    } catch {}
-  }
+const TIMEFRAMES: Timeframe[] = ['1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', 'ALL'];
+const SESSION_MINUTES = 375; // 09:15 AM → 03:30 PM IST
+const UP = '#00B386';
+const DOWN = '#EB5B3C';
 
-  if (timeStr) {
-    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (match) {
-      let h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
-      const ampm = match[3]?.toUpperCase();
-      if (ampm === 'PM' && h < 12) h += 12;
-      if (ampm === 'AM' && h === 12) h = 0;
-      const totalMin = h * 60 + m;
-      if (totalMin >= 555 && totalMin <= 930) {
-        return totalMin - 555;
-      }
-    }
-  }
+const toMs = (ts: number) => (ts > 1e11 ? ts : ts * 1000);
 
-  return 0;
+/** Minutes elapsed since 09:15 IST for a timestamp, or null if outside 09:15–15:30. */
+function sessionMinute(ts: number): number | null {
+  if (!ts) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date(toMs(ts)));
+  const h = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10) % 24;
+  const m = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+  const mins = h * 60 + m - 555;
+  return mins >= 0 && mins <= SESSION_MINUTES ? mins : null;
 }
 
+function formatHoverTimestamp(ts: number, tf: Timeframe, fallback: string): string {
+  if (!ts) return fallback;
+  const d = new Date(toMs(ts));
+  const opts: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Kolkata' };
+  if (tf === '1D') {
+    const time = d.toLocaleTimeString('en-IN', { ...opts, hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+    const date = d.toLocaleDateString('en-IN', { ...opts, day: '2-digit', month: 'short' });
+    return `${time} · ${date}`;
+  }
+  if (tf === '1W') {
+    const date = d.toLocaleDateString('en-IN', { ...opts, day: '2-digit', month: 'short' });
+    const time = d.toLocaleTimeString('en-IN', { ...opts, hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+    return `${date}, ${time}`;
+  }
+  if (tf === '3Y' || tf === '5Y' || tf === 'ALL') {
+    return d.toLocaleDateString('en-IN', { ...opts, day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  return d.toLocaleDateString('en-IN', { ...opts, day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatAxisLabel(ts: number, tf: Timeframe, fallback: string): string {
+  if (!ts) return fallback;
+  const d = new Date(toMs(ts));
+  const opts: Intl.DateTimeFormatOptions = { timeZone: 'Asia/Kolkata' };
+  if (tf === '1D') {
+    return d.toLocaleTimeString('en-IN', { ...opts, hour: '2-digit', minute: '2-digit', hour12: true }).toUpperCase();
+  }
+  if (tf === '1W' || tf === '1M' || tf === '3M') {
+    return d.toLocaleDateString('en-IN', { ...opts, day: '2-digit', month: 'short' });
+  }
+  if (tf === '6M' || tf === '1Y') {
+    return d.toLocaleDateString('en-IN', { ...opts, month: 'short', year: '2-digit' });
+  }
+  return d.toLocaleDateString('en-IN', { ...opts, month: 'short', year: 'numeric' });
+}
+
+const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
-  const { fetchRealChart, marketStatus } = useTrading();
+  const { fetchRealChart, marketStatus, isSimulating } = useTrading();
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [chartType, setChartType] = useState<ChartType>('line');
-  const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
-  const [hoverX, setHoverX] = useState<number | null>(null);
-  const [hoverY, setHoverY] = useState<number | null>(null);
-  const [realPoints, setRealPoints] = useState<ChartPoint[] | null>(null);
-  const [isLoadingReal, setIsLoadingReal] = useState<boolean>(false);
+  const [isTerminalMode, setIsTerminalMode] = useState<boolean>(false);
+  const [points, setPoints] = useState<ChartPoint[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Fetch real market chart points when stock or timeframe changes
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoadingReal(true);
-    fetchRealChart(stock.symbol, timeframe).then((pts) => {
-      if (isMounted) {
-        if (pts && pts.length > 0) {
-          setRealPoints(pts);
-        } else {
-          setRealPoints(null);
-        }
-        setIsLoadingReal(false);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [stock.symbol, timeframe, fetchRealChart]);
-
-  // Use real points if available, otherwise calibrated fallback
-  const baseChartPoints = useMemo(() => {
-    if (realPoints && realPoints.length > 0) {
-      return realPoints;
-    }
-    return generateChartData(stock, timeframe);
-  }, [realPoints, stock, timeframe]);
-
-  // Real-time synchronization: for 1D chart, update the latest candle close and price with stock.price!
-  const chartPoints = useMemo(() => {
-    if (!baseChartPoints || baseChartPoints.length === 0) return baseChartPoints;
-    if (timeframe !== '1D') return baseChartPoints;
-
-    if (stock.price && stock.price > 0 && Math.abs(stock.price - 100) > 1) {
-      const copy = [...baseChartPoints];
-      const lastIdx = copy.length - 1;
-      const last = copy[lastIdx];
-      copy[lastIdx] = {
-        ...last,
-        close: stock.price,
-        price: stock.price,
-        high: Math.max(last.high, stock.price),
-        low: Math.min(last.low, stock.price),
-      };
-      return copy;
-    }
-    return baseChartPoints;
-  }, [baseChartPoints, stock.price, timeframe]);
-
-  // Determine current active market price
-  const latestPoint = chartPoints.length > 0 ? chartPoints[chartPoints.length - 1] : null;
-  const currentMarketPrice = latestPoint
-    ? (stock.price && stock.price > 0 && Math.abs(stock.price - 100) > 1 ? stock.price : latestPoint.close)
-    : (stock.price || 0);
-
-  const displayPrice = hoveredPoint ? hoveredPoint.price : currentMarketPrice;
-
-  // Baseline price for returns:
-  // For 1D: Groww always benchmarks against stock.previousClose
-  // For other timeframes (1W, 1M, etc.): benchmarks against the start of that timeframe
-  const baselinePrice = useMemo(() => {
-    if (timeframe === '1D') {
-      if (stock.previousClose && stock.previousClose > 0 && Math.abs(stock.previousClose - 100) > 1) {
-        return stock.previousClose;
-      }
-      return chartPoints.length > 0 ? chartPoints[0].open : displayPrice;
-    }
-    return chartPoints.length > 0 ? chartPoints[0].close : displayPrice;
-  }, [timeframe, stock.previousClose, chartPoints, displayPrice]);
-
-  const periodChange = displayPrice - baselinePrice;
-  const periodPercent = baselinePrice > 0 ? (periodChange / baselinePrice) * 100 : 0;
-  const isPositive = periodChange >= 0;
-
-  const strokeColor = isPositive ? '#00D09C' : '#EB5B5B';
-
-  // Dimensions
-  const width = 800;
-  const height = 340;
-  const paddingLeft = 12;
-  const paddingRight = 72; // space for price labels & Prev pill
-  const paddingTop = 24;
-  const paddingBottom = 32;
-  const chartWidth = width - paddingLeft - paddingRight;
-  const chartHeight = height - paddingTop - paddingBottom;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(760);
+  const height = isTerminalMode ? 370 : 300;
 
   const is1D = timeframe === '1D';
+  const isLive = marketStatus.isOpen || isSimulating;
+  const validPrice = stock.price > 0;
 
-  // Calculate scales
-  const { minPrice, maxPrice, maxVolume } = useMemo(() => {
-    let min = Infinity;
-    let max = -Infinity;
-    let maxVol = 0;
+  // Measure container width so SVG renders at crisp 1:1 pixel ratio
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => setWidth(Math.max(280, el.clientWidth));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-    chartPoints.forEach((p) => {
-      if (p.low < min) min = p.low;
-      if (p.high > max) max = p.high;
-      if (p.volume > maxVol) maxVol = p.volume;
-    });
-
-    // In 1D, include previousClose in the scale range so the Prev baseline is always visible
-    if (is1D && stock.previousClose && stock.previousClose > 0) {
-      if (stock.previousClose < min) min = stock.previousClose;
-      if (stock.previousClose > max) max = stock.previousClose;
-    }
-
-    if (min === Infinity || max === -Infinity) {
-      min = displayPrice * 0.98;
-      max = displayPrice * 1.02;
-    }
-
-    const padding = (max - min) * 0.12 || 1;
-    return {
-      minPrice: min - padding,
-      maxPrice: max + padding,
-      maxVolume: maxVol || 1,
-    };
-  }, [chartPoints, is1D, stock.previousClose, displayPrice]);
-
-  // Map 1D point to session fraction (0 to 375 minutes: 09:15 to 15:30)
-  const pointXCoords = useMemo(() => {
-    if (!is1D || chartPoints.length === 0) {
-      return chartPoints.map((_, i) => paddingLeft + (i / Math.max(1, chartPoints.length - 1)) * chartWidth);
-    }
-
-    // Check if points have valid timestamps in the 09:15..15:30 range
-    const sessionMinutes = chartPoints.map((p, idx) => {
-      const minFromOpen = getMinutesFromMarketOpen(p.timestamp, p.time);
-      if (minFromOpen > 0) return minFromOpen;
-      // Synthetic progression fallback:
-      // If market is currently between 09:15 and 15:30 IST, end at current IST minute
-      const now = new Date();
-      const currentISTMins = (now.getUTCHours() * 60 + now.getUTCMinutes() + 330) % 1440;
-      let maxSpan = 375;
-      if (currentISTMins >= 555 && currentISTMins < 930) {
-        maxSpan = Math.max(20, currentISTMins - 555);
+  // Load candles for the selected stock & timeframe
+  useEffect(() => {
+    let alive = true;
+    setIsLoading(true);
+    setHoverIdx(null);
+    fetchRealChart(stock.symbol, timeframe).then((pts: ChartPoint[] | null) => {
+      if (!alive) return;
+      // If 1D has too few points from remote, use high-resolution calibrated series
+      if (pts && pts.length >= (timeframe === '1D' ? 25 : 10)) {
+        setPoints(pts);
+      } else {
+        setPoints(generateChartData(stock, timeframe));
       }
-      return (idx / Math.max(1, chartPoints.length - 1)) * maxSpan;
+      setIsLoading(false);
     });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stock.symbol, timeframe, fetchRealChart]);
 
-    return sessionMinutes.map((mins) => paddingLeft + Math.min(chartWidth, (mins / 375) * chartWidth));
-  }, [is1D, chartPoints, chartWidth]);
+  // Synchronize latest point with live ticking price
+  useEffect(() => {
+    if (!is1D || !validPrice) return;
+    setPoints((prev) => {
+      if (!prev || prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      const price = stock.price;
+      const now = Date.now();
+      const bucket = Math.floor(now / 120000) * 120000; // 2-min bar
+      const lastTs = toMs(last.timestamp);
+      if (isLive && sessionMinute(now) !== null && bucket > lastTs && sessionMinute(lastTs) !== null) {
+        return [
+          ...prev,
+          {
+            time: new Date(bucket)
+              .toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
+              .toUpperCase(),
+            timestamp: bucket,
+            open: last.close,
+            high: Math.max(last.close, price),
+            low: Math.min(last.close, price),
+            close: price,
+            price,
+            volume: Math.floor(1500 + Math.random() * 2000),
+          },
+        ];
+      }
+      if (last.close === price) return prev;
+      const copy = prev.slice();
+      copy[copy.length - 1] = {
+        ...last,
+        close: price,
+        price,
+        high: Math.max(last.high, price),
+        low: Math.min(last.low, price),
+      };
+      return copy;
+    });
+  }, [stock.price, is1D, isLive, validPrice]);
 
-  const getX = (index: number) => {
-    return pointXCoords[index] ?? paddingLeft;
-  };
+  const data = points || [];
+  const prevClose = stock.previousClose > 0 ? stock.previousClose : data[0]?.open || 0;
+  const currentPrice = validPrice ? stock.price : data[data.length - 1]?.close || 0;
+  const baseline = is1D ? prevClose : data[0]?.close || currentPrice;
 
-  const getY = (price: number) => {
-    const ratio = (price - minPrice) / (maxPrice - minPrice || 1);
-    return paddingTop + chartHeight - ratio * chartHeight;
-  };
+  const hovered = hoverIdx !== null ? data[hoverIdx] : null;
+  const displayPrice = hovered ? hovered.close : currentPrice;
+  const change = displayPrice - baseline;
+  const changePct = baseline > 0 ? (change / baseline) * 100 : 0;
+  const periodUp = currentPrice - baseline >= 0;
+  const lineColor = periodUp ? UP : DOWN;
 
-  // Build SVG path for line chart
+  // Chart padding
+  const rightAxisWidth = isTerminalMode || chartType === 'candlestick' || hoverIdx !== null ? 58 : 8;
+  const padTop = 24;
+  const padBottom = 14;
+  const padLeft = 4;
+  const plotW = Math.max(100, width - padLeft - rightAxisWidth);
+  const plotH = height - padTop - padBottom;
+
+  // X positions — for 1D, map onto the 09:15–15:30 session timeline like Groww
+  const xs = useMemo(() => {
+    if (data.length === 0) return [] as number[];
+    if (is1D) {
+      const mins = data.map((p) => sessionMinute(p.timestamp));
+      const validCount = mins.filter((m) => m !== null).length;
+      if (validCount >= data.length * 0.7) {
+        let lastKnown = 0;
+        return mins.map((m, idx) => {
+          if (m !== null) lastKnown = m;
+          else lastKnown = Math.min(SESSION_MINUTES, (idx / Math.max(1, data.length - 1)) * SESSION_MINUTES);
+          return padLeft + (lastKnown / SESSION_MINUTES) * plotW;
+        });
+      }
+    }
+    const n = Math.max(1, data.length - 1);
+    return data.map((_, i) => padLeft + (i / n) * plotW);
+  }, [data, is1D, plotW]);
+
+  const { minP, maxP, maxVol } = useMemo(() => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    let mv = 0;
+    for (const p of data) {
+      const l = chartType === 'candlestick' ? p.low : p.close;
+      const h = chartType === 'candlestick' ? p.high : p.close;
+      if (l < lo) lo = l;
+      if (h > hi) hi = h;
+      if (p.volume > mv) mv = p.volume;
+    }
+    if (is1D && prevClose > 0) {
+      lo = Math.min(lo, prevClose);
+      hi = Math.max(hi, prevClose);
+    }
+    if (!isFinite(lo) || !isFinite(hi)) {
+      lo = currentPrice * 0.99;
+      hi = currentPrice * 1.01;
+    }
+    const pad = (hi - lo) * 0.1 || hi * 0.005 || 1;
+    return { minP: lo - pad, maxP: hi + pad, maxVol: mv || 1 };
+  }, [data, chartType, is1D, prevClose, currentPrice]);
+
+  const y = (price: number) => padTop + plotH - ((price - minP) / (maxP - minP || 1)) * plotH;
+
   const linePath = useMemo(() => {
-    if (chartPoints.length === 0) return '';
-    return chartPoints
-      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${getX(i).toFixed(1)} ${getY(p.price).toFixed(1)}`)
-      .join(' ');
-  }, [chartPoints, pointXCoords, minPrice, maxPrice]);
+    if (data.length === 0) return '';
+    return data.map((p, i) => `${i === 0 ? 'M' : 'L'}${xs[i].toFixed(1)},${y(p.close).toFixed(1)}`).join(' ');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, xs, minP, maxP, plotH]);
 
   const areaPath = useMemo(() => {
-    if (chartPoints.length === 0) return '';
-    const bottomY = paddingTop + chartHeight;
-    const startX = getX(0);
-    const endX = getX(chartPoints.length - 1);
-    return `${linePath} L ${endX.toFixed(1)} ${bottomY} L ${startX.toFixed(1)} ${bottomY} Z`;
-  }, [linePath, chartPoints, pointXCoords]);
+    if (data.length === 0 || xs.length === 0) return '';
+    const bot = padTop + plotH;
+    return `${linePath} L${xs[xs.length - 1].toFixed(1)},${bot} L${xs[0].toFixed(1)},${bot} Z`;
+  }, [linePath, data.length, xs, plotH]);
 
-  // Last plotted point position (for pulsing dot)
-  const lastX = chartPoints.length > 0 ? getX(chartPoints.length - 1) : null;
-  const lastY = chartPoints.length > 0 ? getY(chartPoints[chartPoints.length - 1].price) : null;
+  // 20-period Simple Moving Average for Terminal mode
+  const smaPath = useMemo(() => {
+    if (!isTerminalMode || data.length < 10) return '';
+    const period = Math.min(20, Math.floor(data.length / 3));
+    const pts: string[] = [];
+    for (let i = period - 1; i < data.length; i++) {
+      let sum = 0;
+      for (let j = i - period + 1; j <= i; j++) sum += data[j].close;
+      const avg = sum / period;
+      pts.push(`${pts.length === 0 ? 'M' : 'L'}${xs[i].toFixed(1)},${y(avg).toFixed(1)}`);
+    }
+    return pts.join(' ');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTerminalMode, data, xs, minP, maxP, plotH]);
 
-  // Previous close Y position
-  const prevCloseY = is1D && stock.previousClose ? getY(stock.previousClose) : null;
+  // Y-axis price ticks (4 levels)
+  const yTicks = useMemo(() => {
+    const count = 4;
+    const arr: number[] = [];
+    for (let i = 0; i <= count; i++) {
+      arr.push(minP + (i / count) * (maxP - minP));
+    }
+    return arr;
+  }, [minP, maxP]);
 
-  // Mouse move handler for crosshair & inspection
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!containerRef.current || chartPoints.length === 0) return;
+  // X-axis time / date ticks shown below the chart
+  const xTicks = useMemo(() => {
+    if (is1D) {
+      // Standard NSE session markers from 09:15 AM to 03:30 PM
+      const markers = [
+        { min: 0, label: '09:15 AM' },
+        { min: 75, label: '10:30 AM' },
+        { min: 165, label: '12:00 PM' },
+        { min: 255, label: '01:30 PM' },
+        { min: 375, label: '03:30 PM' },
+      ];
+      return markers.map((m) => ({
+        x: padLeft + (m.min / SESSION_MINUTES) * plotW,
+        label: m.label,
+      }));
+    }
+    if (data.length < 2) return [];
+    const tickCount = 5;
+    const items: { x: number; label: string }[] = [];
+    for (let i = 0; i < tickCount; i++) {
+      const idx = Math.min(data.length - 1, Math.round((i / (tickCount - 1)) * (data.length - 1)));
+      const pt = data[idx];
+      items.push({
+        x: xs[idx] ?? padLeft,
+        label: formatAxisLabel(pt.timestamp, timeframe, pt.time),
+      });
+    }
+    return items;
+  }, [is1D, data, xs, plotW, timeframe]);
+
+  const handlePointer = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (data.length === 0 || xs.length === 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
-    const svgX = (clientX / rect.width) * width;
-
-    // Find closest point by X coordinate
-    let closestIndex = 0;
-    let minDistance = Infinity;
-
-    pointXCoords.forEach((px, i) => {
-      const dist = Math.abs(px - svgX);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestIndex = i;
-      }
-    });
-
-    // Only inspect if within reasonable range of plotted data
-    const maxPlottedX = pointXCoords[pointXCoords.length - 1] + 15;
-    if (svgX > maxPlottedX) {
-      setHoveredPoint(null);
-      setHoverX(null);
-      setHoverY(null);
+    const px = e.clientX - rect.left;
+    if (px > xs[xs.length - 1] + 28) {
+      setHoverIdx(null);
       return;
     }
-
-    const pt = chartPoints[closestIndex];
-    setHoveredPoint(pt);
-    setHoverX(pointXCoords[closestIndex]);
-    setHoverY(getY(pt.price));
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredPoint(null);
-    setHoverX(null);
-    setHoverY(null);
-  };
-
-  // Price y-axis ticks (4 cleanly spaced ticks)
-  const yTicks = useMemo(() => {
-    const ticks = [];
-    const count = 4;
-    for (let i = 0; i <= count; i++) {
-      const price = minPrice + (i / count) * (maxPrice - minPrice);
-      ticks.push(price);
+    let lo = 0;
+    let hi = xs.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (xs[mid] < px) lo = mid;
+      else hi = mid;
     }
-    return ticks;
-  }, [minPrice, maxPrice]);
+    setHoverIdx(Math.abs(xs[lo] - px) <= Math.abs(xs[hi] - px) ? lo : hi);
+  };
 
-  const timeframes: Timeframe[] = ['1D', '1W', '1M', '1Y', '5Y', 'ALL'];
+  const lastX = xs.length ? xs[xs.length - 1] : 0;
+  const lastY = data.length ? y(data[data.length - 1].close) : 0;
+  const prevY = is1D && prevClose > 0 ? y(prevClose) : null;
+  const hoverX = hoverIdx !== null ? xs[hoverIdx] : null;
+  const hoverY = hovered ? y(hovered.close) : null;
+  const hoverLabel = hovered ? formatHoverTimestamp(hovered.timestamp, timeframe, hovered.time) : '';
+  const pillW = Math.max(96, hoverLabel.length * 6.5 + 16);
+  const pillX = hoverX !== null ? Math.min(Math.max(hoverX, pillW / 2 + 4), padLeft + plotW - pillW / 2 - 4) : 0;
+
+  const step = data.length > 1 ? plotW / (is1D ? Math.max(data.length, 95) : data.length) : plotW;
+  const candleW = Math.max(2, Math.min(10, step * 0.68));
+
+  const tfLabel: Record<Timeframe, string> = {
+    '1D': '1D',
+    '1W': '1W',
+    '1M': '1M',
+    '3M': '3M',
+    '6M': '6M',
+    '1Y': '1Y',
+    '3Y': '3Y',
+    '5Y': '5Y',
+    ALL: 'All',
+  };
+
+  const activePoint = hovered || data[data.length - 1];
 
   return (
-    <div className="bg-white dark:bg-[#1A1D24] rounded-2xl border border-gray-200 dark:border-[#282C37] p-3.5 sm:p-5 shadow-xs transition-colors w-full min-w-0 max-w-full overflow-hidden">
-      {/* Chart Top Bar: Displaying active price / inspect info + controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3">
-        {/* Dynamic Price readout */}
-        <div>
-          <div className="flex items-baseline gap-3">
-            <span className="font-mono tabular-nums text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-              ₹{displayPrice.toFixed(2)}
+    <div className="w-full min-w-0">
+      {/* Groww Price & Return Readout */}
+      <div className="min-h-[60px]">
+        <div className="flex flex-wrap items-baseline gap-2.5">
+          <span className="font-bold tabular-nums text-[28px] sm:text-[30px] leading-tight text-gray-900 dark:text-white tracking-tight">
+            ₹{fmt(displayPrice)}
+          </span>
+          <span className={`font-semibold tabular-nums text-sm ${change >= 0 ? 'text-[#00B386]' : 'text-[#EB5B3C]'}`}>
+            {change >= 0 ? '+' : ''}
+            {fmt(change)} ({change >= 0 ? '+' : ''}
+            {changePct.toFixed(2)}%)
+          </span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {hovered ? hoverLabel : tfLabel[timeframe]}
+          </span>
+        </div>
+
+        {/* OHLCV Inspection Bar (shown on hover or in Candlestick / Terminal mode) */}
+        {(hovered || chartType === 'candlestick' || isTerminalMode) && activePoint && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono tabular-nums text-gray-500 dark:text-gray-400 mt-1">
+            <span>
+              O <strong className="text-gray-800 dark:text-gray-200">₹{fmt(activePoint.open)}</strong>
             </span>
-            <span
-              className={`font-mono tabular-nums text-sm sm:text-base font-bold flex items-center gap-1 ${
-                isPositive ? 'text-[#00D09C]' : 'text-[#EB5B5B]'
-              }`}
-            >
-              {isPositive ? '+' : ''}
-              {periodChange.toFixed(2)} ({isPositive ? '+' : ''}
-              {periodPercent.toFixed(2)}%)
-              <span className="text-xs text-gray-400 font-normal ml-1">
-                {timeframe}
+            <span>
+              H <strong className="text-[#00B386]">₹{fmt(activePoint.high)}</strong>
+            </span>
+            <span>
+              L <strong className="text-[#EB5B3C]">₹{fmt(activePoint.low)}</strong>
+            </span>
+            <span>
+              C <strong className="text-gray-800 dark:text-gray-200">₹{fmt(activePoint.close)}</strong>
+            </span>
+            {activePoint.volume > 0 && (
+              <span>
+                Vol <strong className="text-gray-800 dark:text-gray-200">{activePoint.volume.toLocaleString('en-IN')}</strong>
               </span>
-            </span>
-          </div>
-
-          {/* Candle Details if hovering */}
-          {chartType === 'candlestick' && hoveredPoint && (
-            <div className="flex items-center gap-4 text-xs font-mono tabular-nums text-gray-500 dark:text-gray-400 mt-1">
-              <span>O: <strong className="text-gray-800 dark:text-gray-200">₹{hoveredPoint.open.toFixed(2)}</strong></span>
-              <span>H: <strong className="text-gray-800 dark:text-gray-200">₹{hoveredPoint.high.toFixed(2)}</strong></span>
-              <span>L: <strong className="text-gray-800 dark:text-gray-200">₹{hoveredPoint.low.toFixed(2)}</strong></span>
-              <span>C: <strong className="text-gray-800 dark:text-gray-200">₹{hoveredPoint.close.toFixed(2)}</strong></span>
-              <span>Vol: <strong className="text-gray-800 dark:text-gray-200">{hoveredPoint.volume.toLocaleString('en-IN')}</strong></span>
-            </div>
-          )}
-        </div>
-
-        {/* View Switchers: Line vs Candle */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className="flex items-center p-1 bg-gray-100 dark:bg-[#232732] rounded-lg">
-            <button
-              onClick={() => setChartType('line')}
-              className={`p-1.5 rounded-md transition-all flex items-center gap-1 text-xs font-medium ${
-                chartType === 'line'
-                  ? 'bg-white dark:bg-[#1A1D24] text-gray-900 dark:text-white shadow-xs'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Line Chart"
-            >
-              <LineChartIcon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Line</span>
-            </button>
-            <button
-              onClick={() => setChartType('candlestick')}
-              className={`p-1.5 rounded-md transition-all flex items-center gap-1 text-xs font-medium ${
-                chartType === 'candlestick'
-                  ? 'bg-white dark:bg-[#1A1D24] text-gray-900 dark:text-white shadow-xs'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Candlestick Chart"
-            >
-              <BarChart2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Candles</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* SVG Canvas Area */}
-      <div ref={containerRef} className="relative w-full h-[320px] sm:h-[350px] select-none mt-2">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full overflow-visible"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <defs>
-            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.18" />
-              <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-
-          {/* Horizontal Grid lines & Price Labels */}
-          {yTicks.map((price, i) => {
-            const y = getY(price);
-            return (
-              <g key={i}>
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={paddingLeft + chartWidth}
-                  y2={y}
-                  stroke="currentColor"
-                  className="text-gray-100 dark:text-[#252A36]"
-                  strokeDasharray="3 3"
-                />
-                <text
-                  x={paddingLeft + chartWidth + 10}
-                  y={y + 4}
-                  fill="currentColor"
-                  className="text-gray-400 dark:text-gray-500 text-[10.5px] font-mono tabular-nums"
-                >
-                  ₹{price.toFixed(1)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* 1D Previous Close Baseline (matches Groww screenshot) */}
-          {is1D && prevCloseY !== null && (
-            <g>
-              <line
-                x1={paddingLeft}
-                y1={prevCloseY}
-                x2={paddingLeft + chartWidth}
-                y2={prevCloseY}
-                stroke="#94A3B8"
-                strokeWidth="1.2"
-                strokeDasharray="4 4"
-                opacity="0.7"
-              />
-              {/* Prev Close Badge on the right */}
-              <g transform={`translate(${paddingLeft + chartWidth - 84}, ${prevCloseY - 10})`}>
-                <rect
-                  width="84"
-                  height="20"
-                  rx="5"
-                  fill="#545F71"
-                  className="shadow-xs"
-                />
-                <text
-                  x="42"
-                  y="14"
-                  textAnchor="middle"
-                  fill="#FFFFFF"
-                  className="text-[10px] font-mono font-semibold"
-                >
-                  Prev: ₹{stock.previousClose.toFixed(2)}
-                </text>
-              </g>
-            </g>
-          )}
-
-          {/* Volume histogram at bottom */}
-          {chartPoints.map((p, i) => {
-            const x = getX(i);
-            const barWidth = Math.max(1.5, (chartWidth / Math.max(chartPoints.length, 50)) * 0.5);
-            const volHeight = (p.volume / maxVolume) * 44;
-            const y = paddingTop + chartHeight - volHeight;
-            const isBarPositive = p.close >= p.open;
-
-            return (
-              <rect
-                key={`vol-${i}`}
-                x={x - barWidth / 2}
-                y={y}
-                width={barWidth}
-                height={volHeight}
-                fill={isBarPositive ? '#00D09C' : '#EB5B5B'}
-                opacity={0.24}
-              />
-            );
-          })}
-
-          {/* Chart Line or Candles */}
-          {chartType === 'line' ? (
-            <>
-              {/* Gradient Area fill */}
-              <path d={areaPath} fill="url(#chartGradient)" />
-              {/* Stroke line */}
-              <path
-                d={linePath}
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </>
-          ) : (
-            // Candlesticks
-            chartPoints.map((p, i) => {
-              const x = getX(i);
-              const candleWidth = Math.max(3, (chartWidth / Math.max(chartPoints.length, 50)) * 0.7);
-              const isGreen = p.close >= p.open;
-              const candleColor = isGreen ? '#00D09C' : '#EB5B5B';
-
-              const topY = getY(Math.max(p.open, p.close));
-              const botY = getY(Math.min(p.open, p.close));
-              const bodyHeight = Math.max(2, botY - topY);
-
-              const highY = getY(p.high);
-              const lowY = getY(p.low);
-
-              return (
-                <g key={`candle-${i}`}>
-                  <line
-                    x1={x}
-                    y1={highY}
-                    x2={x}
-                    y2={lowY}
-                    stroke={candleColor}
-                    strokeWidth="1.2"
-                  />
-                  <rect
-                    x={x - candleWidth / 2}
-                    y={topY}
-                    width={candleWidth}
-                    height={bodyHeight}
-                    fill={candleColor}
-                    rx="1"
-                  />
-                </g>
-              );
-            })
-          )}
-
-          {/* Live pulsing dot at the very latest point */}
-          {lastX !== null && lastY !== null && (
-            <g>
-              <circle
-                cx={lastX}
-                cy={lastY}
-                r="7"
-                fill={strokeColor}
-                opacity="0.35"
-                className="animate-ping"
-              />
-              <circle
-                cx={lastX}
-                cy={lastY}
-                r="4.5"
-                fill={strokeColor}
-                stroke="#FFFFFF"
-                strokeWidth="1.5"
-              />
-            </g>
-          )}
-
-          {/* Interactive Hover Crosshair */}
-          {hoverX !== null && hoveredPoint && hoverY !== null && (
-            <g>
-              {/* Vertical inspection dashed line */}
-              <line
-                x1={hoverX}
-                y1={paddingTop}
-                x2={hoverX}
-                y2={paddingTop + chartHeight}
-                stroke="#94A3B8"
-                strokeWidth="1.2"
-                strokeDasharray="4 4"
-                opacity="0.8"
-              />
-
-              {/* Point circle on line */}
-              <circle
-                cx={hoverX}
-                cy={hoverY}
-                r="5.5"
-                fill="#FFFFFF"
-                stroke={strokeColor}
-                strokeWidth="2.5"
-                className="shadow-md"
-              />
-            </g>
-          )}
-        </svg>
-
-        {/* Floating Dark Card Tooltip matching Screenshot */}
-        {hoverX !== null && hoveredPoint && hoverY !== null && (
-          <div
-            className="absolute z-20 pointer-events-none transition-all duration-75"
-            style={{
-              left: `${Math.max(10, Math.min(width - 150, (hoverX / width) * 100))}%`,
-              top: `${Math.min(height - 110, (hoverY / height) * 100 + 6)}%`,
-            }}
-          >
-            <div className="bg-[#181C26] text-white p-3 rounded-xl shadow-2xl border border-gray-700/80 min-w-[135px]">
-              <div className="font-mono tabular-nums text-sm font-extrabold text-white">
-                ₹{hoveredPoint.price.toFixed(2)}
-              </div>
-              <div className="text-[10.5px] text-gray-400 mt-0.5">
-                {hoveredPoint.time} IST
-              </div>
-              <div
-                className={`text-[11px] font-mono font-bold mt-1 ${
-                  hoveredPoint.price >= baselinePrice ? 'text-[#00D09C]' : 'text-[#EB5B5B]'
-                }`}
-              >
-                {hoveredPoint.price >= baselinePrice ? '+' : ''}
-                {(hoveredPoint.price - baselinePrice).toFixed(2)} (
-                {hoveredPoint.price >= baselinePrice ? '+' : ''}
-                {baselinePrice > 0
-                  ? (((hoveredPoint.price - baselinePrice) / baselinePrice) * 100).toFixed(2)
-                  : '0.00'}
-                %)
-              </div>
-              <div className="text-[10px] text-gray-400 font-mono mt-0.5">
-                Vol: {hoveredPoint.volume.toLocaleString('en-IN')}
-              </div>
-            </div>
+            )}
+            {isTerminalMode && (
+              <span className="text-[#5367FF] font-sans font-semibold">· SMA (20)</span>
+            )}
           </div>
         )}
-
-        {/* Bottom Time Markers */}
-        <div className="absolute bottom-1 left-3 right-[72px] flex justify-between text-[11px] text-gray-400 dark:text-gray-500 font-medium select-none pointer-events-none">
-          {is1D ? (
-            <>
-              <span>09:15 AM (Open)</span>
-              <span className="hidden sm:inline">11:00 AM</span>
-              <span className="hidden sm:inline">01:00 PM</span>
-              <span>03:30 PM (Close)</span>
-            </>
-          ) : (
-            <>
-              <span>{chartPoints[0]?.time || 'Start'}</span>
-              <span>{chartPoints[Math.floor(chartPoints.length / 2)]?.time || 'Mid'}</span>
-              <span>{chartPoints[chartPoints.length - 1]?.time || 'Latest'}</span>
-            </>
-          )}
-        </div>
       </div>
 
-      {/* Timeframe Selector Tabs (Groww signature: 1D 1W 1M 1Y 5Y ALL) */}
-      <div className="flex items-center justify-between gap-1 pt-4 border-t border-gray-100 dark:border-[#282C37] mt-1 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-1 sm:gap-2">
-          {timeframes.map((tf) => {
-            const isActive = timeframe === tf;
+      {/* Interactive SVG Chart Canvas */}
+      <div ref={wrapRef} className="relative w-full mt-2 select-none" style={{ height }}>
+        {isLoading && data.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+            Loading chart…
+          </div>
+        ) : (
+          <svg
+            width={width}
+            height={height}
+            className={`block overflow-visible ${isLoading ? 'opacity-60' : ''}`}
+            style={{ touchAction: 'pan-y' }}
+            onPointerMove={handlePointer}
+            onPointerDown={handlePointer}
+            onPointerLeave={() => setHoverIdx(null)}
+          >
+            <defs>
+              <linearGradient id={`growwArea-${stock.symbol}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={lineColor} stopOpacity={isTerminalMode ? 0.14 : 0.08} />
+                <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
+            {/* Horizontal Grid Lines & Right Y-Axis Price Scale (visible in Terminal, Candlestick, or Hover) */}
+            {(isTerminalMode || chartType === 'candlestick' || hoverIdx !== null) &&
+              yTicks.map((p, i) => {
+                const py = y(p);
+                return (
+                  <g key={`grid-${i}`}>
+                    <line
+                      x1={padLeft}
+                      x2={padLeft + plotW}
+                      y1={py}
+                      y2={py}
+                      stroke="currentColor"
+                      className="text-gray-100 dark:text-[#232732]"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={padLeft + plotW + 6}
+                      y={py + 3.5}
+                      className="fill-gray-400 dark:fill-gray-500 font-mono tabular-nums"
+                      style={{ fontSize: 10 }}
+                    >
+                      {p.toFixed(1)}
+                    </text>
+                  </g>
+                );
+              })}
+
+            {/* 1D Previous Close Dotted Reference Line */}
+            {prevY !== null && (
+              <g>
+                <line
+                  x1={padLeft}
+                  x2={padLeft + plotW}
+                  y1={prevY}
+                  y2={prevY}
+                  stroke="currentColor"
+                  className="text-gray-300 dark:text-gray-600"
+                  strokeWidth={1}
+                  strokeDasharray="3 4"
+                />
+              </g>
+            )}
+
+            {/* Bottom Dashed Baseline (matches Groww reference screenshot) */}
+            <line
+              x1={padLeft}
+              x2={padLeft + plotW}
+              y1={padTop + plotH}
+              y2={padTop + plotH}
+              stroke="currentColor"
+              className="text-gray-200 dark:text-[#2B303C]"
+              strokeWidth={1}
+              strokeDasharray="4 3"
+            />
+
+            {/* Volume Histogram Bars (shown in Candlestick or Terminal mode) */}
+            {(chartType === 'candlestick' || isTerminalMode) &&
+              data.map((p, i) => {
+                const vh = (p.volume / maxVol) * plotH * 0.18;
+                return (
+                  <rect
+                    key={`v-${i}`}
+                    x={xs[i] - candleW / 2}
+                    y={padTop + plotH - vh}
+                    width={candleW}
+                    height={vh}
+                    fill={p.close >= p.open ? UP : DOWN}
+                    opacity={0.2}
+                  />
+                );
+              })}
+
+            {/* Main Series: Line vs Candlesticks */}
+            {chartType === 'line' ? (
+              <>
+                <path d={areaPath} fill={`url(#growwArea-${stock.symbol})`} />
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke={lineColor}
+                  strokeWidth={1.85}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              </>
+            ) : (
+              <g>
+                {data.map((p, i) => {
+                  const up = p.close >= p.open;
+                  const c = up ? UP : DOWN;
+                  const top = y(Math.max(p.open, p.close));
+                  const bot = y(Math.min(p.open, p.close));
+                  return (
+                    <g key={`c-${i}`}>
+                      <line x1={xs[i]} x2={xs[i]} y1={y(p.high)} y2={y(p.low)} stroke={c} strokeWidth={1.1} />
+                      <rect
+                        x={xs[i] - candleW / 2}
+                        y={top}
+                        width={candleW}
+                        height={Math.max(1.5, bot - top)}
+                        fill={c}
+                        rx={0.5}
+                      />
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+
+            {/* 20-SMA Overlay in Terminal Mode */}
+            {isTerminalMode && smaPath && (
+              <path
+                d={smaPath}
+                fill="none"
+                stroke="#5367FF"
+                strokeWidth={1.3}
+                strokeDasharray="3 2"
+                opacity={0.85}
+              />
+            )}
+
+            {/* Static Solid Endpoint Dot on Line Chart (No moving/drifting animation!) */}
+            {hoverX === null && data.length > 0 && chartType === 'line' && (
+              <circle cx={lastX} cy={lastY} r={4} fill={lineColor} />
+            )}
+
+            {/* Interactive Hover Crosshair + Timestamp Pill + Price Tag */}
+            {hoverX !== null && hovered && hoverY !== null && (
+              <g pointerEvents="none">
+                {/* Vertical crosshair line */}
+                <line
+                  x1={hoverX}
+                  x2={hoverX}
+                  y1={padTop}
+                  y2={padTop + plotH}
+                  stroke="currentColor"
+                  className="text-gray-400 dark:text-gray-500"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+                {/* Horizontal crosshair line */}
+                <line
+                  x1={padLeft}
+                  x2={padLeft + plotW}
+                  y1={hoverY}
+                  y2={hoverY}
+                  stroke="currentColor"
+                  className="text-gray-300 dark:text-gray-600"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+
+                {/* Top timestamp/date pill */}
+                <g transform={`translate(${pillX - pillW / 2}, 2)`}>
+                  <rect
+                    width={pillW}
+                    height={19}
+                    rx={4}
+                    className="fill-gray-800 dark:fill-gray-100"
+                  />
+                  <text
+                    x={pillW / 2}
+                    y={13}
+                    textAnchor="middle"
+                    className="fill-white dark:fill-gray-900 font-medium tabular-nums"
+                    style={{ fontSize: 10.5 }}
+                  >
+                    {hoverLabel}
+                  </text>
+                </g>
+
+                {/* Right-axis hovered price badge */}
+                <g transform={`translate(${padLeft + plotW + 2}, ${Math.max(padTop, Math.min(padTop + plotH - 18, hoverY - 9))})`}>
+                  <rect width={54} height={18} rx={3} fill={lineColor} />
+                  <text
+                    x={27}
+                    y={12.5}
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    className="font-mono font-semibold tabular-nums"
+                    style={{ fontSize: 9.5 }}
+                  >
+                    {hovered.close.toFixed(1)}
+                  </text>
+                </g>
+
+                {/* Active point circle */}
+                <circle
+                  cx={hoverX}
+                  cy={hoverY}
+                  r={4.5}
+                  className="fill-white dark:fill-[#121212]"
+                  stroke={lineColor}
+                  strokeWidth={2.2}
+                />
+              </g>
+            )}
+          </svg>
+        )}
+      </div>
+
+      {/* X-Axis Time & Date Labels Below the Chart */}
+      <div className="relative h-6 w-full select-none mt-1" style={{ paddingRight: rightAxisWidth }}>
+        {xTicks.map((tick, i) => {
+          const isFirst = i === 0;
+          const isLast = i === xTicks.length - 1;
+          const pct = (tick.x / Math.max(1, padLeft + plotW)) * 100;
+          return (
+            <span
+              key={`xtick-${i}`}
+              className="absolute top-0.5 text-[11px] font-medium tabular-nums text-gray-400 dark:text-gray-500 whitespace-nowrap"
+              style={{
+                left: `${Math.min(100, Math.max(0, pct))}%`,
+                transform: isFirst ? 'translateX(0%)' : isLast ? 'translateX(-100%)' : 'translateX(-50%)',
+              }}
+            >
+              {tick.label}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Groww Timeframe Pills + Candlestick Toggle + Terminal Button */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-1 border-t border-gray-100 dark:border-[#242834]">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+          {TIMEFRAMES.map((tf) => {
+            const active = tf === timeframe;
             return (
               <button
                 key={tf}
+                type="button"
                 onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#00D09C] text-white shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#232732]'
+                className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer whitespace-nowrap border ${
+                  active
+                    ? 'border-gray-800 dark:border-white bg-gray-100/90 dark:bg-[#252A36] text-gray-900 dark:text-white font-semibold'
+                    : 'border-gray-200 dark:border-[#2A2E39] text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 font-medium'
                 }`}
               >
-                {tf}
+                {tfLabel[tf]}
               </button>
             );
           })}
+
+          {/* Groww Candlestick / Line Icon Pill (right next to 'All', matching reference screenshot) */}
+          <button
+            type="button"
+            onClick={() => setChartType((prev) => (prev === 'line' ? 'candlestick' : 'line'))}
+            title={chartType === 'line' ? 'Switch to Candlestick chart' : 'Switch to Line chart'}
+            className={`px-3 py-1.5 rounded-full border transition-all cursor-pointer flex items-center justify-center ${
+              chartType === 'candlestick'
+                ? 'border-gray-800 dark:border-white bg-gray-100/90 dark:bg-[#252A36]'
+                : 'border-gray-200 dark:border-[#2A2E39] hover:border-gray-300'
+            }`}
+          >
+            {/* Dual Green/Red Candlestick SVG Icon matching Groww */}
+            <svg className="w-4 h-3.5" viewBox="0 0 16 14" fill="none">
+              <line x1="4.5" y1="1" x2="4.5" y2="13" stroke="#EB5B3C" strokeWidth="1.3" strokeLinecap="round" />
+              <rect x="3" y="4" width="3" height="5" rx="0.5" fill="#EB5B3C" />
+              <line x1="11.5" y1="1" x2="11.5" y2="13" stroke="#00B386" strokeWidth="1.3" strokeLinecap="round" />
+              <rect x="10" y="3" width="3" height="6" rx="0.5" fill="#00B386" />
+            </svg>
+          </button>
         </div>
 
-        <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 shrink-0" title={marketStatus.subText}>
-          <span className={`w-2 h-2 rounded-full ${marketStatus.isOpen ? 'bg-[#00D09C] animate-pulse' : 'bg-amber-400'}`} />
-          <span>{marketStatus.isOpen ? 'Live NSE Session · 09:15 - 15:30 IST' : 'NSE Closed · Official Session Candles'}</span>
-        </div>
+        {/* Groww 'Terminal' Button on the right */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsTerminalMode((prev) => {
+              const next = !prev;
+              if (next) setChartType('candlestick');
+              return next;
+            });
+          }}
+          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            isTerminalMode
+              ? 'border-[#00B386] bg-[#00B386]/10 text-[#00B386]'
+              : 'border-gray-200 dark:border-[#2A2E39] text-gray-700 dark:text-gray-300 hover:border-gray-300'
+          }`}
+          title="Toggle full Trading Terminal indicators (Candles, Volume, SMA-20 & Price Scale)"
+        >
+          <span>Terminal</span>
+          <svg className="w-3.5 h-3.5" viewBox="0 0 16 14" fill="none">
+            <line x1="5" y1="1.5" x2="5" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <rect x="3.5" y="4" width="3" height="5" rx="0.5" fill="currentColor" />
+            <line x1="11" y1="1.5" x2="11" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <rect x="9.5" y="3" width="3" height="5.5" rx="0.5" fill="currentColor" />
+          </svg>
+        </button>
       </div>
     </div>
   );

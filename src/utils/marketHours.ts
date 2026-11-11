@@ -88,3 +88,50 @@ export function getIndianMarketStatus(): MarketStatus {
     nextOpenText,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Trading-session helpers used by the order engine (IST based)
+// ---------------------------------------------------------------------------
+
+export const MARKET_OPEN_MIN = 9 * 60 + 15; // 09:15
+export const INTRADAY_SQUARE_OFF_MIN = 15 * 60 + 20; // 15:20 — Groww RMS auto square-off
+export const MARKET_CLOSE_MIN = 15 * 60 + 30; // 15:30
+
+/** Returns the IST calendar date key (YYYY-MM-DD) and minute-of-day for a timestamp. */
+export function getISTParts(ts: number = Date.now()): { dateKey: string; minutes: number; weekday: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(new Date(ts));
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  const hour = parseInt(map.hour || '0', 10) % 24;
+  const minute = parseInt(map.minute || '0', 10);
+  return {
+    dateKey: `${map.year}-${map.month}-${map.day}`,
+    minutes: hour * 60 + minute,
+    weekday: map.weekday,
+  };
+}
+
+/** True once the intraday square-off window (15:20 IST) has been reached for the trading day of `ts`. */
+export function isPastIntradayCutoff(ts: number, now: number = Date.now()): boolean {
+  const placed = getISTParts(ts);
+  const cur = getISTParts(now);
+  if (cur.dateKey !== placed.dateKey) return true;
+  return cur.minutes >= INTRADAY_SQUARE_OFF_MIN;
+}
+
+/** True once the regular session (15:30 IST) of the trading day of `ts` is over. */
+export function isPastSessionClose(ts: number, now: number = Date.now()): boolean {
+  const placed = getISTParts(ts);
+  const cur = getISTParts(now);
+  if (cur.dateKey !== placed.dateKey) return true;
+  return cur.minutes >= MARKET_CLOSE_MIN;
+}
