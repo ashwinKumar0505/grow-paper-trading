@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "users": {
+      "description": "User accounts with paper balance and profile details",
+      "fields": {
+        "userId": "string",
+        "name": "string",
+        "email": "string",
+        "avatar": "string",
+        "authProvider": "string",
+        "balance": "number",
+        "initialBalance": "number",
+        "createdAt": "number",
+        "updatedAt": "number"
+      }
+    },
+    "holdings": {
+      "description": "User equity delivery holdings",
+      "fields": {
+        "symbol": "string",
+        "stockName": "string",
+        "quantity": "number",
+        "averagePrice": "number",
+        "totalInvested": "number",
+        "exchange": "string"
+      }
+    },
+    "orders": {
+      "description": "User execution orders history",
+      "fields": {
+        "id": "string",
+        "symbol": "string",
+        "stockName": "string",
+        "action": "string",
+        "product": "string",
+        "orderType": "string",
+        "exchange": "string",
+        "quantity": "number",
+        "price": "number",
+        "status": "string",
+        "timestamp": "number",
+        "totalAmount": "number"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Paper Grow – Live Stock Trading Simulator",
+  "description": "Paper Grow is a real-time stock paper trading simulator with live NSE/BSE quotes, interactive intraday candlestick charts, delivery & margin trading, portfolio holdings, and simulated wallet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
