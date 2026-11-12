@@ -100,7 +100,7 @@ export const WalletModal: React.FC = () => {
             </div>
             <div>
               <h3 className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
-                <span>My Paper Trade Wallet</span>
+                <span>TradePlaybook Wallet</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#00D09C]">
                   Simulation Desk
                 </span>

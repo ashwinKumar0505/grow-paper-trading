@@ -1,12 +1,10 @@
+import { navigate } from '../lib/navigation';
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
-import { GrowwLogo } from './GrowwLogo';
 import { StockSearchModal } from './StockSearchModal';
 import {
   Search,
   Wallet,
-  Sun,
-  Moon,
   Plus,
   User,
   LogOut,
@@ -14,15 +12,13 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+export const TradingToolbar: React.FC = () => {
   const {
     currentTab,
     setCurrentTab,
     balance,
     holdings,
     intradayPositions,
-    isDarkMode,
-    toggleTheme,
     setIsWalletModalOpen,
     user,
     logOutUser,
@@ -46,25 +42,12 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white dark:bg-[#121212] border-b border-gray-200 dark:border-[#282C37] transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 sm:gap-8">
-          {/* Brand Zone - Clicking logo redirects to Homepage */}
-          <div
-            onClick={() => {
-              setShowLandingPage(true);
-              setCurrentTab('explore');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="cursor-pointer shrink-0"
-            title="Go to My Paper Trade Homepage"
-          >
-            <GrowwLogo />
-          </div>
-
+      <div className="relative z-30 bg-white dark:bg-[#121212] border-b border-gray-200 dark:border-[#282C37] transition-colors">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 min-h-16 sm:h-16 py-2 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4">
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-semibold">
+          <nav className="hidden xl:flex items-center gap-5 text-sm font-semibold">
             <button
-              onClick={() => setCurrentTab('explore')}
+              onClick={() => { setCurrentTab('explore'); navigate('/trade'); }}
               className={`transition-colors whitespace-nowrap shrink-0 relative py-2 cursor-pointer ${
                 currentTab === 'explore'
                   ? 'text-[#00D09C]'
@@ -78,7 +61,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setCurrentTab('holdings')}
+              onClick={() => { setCurrentTab('holdings'); navigate('/trade'); }}
               className={`transition-colors whitespace-nowrap shrink-0 relative py-2 flex items-center gap-1.5 cursor-pointer ${
                 currentTab === 'holdings'
                   ? 'text-[#00D09C]'
@@ -97,7 +80,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setCurrentTab('watchlist')}
+              onClick={() => { setCurrentTab('watchlist'); navigate('/trade'); }}
               className={`transition-colors whitespace-nowrap shrink-0 relative py-2 cursor-pointer ${
                 currentTab === 'watchlist'
                   ? 'text-[#00D09C]'
@@ -111,7 +94,7 @@ export const Navbar: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setCurrentTab('orders')}
+              onClick={() => { setCurrentTab('orders'); navigate('/trade'); }}
               className={`transition-colors whitespace-nowrap shrink-0 relative py-2 cursor-pointer ${
                 currentTab === 'orders'
                   ? 'text-[#00D09C]'
@@ -126,11 +109,11 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Right Actions: Search, Wallet Pill with + Add Money, User Profile, Theme */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex w-full sm:w-auto items-center justify-between gap-1 sm:gap-3 shrink-0">
             {/* Quick Search trigger */}
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-[#1E222D] hover:bg-gray-200/80 dark:hover:bg-[#282D3B] rounded-xl transition-all border border-transparent dark:border-[#2D3240] w-44 md:w-52 justify-between shrink-0 cursor-pointer"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-[#1E222D] hover:bg-gray-200/80 dark:hover:bg-[#282D3B] rounded-xl transition-all border border-transparent dark:border-[#2D3240] w-32 xl:w-40 justify-between shrink-0 cursor-pointer"
               title="Search stocks"
             >
               <div className="flex items-center gap-2 truncate">
@@ -157,7 +140,7 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => setIsWalletModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 text-left cursor-pointer group"
-                title="My Paper Trade Wallet Balance (Click to manage)"
+                title="TradePlaybook Wallet Balance (Click to manage)"
               >
                 <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#00D09C] shrink-0" />
                 <div>
@@ -215,7 +198,7 @@ export const Navbar: React.FC = () => {
                     <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#1A1D24] rounded-2xl shadow-xl border border-gray-200 dark:border-[#2B303C] py-2 z-40 animate-fade-in text-left">
                       <div className="px-4 py-3 border-b border-gray-100 dark:border-[#282C37]">
                         <div className="font-extrabold text-sm text-gray-900 dark:text-white truncate">
-                          {user?.name || 'My Paper Trade User'}
+                          {user?.name || 'TradePlaybook User'}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5 truncate">
                           {user?.email || (user?.phone ? `+91 ${user.phone}` : 'Demo Paper Account')}
@@ -280,22 +263,14 @@ export const Navbar: React.FC = () => {
             </div>
           )}
 
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1E222D] transition-colors shrink-0 cursor-pointer"
-              title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
-            >
-              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
-            </button>
           </div>
         </div>
 
         {/* Mobile Sub Navigation bar - Clean 4-tab grid fitting any mobile width */}
-        <div className="md:hidden border-t border-gray-100 dark:border-[#282C37] bg-white dark:bg-[#121212] px-2 py-1.5 w-full">
+        <div className="xl:hidden border-t border-gray-100 dark:border-[#282C37] bg-white dark:bg-[#121212] px-2 py-1.5 w-full">
           <div className="grid grid-cols-4 gap-1 text-xs font-semibold text-center">
             <button
-              onClick={() => setCurrentTab('explore')}
+              onClick={() => { setCurrentTab('explore'); navigate('/trade'); }}
               className={`py-1.5 px-1 rounded-lg transition-colors cursor-pointer ${
                 currentTab === 'explore'
                   ? 'text-[#00D09C] bg-emerald-50 dark:bg-emerald-950/40 font-bold'
@@ -305,7 +280,7 @@ export const Navbar: React.FC = () => {
               Explore
             </button>
             <button
-              onClick={() => setCurrentTab('holdings')}
+              onClick={() => { setCurrentTab('holdings'); navigate('/trade'); }}
               className={`py-1.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer ${
                 currentTab === 'holdings'
                   ? 'text-[#00D09C] bg-emerald-50 dark:bg-emerald-950/40 font-bold'
@@ -320,7 +295,7 @@ export const Navbar: React.FC = () => {
               )}
             </button>
             <button
-              onClick={() => setCurrentTab('watchlist')}
+              onClick={() => { setCurrentTab('watchlist'); navigate('/trade'); }}
               className={`py-1.5 px-1 rounded-lg transition-colors cursor-pointer ${
                 currentTab === 'watchlist'
                   ? 'text-[#00D09C] bg-emerald-50 dark:bg-emerald-950/40 font-bold'
@@ -330,7 +305,7 @@ export const Navbar: React.FC = () => {
               Watchlist
             </button>
             <button
-              onClick={() => setCurrentTab('orders')}
+              onClick={() => { setCurrentTab('orders'); navigate('/trade'); }}
               className={`py-1.5 px-1 rounded-lg transition-colors cursor-pointer ${
                 currentTab === 'orders'
                   ? 'text-[#00D09C] bg-emerald-50 dark:bg-emerald-950/40 font-bold'
@@ -341,7 +316,7 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Global Search Modal */}
       <StockSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

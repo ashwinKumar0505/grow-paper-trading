@@ -1,3 +1,4 @@
+import { navigate } from '../lib/navigation';
 import React, { useState, useEffect, useRef } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Search, X, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
@@ -69,6 +70,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
   const handleSelectStock = (stock: Stock) => {
     setSelectedStock(stock);
     setCurrentTab('stock-detail');
+    navigate('/trade');
     onClose();
   };
 
@@ -272,7 +274,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
             <span>Use <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↑</kbd> <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↓</kbd> to navigate</span>
             <span><kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">ENTER</kbd> to open stock</span>
           </div>
-          <span className="font-semibold text-[#00D09C]">My Paper Trade</span>
+          <span className="font-semibold text-[#00D09C]">TradePlaybook</span>
         </div>
       </div>
     </div>

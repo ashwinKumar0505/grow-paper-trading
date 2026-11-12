@@ -1,6 +1,9 @@
+import { MarketingHeader } from './navigation/MarketingHeader';
+import { AppLink } from '../lib/navigation';
+import { LearningSection } from './LearningSection';
 import React, { useState } from 'react';
 import { useTrading, MAX_WALLET_LIMIT } from '../context/TradingContext';
-import { GrowwLogo } from './GrowwLogo';
+import { BrandLogo } from './BrandLogo';
 import { INITIAL_STOCKS } from '../data/mockStocks';
 import {
   TrendingUp,
@@ -23,8 +26,6 @@ import {
   Activity,
   AlertCircle,
   HelpCircle,
-  Sun,
-  Moon,
   ExternalLink,
   Sparkles,
   RefreshCw,
@@ -39,8 +40,6 @@ export const LandingPage: React.FC = () => {
     stocks,
     indices,
     marketStatus,
-    isDarkMode,
-    toggleTheme,
     setCurrentTab,
     openAuthModal,
   } = useTrading();
@@ -68,10 +67,6 @@ export const LandingPage: React.FC = () => {
     } else {
       openAuthModal('signup');
     }
-  };
-
-  const handleSignIn = () => {
-    openAuthModal('signin');
   };
 
   const handleLaunchTradeStock = (sym: string) => {
@@ -135,117 +130,12 @@ export const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#F8F9FA] dark:bg-[#0E1117] text-[#1E2229] dark:text-[#E2E8F0] font-sans transition-colors selection:bg-[#00D09C]/20 selection:text-[#00D09C]">
-      {/* 1. FIXED TOP HEADER BAR (Main Navigation on top, Black Ribbon below it) */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#12161F]/95 backdrop-blur-md border-b border-gray-200 dark:border-[#202533] transition-colors shadow-xs">
-        {/* Main Header Navigation */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between border-b border-gray-100 dark:border-gray-800/60">
-          <div className="flex items-center gap-8">
-            <div
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="cursor-pointer shrink-0"
-              title="My Paper Trade Homepage"
-            >
-              <GrowwLogo />
-            </div>
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#F8F9FA] dark:bg-[#0E1117] text-[#1E2229] dark:text-[#E2E8F0] font-sans transition-colors selection:bg-[#00D09C]/20 selection:text-[#00D09C]">
+      <MarketingHeader />
 
-            <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-gray-600 dark:text-gray-300">
-              <a href="#how-it-works" className="hover:text-[#00D09C] transition-colors font-bold text-gray-900 dark:text-white">
-                How It Works
-              </a>
-              <a href="#popular-stocks" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Stocks
-              </a>
-              <a href="#features" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Features
-              </a>
-              <a href="#practice-charts" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Live Charts
-              </a>
-              <a href="#indices" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Indices
-              </a>
-              <a href="#faq" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                FAQ
-              </a>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1E2330] transition-colors cursor-pointer"
-              title={isDarkMode ? 'Light Mode' : 'Dark Mode'}
-            >
-              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
-            </button>
-
-            {user ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleGetStarted}
-                  className="px-4 py-2 rounded-xl font-bold text-xs text-white bg-[#00D09C] hover:bg-[#00c090] shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>Get Started</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSignIn}
-                  className="px-3 py-2 rounded-xl font-bold text-xs text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#1E2330] transition-colors cursor-pointer"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={handleGetStarted}
-                  className="px-4 py-2 rounded-xl font-bold text-xs text-white bg-[#00D09C] hover:bg-[#00c090] shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <span>Get Started</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Black Background Section (Market Status & Indices Ribbon) placed below the main header */}
-        <div className="bg-[#12161F] text-gray-300 text-xs py-1.5 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            {/* Clean Status Badge without cramped inner text */}
-            <div
-              className="flex items-center gap-2 text-[11px] shrink-0 cursor-default select-none"
-              title={marketStatus.subText}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full inline-block ${marketStatus.isOpen ? 'bg-[#00D09C] animate-pulse' : 'bg-amber-400'}`} />
-              <span className={`font-bold tracking-wide ${marketStatus.isOpen ? 'text-[#00D09C]' : 'text-amber-400'}`}>
-                {marketStatus.statusLabel}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4 text-[11px] font-mono tabular-nums overflow-x-auto max-w-full py-0.5 no-scrollbar">
-              {indices.slice(0, 3).map((idx) => {
-                const isUp = idx.change >= 0;
-                return (
-                  <div key={idx.symbol} className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-semibold text-gray-300">{idx.name}</span>
-                    <span className="text-white font-bold">₹{idx.value.toLocaleString('en-IN')}</span>
-                    <span className={isUp ? 'text-[#00D09C]' : 'text-[#EB5B5B]'}>
-                      {isUp ? '+' : ''}
-                      {idx.change.toFixed(2)} ({isUp ? '+' : ''}
-                      {idx.changePercent.toFixed(2)}%)
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* 3. HERO SECTION WITH VIRTUAL PORTFOLIO PREVIEW */}
-      <section className="pt-28 sm:pt-36 pb-12 sm:pb-20 px-4 sm:px-6">
+      <section className="pt-10 sm:pt-16 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
           {/* Left Column: Typography & CTAs */}
           <div className="lg:col-span-7 space-y-6 text-left">
@@ -259,12 +149,12 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <h1 className="text-4xl sm:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-[1.08]">
-              Learn Trading With <br className="hidden sm:inline" />
-              <span className="text-[#00D09C]">Virtual Money</span>.
+              Learn the patterns.<br />
+              <span className="text-[#00D09C]">Practice the playbook.</span>
             </h1>
 
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
-              An authentic paper-trading simulator where users practice equity and intraday trading using virtual funds and live market quotes. No real-money trading, deposits, withdrawals, or investment advice is provided.
+              Build your chart-reading skills with interactive quizzes, then put them into practice with virtual funds and live market quotes. Your learning and paper trading, together in TradePlaybook.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -272,16 +162,16 @@ export const LandingPage: React.FC = () => {
                 onClick={handleGetStarted}
                 className="px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-[#00D09C] hover:bg-[#00c090] shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <span>Get Started</span>
+                <span>Start paper trading</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <a
-                href="#how-it-works"
+              <AppLink
+                href="/quiz"
                 className="px-5 py-3.5 rounded-xl font-bold text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1F2B] border border-gray-200 dark:border-[#282E3E] hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer"
               >
-                View How Simulation Works
-              </a>
+                Try the chart quiz →
+              </AppLink>
             </div>
 
             {/* Checkmark Bullets */}
@@ -401,6 +291,9 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      <LearningSection onStartTrading={handleGetStarted} />
+
+
       {/* 4. IMPORTANT PLATFORM NOTICE (SEBI / EDUCATIONAL NOTICE) */}
       <section className="py-4 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
@@ -505,7 +398,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <h2 className="text-3xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
               How Simulation Works on <br className="hidden sm:inline" />
-              <span className="text-[#00D09C]">My Paper Trade</span>
+              <span className="text-[#00D09C]">TradePlaybook</span>
             </h2>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
               Experience true-to-life Indian market mechanics without risking a single rupee. From instant virtual capital setup to live tick execution in 5 simple steps.
@@ -853,7 +746,7 @@ export const LandingPage: React.FC = () => {
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0" />
-                      <span>Groww-style Buy, Sell to exit, and 1-Click Exit for Intraday positions</span>
+                      <span>Buy, sell to exit, and 1-click exit for intraday positions</span>
                     </li>
                   </ul>
                   <div className="pt-4 flex items-center gap-3">
@@ -1549,9 +1442,9 @@ export const LandingPage: React.FC = () => {
             <div
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="cursor-pointer shrink-0"
-              title="My Paper Trade Homepage"
+              title="TradePlaybook Homepage"
             >
-              <GrowwLogo />
+              <BrandLogo />
             </div>
 
             <div className="flex flex-wrap items-center gap-6 text-xs font-medium">
@@ -1587,7 +1480,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100 dark:border-[#202533] text-[11px]">
-            <div>© {new Date().getFullYear()} My Paper Trade. Educational Market Sandbox.</div>
+            <div>© {new Date().getFullYear()} TradePlaybook. Educational Market Sandbox.</div>
             <div>Maximum Paper Wallet Balance: ₹10,00,000 (10 Lakhs)</div>
           </div>
         </div>

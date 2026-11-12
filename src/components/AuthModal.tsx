@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTrading, MAX_WALLET_LIMIT } from '../context/TradingContext';
-import { GrowwLogo } from './GrowwLogo';
+import { BrandLogo } from './BrandLogo';
 import { auth, googleProvider, signInWithPopup } from '../lib/firebase';
 import {
   X,
@@ -271,7 +271,7 @@ export const AuthModal: React.FC = () => {
 
         {/* Brand Header with Bull Logo */}
         <div className="flex flex-col items-center text-center mb-6">
-          <GrowwLogo className="scale-105 mb-2" showBadge={false} />
+          <BrandLogo className="scale-105 mb-2" />
           <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
             {isSignUp ? 'Create your Account' : 'Welcome back'}
           </h2>

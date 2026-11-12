@@ -1,3 +1,4 @@
+import { navigate } from '../lib/navigation';
 import React, { useMemo, useEffect } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { StockChart } from './StockChart';
@@ -64,8 +65,8 @@ export const StockDetailView: React.FC = () => {
 
   // Dynamic SEO Page Title for active stock
   useEffect(() => {
-    const originalTitle = 'My Paper Trade – Live NSE/BSE Stock Paper Trading Simulator';
-    document.title = `${stock.name} (${stock.symbol}) ₹${stock.price.toFixed(2)} – Groww Paper Trading`;
+    const originalTitle = 'TradePlaybook – Live NSE/BSE Stock Paper Trading Simulator';
+    document.title = `${stock.name} (${stock.symbol}) ₹${stock.price.toFixed(2)} – TradePlaybook`;
     return () => {
       document.title = originalTitle;
     };
@@ -90,7 +91,7 @@ export const StockDetailView: React.FC = () => {
       {/* Breadcrumb bar */}
       <div className="mb-4 flex items-center justify-between">
         <button
-          onClick={() => setCurrentTab('explore')}
+          onClick={() => { setCurrentTab('explore'); navigate('/trade'); }}
           className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

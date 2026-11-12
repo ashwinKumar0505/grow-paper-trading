@@ -18,3 +18,32 @@ NSE transaction charge: 0.00307%; IPFT: 0.0001%. Delivery sell DP estimate uses 
 Run `npm test`, `npx tsc --noEmit`, and `npm run build`.
 
 This is a paper simulator, not an exchange or settlement system. Quote-based fills do not model bid/ask slippage, market impact, partial fills, or queue priority. The existing fixed circuit-band and leverage rules are approximations. Delivery settlement dates, corporate actions, broker-specific margin eligibility, and historical tax-lot reporting are not modeled. Offline square-off cannot reconstruct an actual historical execution price. These limits mean this app cannot promise exact broker contract-note parity.
+
+## TradePlaybook learning and trading routes
+
+The application combines the existing paper trading desk with the chart-pattern learning components migrated from `trade-pulse-quiz`.
+
+| Route | Experience |
+| --- | --- |
+| `/` | Shared TradePlaybook landing page |
+| `/trade` | Paper trading desk; signed-out visitors can create an account or sign in |
+| `/markets` | Stock exploration using the existing paper account |
+| `/quiz` | Public quiz mode and difficulty selection |
+| `/quiz/play` | Interactive chart prediction and answer explanations |
+| `/pattern-library` | Searchable pattern library with generated chart examples |
+
+The header and landing page link the two experiences. URL navigation supports refresh, deep links, and browser back/forward through the existing Express SPA fallback. The trading provider remains mounted across route changes to retain portfolio state. The quiz is lazy-loaded from `src/features/quiz`; its components, generator, indicator helpers, sound utility, types, and referenced cheat-sheet image are local to this repository. No source-app package, configuration, or server files were imported, and no dependencies were added.
+
+Practice accuracy, quiz history, preferences, and survival best streak are stored in the browser using the original `tradepulse_*` keys. Paper trading keeps its existing storage keys. Records from another origin are not transferred automatically. Quiz cash is separate from the paper wallet. A new launch or refresh starts a new run; completed answers stay in history, and leaving an in-progress reveal cancels it without recording an answer.
+
+The quiz supports unlimited practice, three-life survival, and a ten-round virtual-cash challenge. The library stacks its pattern picker above the chart on small screens. Charts initially fit the entire example, with zoom and pan available for inspection.
+
+Validation: `npm test` covers the trading engine and generated chart OHLC bounds for every pattern/asset pair; `npx tsc --noEmit` checks types and `npm run build` produces both app bundles.
+
+### Shared navigation layouts
+
+`MarketingHeader` is used only on `/`. `WorkspaceHeader` owns navigation across `/trade`, `/quiz` (including `/quiz/play`), `/pattern-library`, and `/markets`. Both compose `HeaderFrame` and `BrandLogo`, with identical `h-16` brand rows and `px-4 sm:px-6` gutters. Below desktop width, mode links occupy a scrollable second row and keep the active mode in view.
+
+`TradingToolbar` retains account, search, wallet, and portfolio controls below the workspace header. `QuizToolbar` and the pattern-library toolbar contain activity controls only. Quiz sound lives exclusively in the workspace utilities on quiz routes and uses the sound service's saved state; theme uses the existing trading preference throughout. Learning page surfaces follow the shared light/dark theme while the chart canvas retains its terminal palette.
+
+Legacy `/paper-trading` and `/quiz/learn` URLs are normalized to `/trade` and `/pattern-library` with `replaceState`, retaining search parameters and hash fragments without adding a browser-history entry.

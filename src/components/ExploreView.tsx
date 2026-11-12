@@ -1,3 +1,4 @@
+import { navigate } from '../lib/navigation';
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Stock } from '../types/market';
@@ -70,6 +71,7 @@ export const ExploreView: React.FC = () => {
   const handleStockClick = (stock: Stock) => {
     setSelectedStock(stock);
     setCurrentTab('stock-detail');
+    navigate('/trade');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -81,7 +83,7 @@ export const ExploreView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Flame className="w-5 h-5 text-amber-500" />
             <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white tracking-tight">
-              Most Bought on My Paper Trade
+              Most Bought on TradePlaybook
             </h2>
           </div>
           <span className="text-xs font-semibold flex items-center gap-1.5" title={marketStatus.subText}>

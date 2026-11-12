@@ -2,13 +2,11 @@ import React from 'react';
 
 interface LogoProps {
   className?: string;
-  showBadge?: boolean;
   onClick?: () => void;
 }
 
-export const GrowwLogo: React.FC<LogoProps> = ({
+export const BrandLogo: React.FC<LogoProps> = ({
   className = 'h-8',
-  showBadge = true,
   onClick,
 }) => {
   return (
@@ -18,7 +16,7 @@ export const GrowwLogo: React.FC<LogoProps> = ({
         onClick ? 'cursor-pointer hover:opacity-95' : ''
       } ${className}`}
     >
-      {/* My Paper Trade Bull & Upward Arrow Logo Mark */}
+      {/* TradePlaybook Bull & Upward Arrow Logo Mark */}
       <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
         <svg
           viewBox="0 0 40 40"
@@ -99,13 +97,12 @@ export const GrowwLogo: React.FC<LogoProps> = ({
 
       {/* Brand Typography */}
       <div className="flex items-center gap-2">
-        <span className="font-extrabold text-xl tracking-tight text-[#1E2229] dark:text-white font-sans">
-          My Paper <span className="text-[#00D09C]">Trade</span>
+        <span className="font-extrabold text-base sm:text-xl tracking-tight text-[#1E2229] dark:text-white font-sans">
+          Trade<span className="text-[#00D09C]">Playbook</span>
         </span>
       </div>
     </div>
   );
 };
 
-// Also export as MyPaperTradeLogo
-export const MyPaperTradeLogo = GrowwLogo;
+

@@ -1,3 +1,4 @@
+import { navigate, usePathname } from '../lib/navigation';
 import { portfolioQuoteSymbols, mergePortfolioQuote } from '../utils/portfolioQuotes';
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
@@ -180,7 +181,9 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [indices, setIndices] = useState<IndexData[]>(INITIAL_INDICES);
   const [selectedStock, setSelectedStockState] = useState<Stock>(INITIAL_STOCKS[0]);
   const [currentTab, setCurrentTab] = useState<'explore' | 'holdings' | 'watchlist' | 'orders' | 'stock-detail'>('explore');
-  const [showLandingPage, setShowLandingPage] = useState<boolean>(false);
+  const pathname = usePathname();
+  const showLandingPage = pathname === '/';
+  const setShowLandingPage = (show: boolean) => navigate(show ? '/' : '/trade');
 
   // User Profile & Authentication
   const [user, setUser] = useState<UserProfile | null>(() => {
