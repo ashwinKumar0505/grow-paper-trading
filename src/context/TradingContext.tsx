@@ -263,8 +263,17 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Theme
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  // Theme (Default to dark mode across the application)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const savedTheme = localStorage.getItem('niftylens_theme_v1');
+      if (savedTheme === 'light') return false;
+      if (savedTheme === 'dark') return true;
+      return true;
+    } catch {
+      return true;
+    }
+  });
   const [isSimulating, setIsSimulating] = useState<boolean>(false); // Real market mode: no fake random price movements
 
   // Indian Stock Market (NSE / BSE) Trading Status
@@ -456,7 +465,6 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (parsed.intradayPositions) setIntradayPositions(parsed.intradayPositions);
         if (parsed.orders) setOrders(parsed.orders);
         if (parsed.watchlists) setWatchlists(parsed.watchlists);
-        if (parsed.isDarkMode !== undefined) setIsDarkMode(parsed.isDarkMode);
       }
     } catch {
       // Fallback
@@ -500,13 +508,16 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
   }, [walletTransactions]);
 
-  // Handle dark mode HTML class
+  // Handle dark mode HTML class & persist theme preference
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    try {
+      localStorage.setItem('niftylens_theme_v1', isDarkMode ? 'dark' : 'light');
+    } catch {}
   }, [isDarkMode]);
 
   const toggleTheme = () => {

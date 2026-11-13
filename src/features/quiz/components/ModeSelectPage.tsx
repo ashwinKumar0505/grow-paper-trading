@@ -27,13 +27,21 @@ export const ModeSelectPage = ({ initialMode = 'quiz', initialDifficulty = 'Begi
   const [mode, setMode] = useState<GameMode>(initialMode);
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(initialDifficulty);
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 text-[var(--quiz-text)] sm:px-6 sm:py-12">
-      <div className="flex items-start justify-between gap-4">
+    <main className="mx-auto w-full max-w-[1840px] px-4 py-8 text-[var(--quiz-text)] sm:px-6 lg:px-10 sm:py-12">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">The chart practice room</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400">Guess the Chart · Interactive Practice Room</p>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Read the pattern.<br /><span className="text-emerald-700 dark:text-emerald-400">Make your next call.</span></h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[var(--quiz-muted)] sm:text-base">Study a simulated chart, predict whether price moves up or down, then reveal what happens and learn why.</p>
+          <p className="mt-5 max-w-xl text-sm leading-7 text-[var(--quiz-muted)] sm:text-base">Study a simulated NSE stock chart, predict whether price moves up or down, then reveal the next candles and learn why.</p>
         </div>
+        <button
+          type="button"
+          onClick={onOpenLearnCharts}
+          className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-2.5 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>← Back to Chart Pattern Library</span>
+        </button>
       </div>
 
       <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-[var(--quiz-border)] bg-[var(--quiz-subtle)]/60 p-4 sm:flex-row sm:items-center sm:justify-between">

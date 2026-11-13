@@ -14,7 +14,7 @@ export const IndicesTicker: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-[#181B22] border-b border-gray-200 dark:border-[#282C37] transition-colors overflow-hidden w-full max-w-full select-none">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar touch-pan-x">
+      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar touch-pan-x">
         <div className="flex items-center gap-6 min-w-max text-xs">
           {/* Market Status Indicator */}
           {marketStatus.isOpen ? (

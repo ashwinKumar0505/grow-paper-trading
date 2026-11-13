@@ -1,25 +1,61 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen, ChartCandlestick, Radar } from 'lucide-react';
 import { AppLink } from '../../lib/navigation';
 import { useTrading } from '../../context/TradingContext';
 import { HeaderFrame } from './HeaderFrame';
 import { ThemeToggle } from './ThemeToggle';
+import { UserProfileMenu } from './UserProfileMenu';
 
 export function MarketingHeader() {
   const { setCurrentTab } = useTrading();
-  const linkClass = 'shrink-0 rounded-lg px-2 py-2 text-xs font-semibold text-slate-600 hover:text-emerald-600 dark:text-slate-300 dark:hover:text-emerald-400';
-  const navigation = <nav aria-label="Marketing navigation" className="flex w-max items-center gap-1">
-    <a href="#how-it-works" className={linkClass}>How It Works</a>
-    <a href="#features" className={linkClass}>Features</a>
-    <a href="#faq" className={linkClass}>FAQ</a>
-    <span aria-hidden="true" className="mx-1 h-4 w-px bg-slate-200 dark:bg-slate-700" />
-    <AppLink href="/trade" onClick={() => setCurrentTab('explore')} className={linkClass}>Stocks</AppLink>
-    <AppLink href="/trade" onClick={() => setCurrentTab('stock-detail')} className={linkClass}>Live Charts</AppLink>
-    <AppLink href="/quiz" className={linkClass}>Chart Quiz</AppLink>
-  </nav>;
-  return <HeaderFrame label="Marketing header" navigation={navigation} utilities={<>
-    <ThemeToggle />
-    <AppLink href="/trade" aria-label="Start Paper Trading" className="flex h-9 items-center gap-2 rounded-full bg-emerald-500 px-3 text-xs font-bold text-slate-950 hover:bg-emerald-400 sm:px-4">
-      <span className="hidden sm:inline">Start Paper Trading</span><span className="sm:hidden">Start</span><ArrowRight className="h-4 w-4" />
-    </AppLink>
-  </>} />;
+
+  const modes = [
+    {
+      href: '/screener',
+      label: 'Signal Screener',
+      icon: Radar,
+    },
+    {
+      href: '/trade',
+      label: 'Virtual Trading',
+      icon: ChartCandlestick,
+      select: () => setCurrentTab('explore'),
+    },
+    {
+      href: '/learn',
+      label: 'Learn',
+      icon: BookOpen,
+    },
+  ];
+
+  const navigation = (
+    <nav
+      aria-label="Primary navigation"
+      className="flex w-max items-center gap-1 rounded-full border border-emerald-900/10 bg-[#EEF5F1] p-1 dark:border-[#1E352B] dark:bg-[#111F19]"
+    >
+      {modes.map(({ href, label, icon: Icon, select }) => (
+        <AppLink
+          key={href}
+          href={href}
+          onClick={select}
+          className="flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold text-[#3A5247] transition-all hover:bg-[#00B386] hover:text-white dark:text-[#9AB0A5] dark:hover:bg-[#00D09C] dark:hover:text-[#04261C]"
+        >
+          <Icon className="h-3.5 w-3.5" />
+          <span>{label}</span>
+        </AppLink>
+      ))}
+    </nav>
+  );
+
+  return (
+    <HeaderFrame
+      label="Marketing header"
+      navigation={navigation}
+      utilities={
+        <>
+          <ThemeToggle />
+          <UserProfileMenu />
+        </>
+      }
+    />
+  );
 }

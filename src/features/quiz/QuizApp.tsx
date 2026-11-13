@@ -79,8 +79,14 @@ const INITIAL_STATS: UserStats = {
 export default function QuizApp() {
   // URL navigation keeps deep links and browser history in sync.
   const pathname = usePathname();
-  const currentView = pathname === '/quiz/play' ? 'quiz' : pathname === '/pattern-library' ? 'learn-charts' : 'mode-select';
-  const setCurrentView = (view: 'quiz' | 'learn-charts' | 'mode-select') => navigate(view === 'quiz' ? '/quiz/play' : view === 'learn-charts' ? '/pattern-library' : '/quiz');
+  const currentView =
+    pathname === '/quiz/play'
+      ? 'quiz'
+      : pathname === '/learn' || pathname === '/pattern-library'
+      ? 'learn-charts'
+      : 'mode-select';
+  const setCurrentView = (view: 'quiz' | 'learn-charts' | 'mode-select') =>
+    navigate(view === 'quiz' ? '/quiz/play' : view === 'learn-charts' ? '/learn' : '/quiz');
   const revealTimer = useRef<number | null>(null);
   const tradeInFlight = useRef(false);
   useEffect(() => {
