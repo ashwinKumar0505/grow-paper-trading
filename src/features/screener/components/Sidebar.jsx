@@ -34,7 +34,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
             </svg>
           </div>
           <div>
-            <div className="sb-title">Signal Screener</div>
+            <div className="sb-title">Stock Screener</div>
             <div className="sb-tag">NiftyLens · NSE 500</div>
           </div>
           <button className="sb-close icon-btn" onClick={onClose} aria-label="Close menu">

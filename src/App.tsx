@@ -39,7 +39,7 @@ const WorkspaceContent: React.FC = () => {
   const { user, setShowLandingPage, setCurrentTab } = useTrading();
   const pathname = usePathname();
 
-  // 1. Signal Screener modules require login
+  // 1. Stock Screener modules require login
   if (pathname.startsWith('/screener')) {
     if (!user) {
       return <AuthGatePlaceholder feature="screener" />;
@@ -48,7 +48,7 @@ const WorkspaceContent: React.FC = () => {
       <Suspense
         fallback={
           <div className="p-12 text-center text-slate-500 dark:text-[#9ab0a5]" role="status">
-            Loading NiftyLens Signal Screener…
+            Loading NiftyLens Stock Screener…
           </div>
         }
       >
@@ -123,7 +123,7 @@ const WorkspaceContent: React.FC = () => {
               NiftyLens
             </button>
             <span>·</span>
-            <span>Signal Screener, Virtual Trading & Chart Pattern Lab</span>
+            <span>Stock Screener, Virtual Trading & Chart Pattern Lab</span>
           </div>
           <div className="text-center sm:text-right text-[11px] text-gray-400">
             For educational and strategy backtesting purposes only. No real capital at risk.
@@ -146,14 +146,14 @@ function AppContent() {
       window.history.replaceState(null, '', pathname + window.location.search + window.location.hash);
     }
     document.title = pathname.startsWith('/screener')
-      ? 'Signal Screener & Stock Recommendations | NiftyLens'
+      ? 'Stock Screener & Stock Recommendations | NiftyLens'
       : pathname === '/learn' || pathname === '/pattern-library'
       ? 'Learn Chart Patterns | NiftyLens'
       : pathname.startsWith('/quiz')
       ? 'Guess the Chart Quiz | NiftyLens'
       : pathname === '/trade'
       ? 'Virtual Trading Desk | NiftyLens'
-      : 'NiftyLens – NSE Signal Screener, Virtual Trading & Chart Learning';
+      : 'NiftyLens – NSE Stock Screener, Virtual Trading & Chart Learning';
   }, [pathname, setCurrentTab]);
 
   if (pathname === '/') {

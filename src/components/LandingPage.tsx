@@ -1,6 +1,8 @@
-import { MarketingHeader } from './navigation/MarketingHeader';
+import { WorkspaceHeader } from './navigation/WorkspaceHeader';
 import { AppLink, navigate } from '../lib/navigation';
 import { LearningSection } from './LearningSection';
+import { FloatingIllustration } from './FloatingIllustration';
+import { ScreenerLivePreviewCard } from './landing/ScreenerLivePreviewCard';
 import React, { useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { BrandLogo } from './BrandLogo';
@@ -13,96 +15,19 @@ import {
   ArrowRight,
   BarChart2,
   CheckCircle2,
-  Info,
   ChevronDown,
   ChevronUp,
   LineChart as LineChartIcon,
-  Layers,
-  Eye,
-  Activity,
   Sparkles,
-  RefreshCw,
   Radar,
   Search,
   BookOpen,
   GraduationCap,
   Target,
-  Clock,
   Award,
   ChartCandlestick,
+  PlayCircle,
 } from 'lucide-react';
-
-const DEMO_SWING_PICKS = [
-  {
-    symbol: 'RELIANCE',
-    name: 'Reliance Industries',
-    confidence: 84,
-    status: 'Confirmed Setup',
-    buyAt: '₹1,336',
-    target: '₹1,428',
-    gainPct: '+6.9%',
-    stopLoss: '₹1,298',
-    rr: '2.4x',
-    reason: 'Backtested 20-day resistance breakout + volume confirmation',
-  },
-  {
-    symbol: 'ICICIBANK',
-    name: 'ICICI Bank Ltd',
-    confidence: 79,
-    status: 'Confirmed Setup',
-    buyAt: '₹1,284',
-    target: '₹1,365',
-    gainPct: '+6.3%',
-    stopLoss: '₹1,248',
-    rr: '2.2x',
-    reason: 'Backtested EMA 20/50/200 golden alignment + chart bounce',
-  },
-  {
-    symbol: 'TCS',
-    name: 'Tata Consultancy Services',
-    confidence: 74,
-    status: 'Watchlist Setup',
-    buyAt: '₹3,980',
-    target: '₹4,210',
-    gainPct: '+5.8%',
-    stopLoss: '₹3,875',
-    rr: '2.1x',
-    reason: 'Double bottom chart pattern with rising RSI momentum',
-  },
-];
-
-const DEMO_INTRADAY_PICKS = [
-  {
-    symbol: 'TATAMOTORS',
-    name: 'Tata Motors Ltd',
-    confidence: 82,
-    entry: '₹784.50',
-    target: '₹802.00',
-    stopLoss: '₹776.00',
-    status: 'Open · Running',
-    reason: '15-min opening range breakout above VWAP with 2.3x volume',
-  },
-  {
-    symbol: 'SBIN',
-    name: 'State Bank of India',
-    confidence: 78,
-    entry: '₹832.00',
-    target: '₹848.50',
-    stopLoss: '₹824.50',
-    status: 'Target Reached (+1.98%)',
-    reason: 'Strong banking momentum + 15-min bullish flag breakout',
-  },
-  {
-    symbol: 'HDFCBANK',
-    name: 'HDFC Bank Ltd',
-    confidence: 75,
-    entry: '₹1,745.00',
-    target: '₹1,774.00',
-    stopLoss: '₹1,731.00',
-    status: 'Open · Running',
-    reason: 'Price reclaimed day’s average traded price (VWAP) with buyers stepping in',
-  },
-];
 
 export const LandingPage: React.FC = () => {
   const {
@@ -111,17 +36,9 @@ export const LandingPage: React.FC = () => {
     setSelectedStock,
     selectStockBySymbol,
     stocks,
-    indices,
-    marketStatus,
     setCurrentTab,
     openAuthModal,
   } = useTrading();
-
-  // Hero Preview Tab: 'swing' | 'intraday' | 'analysis'
-  const [heroTab, setHeroTab] = useState<'swing' | 'intraday' | 'analysis'>('swing');
-
-  // Screener Deep-Dive Tab (50% weightage section)
-  const [screenerTab, setScreenerTab] = useState<'swing' | 'intraday' | 'analysis'>('swing');
 
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -152,374 +69,141 @@ export const LandingPage: React.FC = () => {
   const faqs = [
     {
       q: 'What are the 3 tools included inside NiftyLens?',
-      a: 'NiftyLens brings together three connected tools in one place: (1) Signal Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 or check any NSE stock in plain English, (2) Virtual Trading Desk to practice Delivery and 5x Intraday orders with up to ₹10 Lakhs virtual cash, and (3) Pattern Library & Guess the Chart to learn 28+ chart patterns and test your eye.',
+      a: 'NiftyLens brings together three connected tools in one place: (1) AI-Powered Stock Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 using chart analysis and backtested strategies, (2) Virtual Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹10,00,000 in virtual capital, and (3) Interactive Learning & Guess the Chart to master 28+ candlestick patterns and replay market movements.',
     },
     {
-      q: 'How does the Signal Screener pick stocks?',
-      a: 'For Swing trading (holding a few days to 2 weeks), we scan all Nifty 500 stocks for upward trends, breakouts, and strong buying volume, then score each stock from 0 to 100 and calculate a Suggested Buy Price, Target Price, and Stop-Loss. For Intraday trading, we scan the 100 most-traded NSE stocks on 15-minute charts and auto-refresh every 5 minutes during market hours.',
+      q: 'How does the AI-Powered Stock Screener evaluate stocks?',
+      a: 'Our screener combines advanced technical chart analysis, multiple historically backtested strategies, and AI-powered technical insights across Nifty 500 stocks. It evaluates BUY, WAIT, and AVOID signals alongside confidence scores (0–100), reference entry zones, targets, stop-loss levels, and historical strategy statistics for both Swing and 15-minute Intraday trading.',
     },
     {
-      q: 'What do I see when I search a stock in Stock Analysis?',
-      a: 'Type any Nifty 500 stock (like Reliance, TCS, or HDFC Bank) to see a plain-English verdict (Good time to buy, Wait for a better price, or Avoid for now), a confidence score, buy price range, target, stop-loss, an interactive price chart with support/resistance levels, company revenue & profit, and how our signals performed on that stock over the past 2 years.',
+      q: 'What do I see when I search a stock in AI Stock Analysis?',
+      a: 'Type any Nifty 500 stock (like Reliance, TCS, or HDFC Bank) to see a confidence-based verdict (BUY, WAIT, or AVOID), AI-powered contextual insights, buy price range, target, stop-loss, an interactive price chart with support/resistance levels, company revenue & profit, and a 2-year historical strategy backtest.',
     },
     {
       q: 'How does the Virtual Trading Desk work?',
-      a: 'You get up to ₹10,00,000 (10 Lakhs) in virtual paper cash. You can place Delivery (CNC) or 5x leveraged Intraday (MIS) Market and Limit orders on real NSE stock prices, see realistic brokerage and government tax breakdowns, and track your live P&L with zero real money at risk.',
+      a: 'Practice risk-free with ₹1,00,000 (scalable up to ₹10,00,000) in virtual capital. Place Delivery (CNC) or 5x leveraged Intraday (MIS) Market and Limit orders on real NSE stock prices, see realistic brokerage and statutory tax breakdowns, and track your live portfolio performance without risking real money.',
     },
     {
-      q: 'How do the Chart Pattern Library and Guess the Chart Quiz help beginners?',
-      a: 'The Learn page breaks down 28+ classic chart patterns with a clear title, plain-English description, why the chart pattern works, and exact entry, stop-loss, and target rules — followed by an interactive chart where you can reveal the next candles. Clicking "Guess the Chart" lets you test your skill on real-looking setups.',
+      q: 'How do the Chart Pattern Library and Guess the Chart Quiz help traders?',
+      a: 'The Interactive Learning module breaks down 28+ classic candlestick and chart patterns with plain-English explanations, why the pattern works, and exact entry, stop-loss, and target rules — plus interactive chart replay and the Guess the Chart quiz to test your analysis skills.',
     },
     {
       q: 'Is any real money or SEBI brokerage account involved?',
-      a: 'No. NiftyLens is strictly for learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, and nothing on the platform is investment advice.',
+      a: 'No. NiftyLens is strictly for educational learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, historical backtests or AI insights never guarantee future profits, and nothing on the platform is investment advice.',
     },
   ];
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[#F3F6F4] dark:bg-[#0B1310] text-[#15241D] dark:text-[#E9F2EE] font-sans transition-colors selection:bg-[#00D09C]/20 selection:text-[#00D09C]">
-      <MarketingHeader />
+      <WorkspaceHeader />
 
-      {/* 1. HERO SECTION — SCREENER-LED + COMPLETE 3-IN-1 SUITE */}
-      <section className="pt-8 sm:pt-12 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[1880px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          {/* Left Column: Clear Value Proposition */}
-          <div className="lg:col-span-6 space-y-6 text-left">
+      {/* =======================================================================
+         1. HERO SECTION — 45% TEXT & CTAS LEFT / 55% FLOATING 3D LAPTOP RIGHT
+         ======================================================================= */}
+      <section className="pt-6 sm:pt-10 lg:pt-14 pb-12 sm:pb-18 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[1880px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-12">
+          {/* Left Column: 45% width on desktop for text and CTAs */}
+          <div className="w-full lg:w-[45%] space-y-6 text-left">
             <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-[#00B386]/30 bg-[#00B386]/10 dark:border-[#00D09C]/30 dark:bg-[#00D09C]/10 px-3.5 py-1.5 text-xs font-extrabold text-[#008F6B] dark:text-[#00D09C]">
               <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
-              <span>Nifty 500 Screener</span>
+              <span>AI Stock Screener</span>
               <span>·</span>
-              <span>Stock Analysis</span>
+              <span>Backtested Strategies</span>
               <span>·</span>
-              <span>₹10L Virtual Trading</span>
+              <span>Virtual Trading</span>
               <span>·</span>
-              <span>Pattern Lab</span>
+              <span>Interactive Learning</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl xl:text-6xl font-black text-[#15241D] dark:text-white tracking-tight leading-[1.07]">
-              Backtested stock recommendations.<br />
-              <span className="text-[#00B386] dark:text-[#00D09C]">Chart analysis & virtual practice.</span>
+            <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black text-[#15241D] dark:text-white tracking-tight leading-[1.08]">
+              Backtested Stock Recommendations.{' '}
+              <span className="text-[#00B386] dark:text-[#00D09C]">
+                Chart Analysis &amp; Virtual Practice.
+              </span>
             </h1>
 
             <p className="text-base sm:text-lg text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed max-w-2xl">
-              <strong>NiftyLens</strong> uses <strong>historical backtested patterns and multi-indicator chart analysis</strong> across all Nifty 500 stocks to pick the best <strong>Swing & Intraday stock recommendations</strong> for you — then lets you practice every setup risk-free on a <strong>Groww-style virtual desk</strong> and master <strong>chart patterns</strong> in plain English.
+              Discover high-potential Indian stocks with <strong>AI-powered insights</strong>,{' '}
+              <strong>advanced chart analysis</strong>, and{' '}
+              <strong>multiple backtested trading strategies</strong>. Practice with virtual money and
+              master trading through interactive learning.
             </p>
 
             {/* Primary 3-App Action Buttons */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              <AppLink
-                href="/screener"
+              <button
+                type="button"
+                onClick={handleGetStarted}
                 className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <Radar className="w-4 h-4" />
-                <span>Open Signal Screener</span>
+                <ChartCandlestick className="w-4 h-4" />
+                <span>Virtual Trading Desk</span>
                 <ArrowRight className="w-4 h-4" />
-              </AppLink>
+              </button>
 
-              <button
-                onClick={handleGetStarted}
+              <AppLink
+                href="/screener"
                 className="px-5 py-3.5 rounded-xl font-bold text-sm text-white bg-[#0C1D16] hover:bg-[#12281F] border border-[#1D3A2D] transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <ChartCandlestick className="w-4 h-4 text-[#00D09C]" />
-                <span>Virtual Trading Desk</span>
-              </button>
+                <Radar className="w-4 h-4 text-[#00D09C]" />
+                <span>Open Stock Screener</span>
+              </AppLink>
 
               <AppLink
                 href="/learn"
                 className="px-5 py-3.5 rounded-xl font-bold text-sm text-[#15241D] dark:text-[#E9F2EE] bg-white dark:bg-[#111C17] border border-[#CFDCD5] dark:border-[#20332A] hover:border-[#00B386] dark:hover:border-[#00D09C] transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <BookOpen className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-                <span>Learn Charts & Quiz</span>
+                <span>Learn Charts &amp; Quiz</span>
               </AppLink>
             </div>
 
-            {/* Simple Weightage / Feature Highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+            {/* Pillar Summary Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
-                  <Radar className="w-4 h-4" />
-                  <span>1. Signal Screener</span>
+                  <Radar className="w-4 h-4 shrink-0" />
+                  <span>1. AI Stock Screener</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Swing picks, 15-min intraday alerts & full stock health check.
+                  Swing picks, 15-min intraday alerts &amp; AI stock analysis.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
-                  <ChartCandlestick className="w-4 h-4" />
+                  <ChartCandlestick className="w-4 h-4 shrink-0" />
                   <span>2. Virtual Trading</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Practice Delivery & 5x Intraday with ₹10L virtual funds.
+                  Practice intraday &amp; swing trades risk-free with virtual capital.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
-                  <GraduationCap className="w-4 h-4" />
-                  <span>3. Learn & Quiz</span>
+                  <GraduationCap className="w-4 h-4 shrink-0" />
+                  <span>3. Learn &amp; Quiz</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  28+ interactive chart patterns & Guess the Chart game.
+                  28+ interactive chart patterns &amp; Guess the Chart game.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive Screener & Stock Analysis Live Preview */}
-          <div className="lg:col-span-6">
-            <div className="rounded-3xl border border-[#1D3A2D] bg-[#0C1D16] text-[#E9F2EE] p-5 sm:p-6 shadow-2xl space-y-5">
-              {/* Top Bar with Mode Switcher */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1D3A2D]">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#00D09C] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
-                    Backtested Pattern & Chart Analysis Engine · Nifty 500
-                  </div>
-                  <div className="text-lg sm:text-xl font-extrabold text-white mt-0.5">
-                    Stock Recommendations & Reference Levels
-                  </div>
-                </div>
-
-                <div className="inline-flex rounded-xl bg-[#12281F] p-1 border border-[#1D3A2D]">
-                  {[
-                    { id: 'swing' as const, label: 'Swing Picks' },
-                    { id: 'intraday' as const, label: 'Intraday 15m' },
-                    { id: 'analysis' as const, label: 'Stock Check' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setHeroTab(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        heroTab === tab.id
-                          ? 'bg-[#00D09C] text-[#04261C] shadow-xs'
-                          : 'text-[#9AB0A5] hover:text-white'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tab 1: Swing Picks Preview */}
-              {heroTab === 'swing' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-[#9AB0A5]">
-                    <span>Hold for a few days to 2 weeks · Sorted by Confidence Score</span>
-                    <span className="font-mono text-[#00D09C] font-bold">500 NSE Stocks Scanned</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {DEMO_SWING_PICKS.map((pick) => (
-                      <div
-                        key={pick.symbol}
-                        className="rounded-2xl border border-[#1D3A2D] bg-[#11241C] hover:border-[#00D09C]/50 p-3.5 transition-all"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-[#00D09C]/15 text-[#00D09C] font-extrabold text-xs grid place-items-center">
-                              {pick.symbol.slice(0, 2)}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-sm text-white">{pick.symbol}</span>
-                                <span className="rounded-full bg-[#00D09C]/15 px-2 py-0.5 text-[10px] font-bold text-[#00D09C]">
-                                  {pick.status}
-                                </span>
-                              </div>
-                              <div className="text-xs text-[#8FA99C]">{pick.reason}</div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-lg bg-[#0C1D16] border border-[#1D3A2D] px-2.5 py-1 text-xs font-mono font-bold text-[#00D09C]">
-                              Confidence {pick.confidence}/100
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-2.5 border-t border-[#1D3A2D] grid grid-cols-4 gap-2 text-xs">
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Rec. Entry</span>
-                            <strong className="font-mono text-white">{pick.buyAt}</strong>
-                          </div>
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Target</span>
-                            <strong className="font-mono text-[#00D09C]">
-                              {pick.target} ({pick.gainPct})
-                            </strong>
-                          </div>
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Stop-Loss</span>
-                            <strong className="font-mono text-[#F0614A]">{pick.stopLoss}</strong>
-                          </div>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/screener/analysis?symbol=${pick.symbol}`)}
-                              className="px-2.5 py-1 rounded-lg bg-[#163025] hover:bg-[#1D3D30] text-[11px] font-bold text-[#00D09C] cursor-pointer"
-                            >
-                              Analyse
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleLaunchTradeStock(pick.symbol)}
-                              className="px-2.5 py-1 rounded-lg bg-[#00D09C] hover:bg-[#00B386] text-[11px] font-extrabold text-[#04261C] cursor-pointer"
-                            >
-                              Trade
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Intraday 15m Preview */}
-              {heroTab === 'intraday' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-[#9AB0A5]">
-                    <span>15-minute chart breakouts · Auto-refreshes every 5 mins</span>
-                    <span className="font-mono text-[#00D09C] font-bold">3:20 PM Same-Day Exit</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {DEMO_INTRADAY_PICKS.map((pick) => (
-                      <div
-                        key={pick.symbol}
-                        className="rounded-2xl border border-[#1D3A2D] bg-[#11241C] hover:border-[#00D09C]/50 p-3.5 transition-all"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-sm text-white">{pick.symbol}</span>
-                              <span className="rounded-full bg-[#00D09C]/15 px-2 py-0.5 text-[10px] font-bold text-[#00D09C]">
-                                {pick.status}
-                              </span>
-                            </div>
-                            <p className="text-xs text-[#8FA99C] mt-0.5">{pick.reason}</p>
-                          </div>
-                          <span className="rounded-lg bg-[#0C1D16] border border-[#1D3A2D] px-2.5 py-1 text-xs font-mono font-bold text-[#00D09C]">
-                            Score {pick.confidence}
-                          </span>
-                        </div>
-                        <div className="mt-3 pt-2.5 border-t border-[#1D3A2D] grid grid-cols-4 gap-2 text-xs items-center">
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Entry</span>
-                            <strong className="font-mono text-white">{pick.entry}</strong>
-                          </div>
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Intraday Target</span>
-                            <strong className="font-mono text-[#00D09C]">{pick.target}</strong>
-                          </div>
-                          <div>
-                            <span className="text-[#7F9C8E] block text-[10px]">Stop-Loss</span>
-                            <strong className="font-mono text-[#F0614A]">{pick.stopLoss}</strong>
-                          </div>
-                          <div className="text-right">
-                            <button
-                              type="button"
-                              onClick={() => navigate('/screener/intraday')}
-                              className="px-3 py-1 rounded-lg bg-[#00D09C] text-[#04261C] text-[11px] font-extrabold cursor-pointer"
-                            >
-                              View Live →
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: Stock Check Preview */}
-              {heroTab === 'analysis' && (
-                <div className="space-y-3.5">
-                  <div className="rounded-2xl border border-[#00D09C]/40 bg-[#11241C] p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-[11px] text-[#00D09C] font-bold uppercase">NSE: RELIANCE · Energy</span>
-                        <h4 className="text-lg font-extrabold text-white">Reliance Industries Ltd</h4>
-                      </div>
-                      <div className="text-right">
-                        <div className="rounded-xl bg-[#00D09C]/20 border border-[#00D09C]/40 px-3 py-1 text-xs font-extrabold text-[#00D09C]">
-                          Our View: Good Time to Buy
-                        </div>
-                        <span className="text-[11px] text-[#9AB0A5] mt-1 block">Confidence: 84 / 100</span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-[#D6E6DE] leading-relaxed">
-                      Price is trading above its 20-day and 50-day averages with strong buying volume and a confirmed breakout above resistance.
-                    </p>
-
-                    <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[#1D3A2D] text-xs">
-                      <div>
-                        <span className="text-[10px] text-[#7F9C8E] block">Buy Zone</span>
-                        <strong className="font-mono text-white">₹1,330 – ₹1,342</strong>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[#7F9C8E] block">Target 1</span>
-                        <strong className="font-mono text-[#00D09C]">₹1,428 (+6.9%)</strong>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[#7F9C8E] block">Stop-Loss</span>
-                        <strong className="font-mono text-[#F0614A]">₹1,298 (-2.8%)</strong>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[#7F9C8E] block">Reward : Risk</span>
-                        <strong className="font-mono text-[#00D09C]">2.4x</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#9AB0A5] px-1">
-                    <span>Includes Price Chart, Support/Resistance, Revenue & Profit, and 2-Yr Backtest</span>
-                    <AppLink
-                      href="/screener/analysis?symbol=RELIANCE"
-                      className="font-extrabold text-[#00D09C] hover:underline"
-                    >
-                      Open Full Analysis →
-                    </AppLink>
-                  </div>
-                </div>
-              )}
-
-              {/* Research Note inside Preview */}
-              <div className="rounded-xl bg-[#12281F] border border-[#1D3A2D] px-3.5 py-2 text-[11px] text-[#9AB0A5] flex items-center gap-2">
-                <Info className="w-3.5 h-3.5 text-[#00D09C] shrink-0" />
-                <span>
-                  <strong className="text-white">Note:</strong> Screened using backtested patterns & chart analysis. Do research once from your side before buying any recommendation.
-                </span>
-              </div>
-
-              {/* Card Bottom Bar */}
-              <div className="pt-2 border-t border-[#1D3A2D] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-4 text-xs text-[#9AB0A5]">
-                  <AppLink href="/screener" className="hover:text-[#00D09C] font-semibold">
-                    Swing Scanner →
-                  </AppLink>
-                  <AppLink href="/screener/intraday" className="hover:text-[#00D09C] font-semibold">
-                    Intraday Scanner →
-                  </AppLink>
-                  <AppLink href="/screener/analysis" className="hover:text-[#00D09C] font-semibold">
-                    Stock Analysis →
-                  </AppLink>
-                </div>
-                <AppLink
-                  href="/screener"
-                  className="px-4 py-2 rounded-xl text-xs font-extrabold bg-[#00D09C] text-[#04261C] hover:bg-[#00B386] transition-colors"
-                >
-                  Launch Screener →
-                </AppLink>
-              </div>
-            </div>
+          {/* Right Column: 55% width on desktop for the floating 3D laptop illustration */}
+          <div className="w-full lg:w-[55%] flex items-center justify-center">
+            <FloatingIllustration
+              src="/images/landing/hero-trading.png"
+              alt="NiftyLens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Virtual Trading portfolio, and Interactive Learning"
+              loading="eager"
+              fetchPriority="high"
+              glowVariant="emerald-blue"
+              align="right"
+              maxWidthClass="max-w-[540px] sm:max-w-[640px] lg:max-w-[740px]"
+            />
           </div>
         </div>
       </section>
-
-      {/* 2. THREE INTEGRATED APPLICATIONS SECTION (KEEPING USER'S FAVORITE SECTION) */}
-      <LearningSection onStartTrading={handleGetStarted} />
 
       {/* 3. CONTINUOUS LIVE NSE MARKET TICKER STRIP */}
       <section className="relative w-full py-3.5 border-b border-emerald-900/10 dark:border-[#20332A] bg-white dark:bg-[#111C17] overflow-hidden select-none">
@@ -576,54 +260,251 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* =======================================================================
-         4. PILLAR 1 (50% WEIGHTAGE): SIGNAL SCREENER & STOCK ANALYSIS
+         4. VIRTUAL TRADING FEATURE SECTION — ILLUSTRATION LEFT / TEXT RIGHT
          ======================================================================= */}
-      <section id="screener-suite" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <section
+        id="virtual-trading"
+        className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#0E1713] border-b border-emerald-900/10 dark:border-[#20332A]"
+      >
         <div className="w-full max-w-[1880px] mx-auto space-y-12">
-          {/* Section Header */}
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="space-y-3 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
-                <Radar className="w-3.5 h-3.5" />
-                <span>Core Engine · Signal Screener & Stock Analysis</span>
-              </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
-                Backtested patterns & chart analysis.<br />
-                <span className="text-[#00B386] dark:text-[#00D09C]">Picking the best stock recommendations for you.</span>
-              </h2>
-              <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                Instead of manually checking hundreds of charts every evening, NiftyLens screens all <strong>Nifty 500 stocks</strong> using <strong>historical backtested patterns, candlestick structures, and technical chart analysis</strong> to surface high-confidence stock recommendations — while reminding you to always do your own research before acting.
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left on Desktop: Floating 3D Virtual Trading Illustration */}
+            <div className="lg:col-span-6 order-2 lg:order-1">
+              <FloatingIllustration
+                src="/images/landing/virtual-trading.png"
+                alt="NiftyLens Virtual Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
+                loading="lazy"
+                glowVariant="emerald"
+                delayMs={400}
+                align="left"
+                maxWidthClass="max-w-[520px] sm:max-w-[600px] lg:max-w-[660px]"
+              />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <AppLink
-                href="/screener"
-                className="px-5 py-3 rounded-xl bg-[#00B386] hover:bg-[#009A73] dark:bg-[#00D09C] dark:hover:bg-[#00B386] text-white dark:text-[#04261C] text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-sm"
-              >
-                <span>Open Swing Screener</span>
-                <ArrowRight className="w-4 h-4" />
-              </AppLink>
-              <AppLink
-                href="/screener/intraday"
-                className="px-5 py-3 rounded-xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] hover:border-[#00D09C] text-xs sm:text-sm font-bold flex items-center gap-2"
-              >
-                <Zap className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-                <span>Intraday 15m Picks</span>
-              </AppLink>
-              <AppLink
-                href="/screener/analysis"
-                className="px-5 py-3 rounded-xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] hover:border-[#00D09C] text-xs sm:text-sm font-bold flex items-center gap-2"
-              >
-                <Search className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-                <span>Analyse Any Stock</span>
-              </AppLink>
+            {/* Right on Desktop: Description and Feature Highlights */}
+            <div className="lg:col-span-6 space-y-6 text-left order-1 lg:order-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
+                <ChartCandlestick className="w-3.5 h-3.5" />
+                <span>Virtual Trading Desk · Risk-Free Practice</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
+                Trade Smarter.{' '}
+                <span className="text-[#00B386] dark:text-[#00D09C]">Practice Risk-Free.</span>
+              </h2>
+
+              <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                Practice trading Indian stocks with <strong>₹1,00,000 in virtual capital</strong>{' '}
+                (scalable up to ₹10,00,000). Explore intraday and swing trading, manage positions,
+                and track portfolio performance without risking real money.
+              </p>
+
+              {/* Key Feature Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <Wallet className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>₹1,00,000 Virtual Capital</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Start with ₹1,00,000 in paper capital (expandable up to ₹10 Lakhs) and reset or top up anytime.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <Zap className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Intraday &amp; Swing Trading</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Execute multi-day Swing Delivery (CNC) orders or same-day 5x Intraday (MIS) setups with live NSE quotes.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <LineChartIcon className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Portfolio Performance Tracking</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Monitor real-time P&amp;L, active holdings, order history, and interactive candlestick &amp; line charts.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <ShieldCheck className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Real Taxes &amp; Brokerage Math</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    See exact brokerage, STT, NSE exchange fees, SEBI charges, stamp duty, and GST on every simulated trade.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Open Virtual Trading Desk</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-[#5B7066] dark:text-[#9AB0A5]">
+                  Live NSE benchmark quotes · 100% risk-free simulation
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* 3 Screener Capabilities Grid */}
+          {/* Preserved Virtual Portfolio & Order Execution Quick Strip */}
+          <div className="rounded-3xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-5 sm:p-6 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#5B7066] dark:text-[#9AB0A5]">
+                  Virtual Trading Sandbox
+                </span>
+                <div className="font-mono tabular-nums text-xl sm:text-2xl font-black text-[#15241D] dark:text-white mt-0.5">
+                  ₹1,00,000 – ₹10,00,000
+                </div>
+              </div>
+              <div className="h-10 w-px bg-[#CFDCD5] dark:bg-[#20332A] hidden sm:block" />
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#5B7066] dark:text-[#9AB0A5] block">
+                  Supported Order Modes
+                </span>
+                <span className="mt-1 inline-block rounded-lg border border-[#00D09C]/30 bg-[#00D09C]/10 px-3 py-1 font-mono text-xs font-extrabold text-[#008F6B] dark:text-[#00D09C]">
+                  Delivery (CNC) · 5x Intraday (MIS) · Market &amp; Limit
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGetStarted}
+              className="w-full sm:w-auto rounded-xl bg-[#00D09C] hover:bg-[#00B386] text-[#04261C] font-extrabold text-xs sm:text-sm px-5 py-3 flex items-center justify-center gap-2 cursor-pointer transition-colors shrink-0"
+            >
+              <span>Start Paper Trading</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* =======================================================================
+         5. AI-POWERED STOCK SCREENER SECTION — TEXT LEFT / ILLUSTRATION RIGHT
+         ======================================================================= */}
+      <section id="screener-suite" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[1880px] mx-auto space-y-14">
+          {/* Main Two-Column Feature Showcase: Left Copy, Right Illustration on Desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left on Desktop: Heading, Description, Feature Highlights, and CTAs */}
+            <div className="lg:col-span-6 space-y-6 text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Core Engine · AI Insights, Chart Analysis &amp; Backtested Strategies</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
+                Discover High-Potential Stocks with{' '}
+                <span className="text-[#00B386] dark:text-[#00D09C]">AI-Powered Insights.</span>
+              </h2>
+
+              <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                Find promising Indian stocks using <strong>advanced chart analysis</strong>,{' '}
+                <strong>multiple backtested trading strategies</strong>, and{' '}
+                <strong>AI-powered technical insights</strong>. Identify intraday and swing trading
+                opportunities, evaluate historical performance, and make more informed trading
+                decisions.
+              </p>
+
+              {/* 4 Required Feature Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-4 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <BarChart2 className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Advanced Chart Analysis</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Identify technical patterns, support, resistance, momentum, and trend changes.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-4 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <TrendingUp className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Multiple Backtested Strategies</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Explore trading opportunities identified using strategies evaluated against historical market data.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-4 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <Sparkles className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>AI-Powered Insights</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Get additional technical analysis and contextual insights to support trading decisions.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-4 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <Target className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Confidence-Based Signals</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Evaluate BUY, WAIT, and AVOID signals alongside technical scores and historical statistics.
+                  </p>
+                </div>
+              </div>
+
+              {/* Existing Screener CTAs */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <AppLink
+                  href="/screener"
+                  className="px-5 py-3.5 rounded-xl bg-[#00B386] hover:bg-[#009A73] dark:bg-[#00D09C] dark:hover:bg-[#00B386] text-white dark:text-[#04261C] text-xs sm:text-sm font-extrabold flex items-center gap-2 shadow-sm"
+                >
+                  <span>Open Swing Screener</span>
+                  <ArrowRight className="w-4 h-4" />
+                </AppLink>
+                <AppLink
+                  href="/screener/intraday"
+                  className="px-5 py-3.5 rounded-xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] hover:border-[#00D09C] text-xs sm:text-sm font-bold flex items-center gap-2"
+                >
+                  <Zap className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
+                  <span>Intraday 15m Picks</span>
+                </AppLink>
+                <AppLink
+                  href="/screener/analysis"
+                  className="px-5 py-3.5 rounded-xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] hover:border-[#00D09C] text-xs sm:text-sm font-bold flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
+                  <span>Analyse Any Stock</span>
+                </AppLink>
+              </div>
+            </div>
+
+            {/* Right on Desktop: Floating 3D Stock Screener Illustration */}
+            <div className="lg:col-span-6">
+              <FloatingIllustration
+                src="/images/landing/stock-screener.png"
+                alt="NiftyLens AI Stock Screener 3D illustration displaying Swing Trading, Intraday Trading, and Stock Analyser panels with technical indicators, breakout chart analysis, confidence score, and backtesting results"
+                loading="lazy"
+                glowVariant="blue-cyan"
+                delayMs={200}
+                align="right"
+                maxWidthClass="max-w-[520px] sm:max-w-[600px] lg:max-w-[660px]"
+              />
+            </div>
+          </div>
+
+          {/* Preserved 3 Detailed Screener Strategy Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Capability 1: Swing Trading Scanner */}
+            {/* Strategy 1: Swing Trading Screener */}
             <div className="rounded-3xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-6 sm:p-8 flex flex-col justify-between shadow-sm">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -636,24 +517,30 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-extrabold text-[#15241D] dark:text-white">
-                  1. Swing Trading Scanner (Nifty 500)
+                  1. Swing Trading Screener (Nifty 500)
                 </h3>
                 <p className="text-sm text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Checks all 500 NSE stocks for upward price trends, volume breakouts, and momentum — then ranks the strongest bullish picks so you know what is ready to rise.
+                  Scans all 500 NSE stocks using backtested breakout, trend-following, and momentum strategies — ranking high-potential swing setups by technical confidence.
                 </p>
 
                 <ul className="space-y-2.5 pt-2 text-xs sm:text-sm text-[#15241D] dark:text-[#D6E6DE]">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Confidence Score (0–100):</strong> See how strongly multiple indicators agree.</span>
+                    <span>
+                      <strong>Confidence Score (0–100):</strong> See how strongly multiple indicators and backtested rules align.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Ready to Buy vs Watchlist:</strong> Know whether to enter now or wait for confirmation.</span>
+                    <span>
+                      <strong>Confirmed vs Watchlist:</strong> Know whether a breakout is active or awaiting confirmation.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Complete Plan:</strong> Buy price, target sell price, expected date, stop-loss & reward:risk.</span>
+                    <span>
+                      <strong>Reference Plan:</strong> Entry zone, target price, stop-loss &amp; reward:risk ratio.
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -670,7 +557,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Capability 2: Live Intraday Scanner */}
+            {/* Strategy 2: Intraday Screener */}
             <div className="rounded-3xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-6 sm:p-8 flex flex-col justify-between shadow-sm">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -683,24 +570,30 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-extrabold text-[#15241D] dark:text-white">
-                  2. Live Intraday Scanner (Top 100)
+                  2. Intraday Screener (Top 100 Liquid)
                 </h3>
                 <p className="text-sm text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Watches the 100 most liquid Nifty stocks on 15-minute candles during market hours (9:15 AM – 3:30 PM IST) and flags sharp moves backed by heavy buying volume.
+                  Monitors the 100 most liquid Nifty stocks on 15-minute candles during market hours (9:15 AM – 3:30 PM IST) for VWAP and volume-backed momentum bursts.
                 </p>
 
                 <ul className="space-y-2.5 pt-2 text-xs sm:text-sm text-[#15241D] dark:text-[#D6E6DE]">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Auto-Refresh Every 5 Mins:</strong> Live countdown timer while NSE is open.</span>
+                    <span>
+                      <strong>Auto-Refresh Every 5 Mins:</strong> Live countdown timer while NSE is open.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Live Trade Tracking:</strong> Tracks whether each pick is Open, Hit Target, or Stopped Out.</span>
+                    <span>
+                      <strong>Live Signal Tracking:</strong> Tracks whether each intraday setup is Open, Hit Target, or Stopped Out.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Last Session Replay:</strong> Even after market close, review the full day’s intraday results.</span>
+                    <span>
+                      <strong>Last Session Replay:</strong> Review the full day’s intraday strategy performance after market close.
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -717,7 +610,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Capability 3: Deep Stock Analysis */}
+            {/* Strategy 3: AI Stock Analysis */}
             <div className="rounded-3xl border border-[#CFDCD5] dark:border-[#20332A] bg-white dark:bg-[#111C17] p-6 sm:p-8 flex flex-col justify-between shadow-sm">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -725,29 +618,35 @@ export const LandingPage: React.FC = () => {
                     <Search className="w-6 h-6" />
                   </div>
                   <span className="rounded-full bg-[#00D09C]/10 border border-[#00D09C]/25 px-3 py-1 text-[11px] font-bold text-[#008F6B] dark:text-[#00D09C]">
-                    Simple + Advanced Modes
+                    AI + Technical + Fundamental
                   </span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-extrabold text-[#15241D] dark:text-white">
-                  3. Instant Stock Analysis (Any Stock)
+                  3. Stock Analysis (Any Stock)
                 </h3>
                 <p className="text-sm text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Have a stock in mind? Search any Nifty 500 company to get a complete health check combining technical trends, price levels, company financials, and past signal accuracy.
+                  Search any Nifty 500 company for an instant health check combining AI-powered technical commentary, chart structure, financials, and historical strategy backtests.
                 </p>
 
                 <ul className="space-y-2.5 pt-2 text-xs sm:text-sm text-[#15241D] dark:text-[#D6E6DE]">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Clear Verdict:</strong> Plain-English <em>Buy</em>, <em>Wait</em>, or <em>Avoid</em> with buy zone & targets.</span>
+                    <span>
+                      <strong>Confidence-Based Verdict:</strong> Clear <em>BUY</em>, <em>WAIT</em>, or <em>AVOID</em> signal with reference levels.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>Revenue, Profit & Balance Sheet:</strong> Yearly/Quarterly financials & key ratios.</span>
+                    <span>
+                      <strong>Revenue, Profit &amp; Balance Sheet:</strong> Yearly/Quarterly financials &amp; valuation ratios.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                    <span><strong>2-Year Signal Backtest:</strong> See how often past signals on that stock hit target.</span>
+                    <span>
+                      <strong>2-Year Strategy Backtest:</strong> Evaluate how historical signals performed on that stock.
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -765,220 +664,133 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Interactive Quick Stock Analysis Bar */}
-          <div className="rounded-3xl border border-[#1D3A2D] bg-gradient-to-r from-[#0C1D16] via-[#122B21] to-[#0C1D16] p-6 sm:p-8 text-white flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-lg">
-            <div className="space-y-1.5 max-w-2xl">
-              <div className="text-xs font-extrabold uppercase tracking-wider text-[#00D09C]">
-                Try Instant Stock Check
-              </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold">
-                Click any popular NSE stock to see its live buy/wait verdict, price chart & financials:
-              </h3>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'TATAMOTORS', 'ITC'].map((sym) => (
-                <button
-                  key={sym}
-                  type="button"
-                  onClick={() => navigate(`/screener/analysis?symbol=${sym}`)}
-                  className="px-3.5 py-2 rounded-xl bg-[#163025] hover:bg-[#00D09C] text-[#E9F2EE] hover:text-[#04261C] border border-[#234737] font-mono text-xs font-extrabold transition-all cursor-pointer"
-                >
-                  {sym} →
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Interactive Screener & Stock Analysis Live Preview + Quick Stock Check Bar */}
+          {/* <ScreenerLivePreviewCard onLaunchTradeStock={handleLaunchTradeStock} /> */}
         </div>
       </section>
 
       {/* =======================================================================
-         5. PILLAR 2 (30% WEIGHTAGE): GROWW-STYLE VIRTUAL TRADING DESK
+         6. INTERACTIVE LEARNING SECTION — ILLUSTRATION LEFT / TEXT RIGHT
          ======================================================================= */}
       <section
-        id="virtual-trading"
-        className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#0E1713] border-y border-emerald-900/10 dark:border-[#20332A]"
+        id="learn-module"
+        className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#0E1713] border-t border-emerald-900/10 dark:border-[#20332A]"
       >
-        <div className="w-full max-w-[1880px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left: Clear Explanation of Virtual Trading (30% Weightage) */}
-          <div className="lg:col-span-6 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
-              <ChartCandlestick className="w-3.5 h-3.5" />
-              <span>Practice Desk · ₹10,00,000 Virtual Capital</span>
+        <div className="w-full max-w-[1880px] mx-auto space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left on Desktop: Floating 3D Interactive Learning Illustration */}
+            <div className="lg:col-span-6 order-2 lg:order-1">
+              <FloatingIllustration
+                src="/images/landing/interactive-learning.png"
+                alt="NiftyLens Interactive Learning 3D illustration featuring Learn Chart Patterns, Bullish Engulfing breakdown, Chart Pattern Library, Guess the Chart quiz, and Chart Replay"
+                loading="lazy"
+                glowVariant="indigo-emerald"
+                delayMs={300}
+                align="left"
+                maxWidthClass="max-w-[520px] sm:max-w-[600px] lg:max-w-[660px]"
+              />
             </div>
 
-            <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
-              Found a good stock pick?<br />
-              <span className="text-[#00B386] dark:text-[#00D09C]">Test it with virtual money first.</span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-              Once you spot a setup in the Signal Screener, jump straight to the <strong>Virtual Trading Desk</strong>. Experience the exact look, order pad, and market mechanics of top Indian apps like Groww — without risking a single rupee of real capital.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
-                  <Wallet className="w-4 h-4 text-[#00D09C]" />
-                  <span>Up to ₹10 Lakhs Virtual Cash</span>
-                </div>
-                <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Start with ₹1L to ₹10L virtual funds. Recharge or reset your portfolio with one click anytime.
-                </p>
+            {/* Right on Desktop: Text and Feature Highlights */}
+            <div className="lg:col-span-6 space-y-6 text-left order-1 lg:order-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Chart Learning Studio · 28+ Patterns &amp; Quiz</span>
               </div>
 
-              <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
-                  <Zap className="w-4 h-4 text-[#00D09C]" />
-                  <span>Delivery (CNC) & 5x Intraday</span>
-                </div>
-                <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Practice multi-day Delivery holdings or same-day Intraday MIS trades with 5x margin power.
-                </p>
-              </div>
+              <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
+                Learn Chart Patterns.{' '}
+                <span className="text-[#00B386] dark:text-[#00D09C]">Predict Market Moves.</span>
+              </h2>
 
-              <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
-                  <LineChartIcon className="w-4 h-4 text-[#00D09C]" />
-                  <span>Groww-Style Live Charts</span>
-                </div>
-                <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  Switch between Line, Candlestick, and Terminal views across 1D, 1W, 1M, 1Y, and All timeframes.
-                </p>
-              </div>
+              <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                Master candlestick patterns through <strong>interactive lessons</strong>,{' '}
+                <strong>replay market movements</strong>, and test your knowledge with{' '}
+                <strong>Guess the Chart quizzes</strong>. Build confidence by practicing chart
+                analysis and learning from every decision.
+              </p>
 
-              <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
-                  <ShieldCheck className="w-4 h-4 text-[#00D09C]" />
-                  <span>Real Taxes & Brokerage Math</span>
-                </div>
-                <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                  See exact brokerage, STT, NSE exchange fees, SEBI charges, stamp duty, and GST on every trade.
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <button
-                onClick={handleGetStarted}
-                className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span>Open Virtual Trading Desk</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-              <span className="text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                Live NSE benchmark quotes · 100% risk-free simulation
-              </span>
-            </div>
-          </div>
-
-          {/* Right: Virtual Portfolio & Order Pad Preview Card */}
-          <div className="lg:col-span-6">
-            <div className="rounded-3xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-6 sm:p-8 shadow-xl space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#E2EAE6] dark:border-[#20332A]">
-                <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#5B7066] dark:text-[#9AB0A5]">
-                    Virtual Trading Portfolio
-                  </span>
-                  <div className="font-mono tabular-nums text-2xl sm:text-3xl font-black text-[#15241D] dark:text-white mt-0.5">
-                    ₹10,00,000.00
+              {/* 4 Required Feature Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <BookOpen className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Candlestick Pattern Library</span>
                   </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Explore 28+ reversal, continuation, and candlestick setups with entry, stop-loss, and target rules.
+                  </p>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-[#5B7066] dark:text-[#9AB0A5] block">
-                    Simulated Day P&L
-                  </span>
-                  <span className="mt-1 inline-block rounded-lg border border-[#00D09C]/30 bg-[#00D09C]/10 px-3 py-1 font-mono text-xs sm:text-sm font-extrabold text-[#008F6B] dark:text-[#00D09C]">
-                    +₹8,420.50 (+0.84%)
-                  </span>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <PlayCircle className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Interactive Chart Replay</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Step through historical market setups candle by candle to see how patterns unfold in real time.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <GraduationCap className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Guess the Chart Quiz</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Test your instincts across Casual Quiz, 3-Life Survival, and 10-Round Challenge modes.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
+                    <Award className="w-4 h-4 text-[#00D09C] shrink-0" />
+                    <span>Learning Progress &amp; Achievements</span>
+                  </div>
+                  <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
+                    Track your accuracy, win streaks, and detailed post-question explanations after every call.
+                  </p>
                 </div>
               </div>
 
-              {/* Clean Groww-style Static Endpoint Curve Preview */}
-              <div className="rounded-2xl border border-[#E2EAE6] dark:border-[#20332A] bg-white dark:bg-[#0C1511] p-4">
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-extrabold text-[#15241D] dark:text-white">
-                    RELIANCE · NSE Live Session
-                  </span>
-                  <span className="font-mono font-bold text-[#00B386] dark:text-[#00D09C]">
-                    ₹1,336.10 (+0.88%)
-                  </span>
-                </div>
-                <div className="h-32 w-full">
-                  <svg viewBox="0 0 420 100" className="w-full h-full overflow-visible">
-                    <defs>
-                      <linearGradient id="deskPreviewGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00D09C" stopOpacity="0.22" />
-                        <stop offset="100%" stopColor="#00D09C" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <line x1="0" y1="76" x2="420" y2="76" stroke="#6C8579" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
-                    <path
-                      d="M 0 76 L 35 64 L 70 68 L 110 52 L 150 58 L 195 42 L 240 48 L 285 34 L 330 38 L 375 24 L 375 100 L 0 100 Z"
-                      fill="url(#deskPreviewGrad)"
-                    />
-                    <path
-                      d="M 0 76 L 35 64 L 70 68 L 110 52 L 150 58 L 195 42 L 240 48 L 285 34 L 330 38 L 375 24"
-                      fill="none"
-                      stroke="#00D09C"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="375" cy="24" r="4" fill="#00D09C" />
-                  </svg>
-                </div>
-                <div className="flex justify-between text-[10px] font-mono text-[#5B7066] dark:text-[#7F9C8E] pt-2 border-t border-[#E2EAE6] dark:border-[#1D3A2D]">
-                  <span>09:15 AM</span>
-                  <span>11:30 AM</span>
-                  <span>01:30 PM</span>
-                  <span>03:30 PM</span>
-                </div>
-              </div>
-
-              {/* Order Execution Strip */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-[#E2EAE6] dark:border-[#20332A] bg-white dark:bg-[#16241E] p-3">
-                  <span className="text-[10px] uppercase font-bold text-[#5B7066] dark:text-[#9AB0A5]">Order Mode</span>
-                  <div className="text-xs font-extrabold text-[#15241D] dark:text-white mt-0.5">
-                    Delivery CNC / Intraday 5x
-                  </div>
-                </div>
-                <div className="rounded-xl border border-[#E2EAE6] dark:border-[#20332A] bg-white dark:bg-[#16241E] p-3">
-                  <span className="text-[10px] uppercase font-bold text-[#5B7066] dark:text-[#9AB0A5]">Execution</span>
-                  <div className="text-xs font-extrabold text-[#15241D] dark:text-white mt-0.5">
-                    Market, Limit & Stop-Loss
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleGetStarted}
-                  className="rounded-xl bg-[#00D09C] hover:bg-[#00B386] text-[#04261C] font-extrabold text-xs p-3 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <AppLink
+                  href="/learn"
+                  className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-sm transition-all flex items-center gap-2"
                 >
-                  <span>Start Paper Trading</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                  <BookOpen className="w-4 h-4" />
+                  <span>Explore Pattern Library</span>
+                </AppLink>
+                <AppLink
+                  href="/quiz"
+                  className="px-5 py-3.5 rounded-xl font-bold text-sm text-[#15241D] dark:text-white bg-[#F3F6F4] dark:bg-[#111C17] border border-[#CFDCD5] dark:border-[#20332A] hover:border-[#00D09C] transition-colors flex items-center gap-2"
+                >
+                  <GraduationCap className="w-4 h-4 text-[#00D09C]" />
+                  <span>Play Guess the Chart →</span>
+                </AppLink>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* =======================================================================
-         6. PILLAR 3 (20% WEIGHTAGE): LEARN CHART PATTERNS & GUESS THE CHART
-         ======================================================================= */}
-      <section id="learn-module" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-[1880px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left: Interactive Pattern Lesson Preview Card */}
-          <div className="lg:col-span-6 order-2 lg:order-1">
-            <div className="rounded-3xl border border-[#1D3A2D] bg-[#0C1D16] text-white p-6 sm:p-8 shadow-xl space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-[#1D3A2D]">
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#00D09C]/15 border border-[#00D09C]/30 px-3 py-1 text-xs font-bold text-[#00D09C]">
-                    Reversal Pattern · Beginner
-                  </span>
-                  <span className="rounded-full bg-[#00D09C]/20 px-2.5 py-1 text-xs font-bold text-[#00D09C]">
-                    Bullish Bias
-                  </span>
-                </div>
+          {/* Preserved Interactive Pattern Lesson Breakdown Strip */}
+          <div className="rounded-3xl border border-[#1D3A2D] bg-[#0C1D16] text-white p-6 sm:p-8 shadow-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1D3A2D]">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="rounded-full bg-[#00D09C]/15 border border-[#00D09C]/30 px-3 py-1 text-xs font-bold text-[#00D09C]">
+                  Sample Pattern Lesson · Double Bottom (W-Pattern)
+                </span>
+                <span className="rounded-full bg-[#00D09C]/20 px-2.5 py-1 text-xs font-bold text-[#00D09C]">
+                  Bullish Reversal
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <AppLink
+                  href="/learn"
+                  className="text-xs font-extrabold text-[#00D09C] hover:underline flex items-center gap-1"
+                >
+                  <span>Open Pattern Library</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </AppLink>
                 <AppLink
                   href="/quiz"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#00D09C] px-3.5 py-1.5 text-xs font-extrabold text-[#04261C] hover:bg-[#00B386]"
@@ -987,176 +799,34 @@ export const LandingPage: React.FC = () => {
                   <span>Guess the Chart</span>
                 </AppLink>
               </div>
+            </div>
 
-              <div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                  Double Bottom (W-Pattern)
-                </h3>
-                <p className="text-xs sm:text-sm text-[#9AB0A5] mt-1">
-                  Plain-English meaning: <strong className="text-white">Price tests a floor twice and bounces up</strong>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                  <span className="font-bold text-[#00D09C] block mb-1">Entry Rule</span>
-                  <span className="text-[#D6E6DE]">Buy when price breaks above the middle peak (neckline).</span>
-                </div>
-                <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                  <span className="font-bold text-[#F0614A] block mb-1">Stop-Loss</span>
-                  <span className="text-[#D6E6DE]">Place stop just below the twin bottom support floor.</span>
-                </div>
-                <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                  <span className="font-bold text-[#5CB8FF] block mb-1">Profit Target</span>
-                  <span className="text-[#D6E6DE]">Height of the W pattern added to the breakout level.</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1D3A2D]">
-                <span className="text-xs text-[#8FA99C]">
-                  28+ interactive setups with &ldquo;Reveal Next Candles&rdquo;
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
+                <span className="font-bold text-[#00D09C] block mb-1">Entry Rule</span>
+                <span className="text-[#D6E6DE]">
+                  Enter when price breaks decisively above the middle peak (neckline) with rising volume.
                 </span>
-                <div className="flex items-center gap-3">
-                  <AppLink
-                    href="/learn"
-                    className="text-xs font-extrabold text-[#00D09C] hover:underline flex items-center gap-1"
-                  >
-                    <span>Open Pattern Library</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </AppLink>
-                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Right: Copy for Learn & Guess the Chart (20% Weightage) */}
-          <div className="lg:col-span-6 space-y-6 text-left order-1 lg:order-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Chart Learning Studio · 28+ Patterns & Quiz</span>
-            </div>
-
-            <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
-              Learn what the chart is telling you.<br />
-              <span className="text-[#00B386] dark:text-[#00D09C]">Then play Guess the Chart.</span>
-            </h2>
-
-            <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-              New to technical charts? Our <strong>Learn</strong> module breaks down 28+ classic reversal, continuation, and candlestick patterns into four simple parts: <strong>Title, Description, Why the Chart Works, and an Interactive Chart</strong> — with a one-click <strong>Guess the Chart</strong> quiz to test your instincts.
-            </p>
-
-            <ul className="space-y-3 text-xs sm:text-sm text-[#15241D] dark:text-[#D6E6DE]">
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                <span><strong>Spacious Pattern Sidebar:</strong> Filter by Reversal, Continuation, Bilateral, or Candlestick setups.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                <span><strong>Why the Chart Works:</strong> Understand buyer & seller psychology plus clear Entry, Stop-Loss, and Target rules.</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
-                <span><strong>Guess the Chart Arena:</strong> Predict UP or DOWN across Unlimited Practice, 3-Life Survival, and 10-Round Challenge modes.</span>
-              </li>
-            </ul>
-
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <AppLink
-                href="/learn"
-                className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-sm transition-all flex items-center gap-2"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Explore Pattern Library</span>
-              </AppLink>
-              <AppLink
-                href="/quiz"
-                className="px-5 py-3.5 rounded-xl font-bold text-sm text-[#15241D] dark:text-white bg-white dark:bg-[#111C17] border border-[#CFDCD5] dark:border-[#20332A] hover:border-[#00D09C] transition-colors flex items-center gap-2"
-              >
-                <GraduationCap className="w-4 h-4 text-[#00D09C]" />
-                <span>Play Guess the Chart →</span>
-              </AppLink>
+              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
+                <span className="font-bold text-[#F0614A] block mb-1">Stop-Loss</span>
+                <span className="text-[#D6E6DE]">
+                  Place stop-loss just below the twin bottom support floor to manage downside risk.
+                </span>
+              </div>
+              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
+                <span className="font-bold text-[#5CB8FF] block mb-1">Profit Target</span>
+                <span className="text-[#D6E6DE]">
+                  Project the height of the W pattern upward from the neckline breakout level.
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 7. BENCHMARK INDICES STRIP */}
-      <section
-        id="indices"
-        className="py-14 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#0E1713] border-y border-emerald-900/10 dark:border-[#20332A]"
-      >
-        <div className="w-full max-w-[1880px] mx-auto space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-xs font-extrabold text-[#00B386] dark:text-[#00D09C] uppercase tracking-wider">
-                  Indian Market Benchmarks
-                </span>
-                <span
-                  className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
-                    marketStatus.isOpen
-                      ? 'bg-emerald-50 text-[#00D09C] border-[#00D09C]/30 dark:bg-emerald-950/40'
-                      : 'bg-amber-50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/40 dark:bg-amber-950/40'
-                  }`}
-                >
-                  {marketStatus.isOpen
-                    ? '● Live Exchange Session'
-                    : `○ ${marketStatus.statusLabel} · Official Close`}
-                </span>
-              </div>
-              <h3 className="text-2xl font-extrabold text-[#15241D] dark:text-white tracking-tight mt-1">
-                Track major NSE & BSE indices alongside your scans
-              </h3>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {indices.map((idx) => {
-              const isUp = idx.change >= 0;
-              return (
-                <div
-                  key={idx.symbol}
-                  className="bg-[#F3F6F4] dark:bg-[#111C17] p-4 rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] space-y-2.5 text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-xs text-[#15241D] dark:text-white truncate">
-                      {idx.name}
-                    </span>
-                    <span
-                      className={`text-[11px] font-mono font-bold ${
-                        isUp ? 'text-[#00B386] dark:text-[#00D09C]' : 'text-[#E0452B] dark:text-[#F0614A]'
-                      }`}
-                    >
-                      {isUp ? '+' : ''}
-                      {idx.changePercent.toFixed(2)}%
-                    </span>
-                  </div>
-
-                  <div className="font-mono tabular-nums text-lg font-black text-[#15241D] dark:text-white">
-                    {idx.value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </div>
-
-                  <div className="h-8 w-full">
-                    <svg viewBox="0 0 100 24" className="w-full h-full overflow-visible">
-                      <path
-                        d={
-                          isUp
-                            ? 'M 0 18 Q 30 12, 50 14 T 80 8 L 100 4'
-                            : 'M 0 6 Q 30 10, 50 8 T 80 16 L 100 20'
-                        }
-                        fill="none"
-                        stroke={isUp ? '#00D09C' : '#F0614A'}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* THREE INTEGRATED APPLICATIONS SECTION */}
+      <LearningSection onStartTrading={handleGetStarted} />
 
       {/* 8. FAQ SECTION */}
       <section id="faq" className="py-16 px-4 sm:px-6 lg:px-8">
@@ -1169,7 +839,7 @@ export const LandingPage: React.FC = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-xs sm:text-sm text-[#5B7066] dark:text-[#9AB0A5]">
-              Everything you need to know about NiftyLens Signal Screener, Virtual Trading, and Pattern Learning.
+              Everything you need to know about NiftyLens AI Stock Screener, Virtual Trading, and Pattern Learning.
             </p>
           </div>
 
@@ -1215,7 +885,7 @@ export const LandingPage: React.FC = () => {
                 Ready to scan stocks, practice trades, and master charts?
               </h3>
               <p className="text-xs sm:text-sm text-[#9AB0A5] leading-relaxed">
-                Start with the Nifty 500 Signal Screener, practice risk-free with ₹10,00,000 on the Virtual Trading Desk, or explore 28+ setups in the Chart Pattern Library.
+                Start with the AI-Powered Nifty 500 Stock Screener, practice risk-free on the Virtual Trading Desk, or explore 28+ setups in the Chart Pattern Library.
               </p>
             </div>
 
@@ -1225,10 +895,11 @@ export const LandingPage: React.FC = () => {
                 className="px-7 py-3.5 rounded-xl font-extrabold text-sm bg-[#00D09C] text-[#04261C] hover:bg-[#00B386] shadow-md transition-all inline-flex items-center gap-2"
               >
                 <Radar className="w-4 h-4" />
-                <span>Open Signal Screener</span>
+                <span>Open Stock Screener</span>
                 <ArrowRight className="w-4 h-4" />
               </AppLink>
               <button
+                type="button"
                 onClick={handleGetStarted}
                 className="px-6 py-3.5 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/15 border border-white/20 text-white transition-all inline-flex items-center gap-2 cursor-pointer"
               >
@@ -1283,7 +954,7 @@ export const LandingPage: React.FC = () => {
 
           <div className="space-y-2 text-[11px] leading-relaxed text-[#5B7066] dark:text-[#7F9C8E]">
             <p>
-              <strong>Disclaimer:</strong> NiftyLens is an educational stock screening, chart learning, and paper trading platform created strictly for informational and strategy backtesting purposes. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
+              <strong>Disclaimer:</strong> NiftyLens is an educational stock screening, AI-assisted chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and AI insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
             </p>
             <p>
               This platform is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, sub-broker, portfolio manager, or investment adviser. Nothing on this website constitutes investment advice, financial guidance, tax advisory, or a recommendation to buy or sell any financial instrument.
@@ -1291,8 +962,8 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-emerald-900/10 dark:border-[#20332A] text-[11px]">
-            <div>© {new Date().getFullYear()} NiftyLens. NSE Signal Screener, Virtual Trading & Chart Pattern Studio.</div>
-            <div>Educational Research & Paper Trading Sandbox · Max Virtual Wallet: ₹10,00,000</div>
+            <div>© {new Date().getFullYear()} NiftyLens. NSE Stock Screener, Virtual Trading &amp; Chart Pattern Studio.</div>
+            <div>Educational Research &amp; Paper Trading Sandbox · Virtual Capital: ₹1,00,000 – ₹10,00,000</div>
           </div>
         </div>
       </footer>

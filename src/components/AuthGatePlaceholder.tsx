@@ -19,7 +19,7 @@ interface AuthGatePlaceholderProps {
 
 const FEATURE_COPY = {
   screener: {
-    eyebrow: 'NIFTYLENS SIGNAL SCREENER & STOCK RECOMMENDATIONS',
+    eyebrow: 'NIFTYLENS STOCK SCREENER & STOCK RECOMMENDATIONS',
     title: 'Sign in to access Stock Recommendations & Chart Analysis',
     description:
       'Unlock our Nifty 500 Swing & Intraday Screener powered by historical backtested patterns, multi-indicator chart analysis, and complete entry, target, and stop-loss recommendations.',
@@ -69,7 +69,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
               <div className="rounded-2xl border border-[#E2EAE6] dark:border-[#20332A] bg-[#F6F9F7] dark:bg-[#16241E] p-3.5 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
                   <Radar className="w-4 h-4 shrink-0" />
-                  <span>Signal Screener</span>
+                  <span>Stock Screener</span>
                 </div>
                 <p className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5] leading-snug">
                   Backtested Swing & Intraday stock recommendations + full stock analysis.

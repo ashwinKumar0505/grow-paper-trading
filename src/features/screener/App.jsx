@@ -37,7 +37,7 @@ export default function ScreenerApp() {
     return () => clearInterval(timer);
   }, []);
 
-  const title = TITLES[pathname] || 'Signal Screener';
+  const title = TITLES[pathname] || 'Stock Screener';
   useEffect(() => {
     document.title = `${title} · NiftyLens`;
     window.scrollTo(0, 0);
@@ -75,7 +75,7 @@ export default function ScreenerApp() {
             <SwingScannerPage />
           )}
           <footer className="app-footer">
-            NiftyLens Signal Screener · For learning and research only — not investment advice. Targets and dates are
+            NiftyLens Stock Screener · For learning and research only — not investment advice. Targets and dates are
             estimates based on past price behaviour.
           </footer>
         </main>

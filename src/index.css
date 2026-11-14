@@ -149,3 +149,27 @@
 @media (min-width: 1280px) {
   #how-it-works, #features, #faq { scroll-margin-top: 6rem; }
 }
+
+/* Gentle 3D illustration floating animation (GPU-accelerated, respects reduced motion) */
+@keyframes niftyFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+.animate-float-3d {
+  animation: niftyFloat 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-3d,
+  .animate-marquee,
+  .animate-ticker {
+    animation: none !important;
+    transform: none !important;
+  }
+}
