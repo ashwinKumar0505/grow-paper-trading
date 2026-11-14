@@ -27,7 +27,14 @@ import {
   Award,
   ChartCandlestick,
   PlayCircle,
+  Crown,
 } from 'lucide-react';
+import { SUBSCRIPTION_PLANS } from '../lib/subscription';
+import { getMaxYearlySavingsPercent, type PaidBillingCycle } from '../utils/pricing';
+import { BillingToggle } from '../features/pricing/components/BillingToggle';
+import { PricingCards } from '../features/pricing/components/PricingCards';
+
+const MAX_YEARLY_SAVINGS = getMaxYearlySavingsPercent(Object.values(SUBSCRIPTION_PLANS));
 
 export const LandingPage: React.FC = () => {
   const {
@@ -38,10 +45,12 @@ export const LandingPage: React.FC = () => {
     stocks,
     setCurrentTab,
     openAuthModal,
+    subscriptionTier,
   } = useTrading();
 
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [billingCycle, setBillingCycle] = useState<PaidBillingCycle>('yearly');
 
   const handleGetStarted = () => {
     if (user) {
@@ -76,8 +85,8 @@ export const LandingPage: React.FC = () => {
       a: 'Our screener combines advanced technical chart analysis, multiple historically backtested strategies, and AI-powered technical insights across Nifty 500 stocks. It evaluates BUY, WAIT, and AVOID signals alongside confidence scores (0–100), reference entry zones, targets, stop-loss levels, and historical strategy statistics for both Swing and 15-minute Intraday trading.',
     },
     {
-      q: 'What do I see when I search a stock in AI Stock Analysis?',
-      a: 'Type any Nifty 500 stock (like Reliance, TCS, or HDFC Bank) to see a confidence-based verdict (BUY, WAIT, or AVOID), AI-powered contextual insights, buy price range, target, stop-loss, an interactive price chart with support/resistance levels, company revenue & profit, and a 2-year historical strategy backtest.',
+      q: 'What do I see when I search a stock in Stock Analysis?',
+      a: 'Type any Nifty 500 stock (like Reliance, TCS, or HDFC Bank) to see a confidence-based verdict (BUY, WAIT, or AVOID), chart structure with support/resistance levels, company revenue & profit, historical strategy backtests (2-year on Beginner, up to 5-year on Advanced), and an AI insights layer.',
     },
     {
       q: 'How does the Virtual Trading Desk work?',
@@ -133,11 +142,11 @@ export const LandingPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 type="button"
-                onClick={handleGetStarted}
+                onClick={() => (user ? handleGetStarted() : openAuthModal('signup'))}
                 className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
               >
                 <ChartCandlestick className="w-4 h-4" />
-                <span>Virtual Trading Desk</span>
+                <span>{user ? 'Open Paper Trading Desk' : 'Start Free Account Now'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -150,11 +159,11 @@ export const LandingPage: React.FC = () => {
               </AppLink>
 
               <AppLink
-                href="/learn"
+                href="/pricing"
                 className="px-5 py-3.5 rounded-xl font-bold text-sm text-[#15241D] dark:text-[#E9F2EE] bg-white dark:bg-[#111C17] border border-[#CFDCD5] dark:border-[#20332A] hover:border-[#00B386] dark:hover:border-[#00D09C] transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <BookOpen className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-                <span>Learn Charts &amp; Quiz</span>
+                <Crown className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
+                <span>View Plans &amp; Pricing</span>
               </AppLink>
             </div>
 
@@ -163,10 +172,10 @@ export const LandingPage: React.FC = () => {
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
                   <Radar className="w-4 h-4 shrink-0" />
-                  <span>1. AI Stock Screener</span>
+                  <span>1. Stock Screener &amp; Backtests</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Swing picks, 15-min intraday alerts &amp; AI stock analysis.
+                  Backtested swing &amp; intraday strategies, chart analysis &amp; AI insights.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
@@ -645,7 +654,7 @@ export const LandingPage: React.FC = () => {
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-[#00D09C] shrink-0 mt-0.5" />
                     <span>
-                      <strong>2-Year Strategy Backtest:</strong> Evaluate how historical signals performed on that stock.
+                      <strong>2- to 5-Year Strategy Backtests:</strong> Evaluate how historical signals performed on that stock.
                     </span>
                   </li>
                 </ul>
@@ -827,6 +836,40 @@ export const LandingPage: React.FC = () => {
 
       {/* THREE INTEGRATED APPLICATIONS SECTION */}
       <LearningSection onStartTrading={handleGetStarted} />
+
+      {/* =======================================================================
+         7.5. START FREE & UPGRADE PACKAGES SECTION (FREE vs BEGINNER vs ADVANCED)
+         ======================================================================= */}
+      <section
+        id="pricing-packages"
+        className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#F3F6F4] dark:bg-[#0B1310] border-t border-b border-emerald-900/10 dark:border-[#20332A]"
+      >
+        <div className="w-full max-w-[1200px] mx-auto space-y-10">
+          <div className="mx-auto max-w-3xl space-y-5 text-center">
+            <h2 className="text-3xl sm:text-5xl font-extrabold leading-[1.1] tracking-tight text-[#15241D] dark:text-white">
+              Find the Right Plan for Your{' '}
+              <span className="text-[#00B386] dark:text-[#00D09C]">Trading Journey</span>
+            </h2>
+            <p className="mx-auto max-w-2xl text-base leading-relaxed sm:text-lg text-[#5B7066] dark:text-[#9AB0A5]">
+              Start learning and practicing for free. Unlock backtested stock screening, deeper chart analysis, and
+              advanced paper trading as you grow.
+            </p>
+            <div className="pt-1">
+              <BillingToggle
+                value={billingCycle}
+                onChange={setBillingCycle}
+                savingsPercent={MAX_YEARLY_SAVINGS}
+              />
+            </div>
+          </div>
+
+          <PricingCards
+            billingCycle={billingCycle}
+            compareHref="/pricing#compare-plans"
+            compareLabel="Compare all features & full plan details"
+          />
+        </div>
+      </section>
 
       {/* 8. FAQ SECTION */}
       <section id="faq" className="py-16 px-4 sm:px-6 lg:px-8">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart3, RefreshCw } from 'lucide-react';
+import { useTrading } from '../../../context/TradingContext';
 import { api } from '../api/client';
 import { fmtCrore, fmtPct } from '../utils/format';
 import { Segmented, SectionCard, StatCard, Hint } from './ui';
@@ -47,6 +48,7 @@ function BarsChart({ rows }) {
 }
 
 export default function FinancialsSection({ symbol }) {
+  const { addToast } = useTrading();
   const [data, setData] = useState(memo[symbol] || null);
   const [loading, setLoading] = useState(!memo[symbol]);
   const [error, setError] = useState('');
@@ -70,12 +72,17 @@ export default function FinancialsSection({ symbol }) {
         setData(res);
         if (!res.yearly?.length && res.quarterly?.length) setView('quarterly');
       })
-      .catch((e) => alive && setError(e.message || 'Could not load company financials.'))
+      .catch((e) => {
+        if (!alive) return;
+        const msg = e.message || 'Could not load company financials. Please try again in some time.';
+        setError(msg);
+        addToast('Financials Unavailable', msg, 'error');
+      })
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [symbol]);
+  }, [symbol, addToast]);
 
   const rows = (view === 'yearly' ? data?.yearly : data?.quarterly) || [];
   const latest = rows[rows.length - 1];

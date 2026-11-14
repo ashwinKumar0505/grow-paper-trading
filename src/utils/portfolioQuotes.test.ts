@@ -4,11 +4,12 @@ import { portfolioQuoteSymbols, mergePortfolioQuote } from './portfolioQuotes';
 import type { Stock, IntradayPosition, Order } from '../types/market';
 const position = { symbol: 'MANAPPURAM', exchange: 'NSE' } as IntradayPosition;
 const quote = { symbol: 'MANAPPURAM', exchange: 'NSE', price: 318.25 } as Stock;
-test('restores search-only symbols from persisted positions and pending orders', () => {
+test('restores search-only symbols from persisted positions, pending orders, and scheduled AMO orders', () => {
   assert.deepEqual(portfolioQuoteSymbols([], [position, position], [
     { symbol: 'HDFCLIFE', exchange: 'NSE', status: 'PENDING' } as Order,
+    { symbol: 'RELIANCE', exchange: 'NSE', status: 'SCHEDULED' } as Order,
     { symbol: 'OLD', exchange: 'NSE', status: 'EXECUTED' } as Order,
-  ]), ['HDFCLIFE', 'MANAPPURAM']);
+  ]), ['HDFCLIFE', 'MANAPPURAM', 'RELIANCE']);
   assert.deepEqual(mergePortfolioQuote([], 'MANAPPURAM', quote), [quote]);
 });
 test('refreshes an existing quote without duplicating the stock', () => {

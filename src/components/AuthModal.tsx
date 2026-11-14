@@ -38,9 +38,6 @@ export const AuthModal: React.FC = () => {
   // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedCash, setSelectedCash] = useState<number>(500000);
-  const [customCash, setCustomCash] = useState<string>('');
-  const [isCustomCash, setIsCustomCash] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // OTP State
@@ -49,14 +46,6 @@ export const AuthModal: React.FC = () => {
   const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [resendTimer, setResendTimer] = useState<number>(30);
   const [canResend, setCanResend] = useState<boolean>(false);
-
-  // Cash presets (up to ₹10 Lakhs max limit)
-  const cashPresets = [
-    { label: '₹1,00,000', value: 100000, desc: 'Conservative' },
-    { label: '₹2,00,000', value: 200000, desc: 'Moderate' },
-    { label: '₹5,00,000', value: 500000, desc: 'Popular', badge: 'Recommended' },
-    { label: '₹10,00,000', value: 1000000, desc: 'Max Wallet Limit (10L)', badge: 'Max Limit' },
-  ];
 
   // Reset form when modal opens
   useEffect(() => {
@@ -88,26 +77,11 @@ export const AuthModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
-  // Google 1-Click Sign-In / Sign-Up via Firebase
+  // Google 1-Click Sign-In / Sign-Up
   const handleGoogleAuth = async () => {
     setErrorMsg('');
     setIsGoogleLoading(true);
-
-    let finalCash = selectedCash;
-    if (isSignUp && isCustomCash) {
-      const parsed = parseFloat(customCash.replace(/,/g, ''));
-      if (isNaN(parsed) || parsed <= 0) {
-        setErrorMsg('Please enter a valid starting cash amount.');
-        setIsGoogleLoading(false);
-        return;
-      }
-      if (parsed > MAX_WALLET_LIMIT) {
-        setErrorMsg(`Maximum wallet limit is ₹10,00,000 (10 Lakhs). You cannot start with more than ₹10 Lakhs.`);
-        setIsGoogleLoading(false);
-        return;
-      }
-      finalCash = parsed;
-    }
+    const finalCash = 100000;
 
     try {
       // 1. Attempt real Firebase Google Auth Popup
@@ -223,26 +197,12 @@ export const AuthModal: React.FC = () => {
 
     const userUid = `email_${email.trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
     if (isSignUp) {
-      let finalCash = selectedCash;
-      if (isCustomCash) {
-        const parsed = parseFloat(customCash.replace(/,/g, ''));
-        if (isNaN(parsed) || parsed <= 0) {
-          setErrorMsg('Please enter a valid starting cash amount.');
-          return;
-        }
-        if (parsed > MAX_WALLET_LIMIT) {
-          setErrorMsg(`Maximum wallet limit is ₹10,00,000 (10 Lakhs). You cannot start with more than ₹10 Lakhs.`);
-          return;
-        }
-        finalCash = parsed;
-      }
-
       signUpUser({
         uid: userUid,
         name: name.trim(),
         email: email.trim(),
         authProvider: 'email',
-        initialCash: finalCash,
+        initialCash: 100000,
       });
     } else {
       signInUser({
@@ -277,7 +237,7 @@ export const AuthModal: React.FC = () => {
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
             {isSignUp
-              ? 'Start paper trading NSE/BSE stocks with up to ₹10 Lakhs virtual wallet'
+              ? 'Start with ₹1,00,000 free paper trading capital (upgradeable to ₹10L on Beginner & ₹50L on Advanced)'
               : 'Sign in to access your portfolio, live watchlists & order desk'}
           </p>
 
@@ -406,45 +366,6 @@ export const AuthModal: React.FC = () => {
                   />
                 </div>
               </div>
-
-              {/* If signing up, allow choosing virtual starting capital */}
-              {isSignUp && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-gray-700 dark:text-gray-300">
-                      Virtual Starting Capital
-                    </span>
-                    <span className="text-[11px] font-semibold text-[#00D09C]">
-                      Max Limit: ₹10L
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {cashPresets.map((preset) => (
-                      <button
-                        key={preset.value}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCash(preset.value);
-                          setIsCustomCash(false);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          !isCustomCash && selectedCash === preset.value
-                            ? 'border-[#00D09C] bg-emerald-50/60 dark:bg-emerald-950/20 shadow-xs'
-                            : 'border-gray-200 dark:border-[#282F40] hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
-                      >
-                        <div className="font-mono font-extrabold text-xs text-gray-900 dark:text-white">
-                          {preset.label}
-                        </div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                          {preset.desc}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <button
                 type="submit"

@@ -4,6 +4,7 @@ import { useTrading } from '../context/TradingContext';
 import { StockChart } from './StockChart';
 import { OrderPanel } from './OrderPanel';
 import { generateMarketDepth } from '../data/mockStocks';
+import { LockedFeatureCard } from './LockedFeatureCard';
 import {
   ArrowLeft,
   Bookmark,
@@ -45,46 +46,82 @@ export const StockDetailView: React.FC = () => {
     intradayPositions,
     exitPosition,
     addToast,
+    planConfig,
+    marketStatus,
   } = useTrading();
 
   const stock = selectedStock;
   const inWatchlist = isStockInWatchlist(stock.symbol);
   const brandBg = BRAND_COLORS[stock.symbol] || '#E31837';
 
-  // Ensure live price is refreshed for this stock
+  // Ensure live price is refreshed for this stock without losing fundamentals/about
   useEffect(() => {
     fetch(`/api/stocks/${stock.symbol}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success && data.stock && data.stock.price > 0) {
-          setSelectedStock(data.stock);
+          setSelectedStock({
+            ...stock,
+            ...data.stock,
+            fundamentals: data.stock.fundamentals || stock.fundamentals,
+            about: data.stock.about || stock.about,
+          });
         }
       })
       .catch(() => {});
-  }, [stock.symbol, setSelectedStock]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stock.symbol]);
 
   // Dynamic SEO Page Title for active stock
   useEffect(() => {
-    const originalTitle = 'TradePlaybook – Live NSE/BSE Stock Paper Trading Simulator';
-    document.title = `${stock.name} (${stock.symbol}) ₹${stock.price.toFixed(2)} – TradePlaybook`;
+    const originalTitle = 'NiftyLens – Live NSE/BSE Stock Paper Trading Simulator';
+    const safePrice = Number(stock.price || 0);
+    document.title = `${stock.name} (${stock.symbol}) ₹${safePrice.toFixed(2)} – NiftyLens`;
     return () => {
       document.title = originalTitle;
     };
   }, [stock.symbol, stock.name, stock.price]);
 
-  const marketDepth = useMemo(() => generateMarketDepth(stock.price), [stock.price]);
+  const safePrice = Number(stock.price || 0);
+  const safeLow = Number(stock.low ?? safePrice * 0.985);
+  const safeHigh = Number(stock.high ?? safePrice * 1.015);
+  const safeOpen = Number(stock.open ?? safePrice);
+  const safePrevClose = Number(stock.previousClose ?? safePrice);
+  const safeVolume = Number(stock.volume ?? 1250000);
+  const safeWeek52Low = Number(stock.week52Low ?? safePrice * 0.78);
+  const safeWeek52High = Number(stock.week52High ?? safePrice * 1.24);
+
+  const fundamentals = stock.fundamentals || {
+    marketCap: `₹${Math.max(12000, Math.round(safePrice * 42)).toLocaleString('en-IN')} Cr`,
+    roe: 16.8,
+    peRatio: 23.4,
+    eps: Number((safePrice / 23.4).toFixed(2)),
+    pbRatio: 3.8,
+    divYield: 1.15,
+    industryPe: 25.1,
+    bookValue: Number((safePrice / 3.8).toFixed(2)),
+    debtToEquity: 0.32,
+  };
+
+  const aboutText =
+    stock.about ||
+    `${stock.name} (${stock.symbol}) is an actively traded Indian public company listed on the ${
+      stock.exchange || 'NSE'
+    } in the ${stock.sector || 'Equities'} sector.`;
+
+  const marketDepth = useMemo(() => generateMarketDepth(safePrice), [safePrice]);
 
   const currentHolding = holdings.find((h) => h.symbol === stock.symbol);
   const currentPositions = intradayPositions.filter((p) => p.symbol === stock.symbol);
 
-  const todayRange = stock.high - stock.low || 1;
-  const todayPositionPercent = Math.max(0, Math.min(100, ((stock.price - stock.low) / todayRange) * 100));
+  const todayRange = safeHigh - safeLow || 1;
+  const todayPositionPercent = Math.max(0, Math.min(100, ((safePrice - safeLow) / todayRange) * 100));
 
-  const w52Range = stock.week52High - stock.week52Low || 1;
-  const w52PositionPercent = Math.max(0, Math.min(100, ((stock.price - stock.week52Low) / w52Range) * 100));
+  const w52Range = safeWeek52High - safeWeek52Low || 1;
+  const w52PositionPercent = Math.max(0, Math.min(100, ((safePrice - safeWeek52Low) / w52Range) * 100));
 
-  const lowerCircuit = (stock.previousClose * 0.8).toFixed(2);
-  const upperCircuit = (stock.previousClose * 1.2).toFixed(2);
+  const lowerCircuit = (safePrevClose * 0.8).toFixed(2);
+  const upperCircuit = (safePrevClose * 1.2).toFixed(2);
 
   return (
     <div className="animate-fade-in pb-24">
@@ -288,13 +325,13 @@ export const StockDetailView: React.FC = () => {
                 <div>
                   <div>Today&apos;s Low</div>
                   <div className="font-semibold text-sm text-gray-900 dark:text-white font-mono mt-0.5">
-                    ₹{stock.low.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{safeLow.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="text-right">
                   <div>Today&apos;s High</div>
                   <div className="font-semibold text-sm text-gray-900 dark:text-white font-mono mt-0.5">
-                    ₹{stock.high.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{safeHigh.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -316,13 +353,13 @@ export const StockDetailView: React.FC = () => {
                 <div>
                   <div>52W Low</div>
                   <div className="font-semibold text-sm text-gray-900 dark:text-white font-mono mt-0.5">
-                    ₹{stock.week52Low.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{safeWeek52Low.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
                 <div className="text-right">
                   <div>52W High</div>
                   <div className="font-semibold text-sm text-gray-900 dark:text-white font-mono mt-0.5">
-                    ₹{stock.week52High.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{safeWeek52High.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -343,19 +380,19 @@ export const StockDetailView: React.FC = () => {
               <div>
                 <div className="text-gray-400">Open</div>
                 <div className="font-mono tabular-nums font-semibold text-sm text-gray-900 dark:text-white mt-0.5">
-                  ₹{stock.open.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{safeOpen.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
               <div>
                 <div className="text-gray-400">Prev. Close</div>
                 <div className="font-mono tabular-nums font-semibold text-sm text-gray-900 dark:text-white mt-0.5">
-                  ₹{stock.previousClose.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{safePrevClose.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
               <div>
                 <div className="text-gray-400">Volume</div>
                 <div className="font-mono tabular-nums font-semibold text-sm text-gray-900 dark:text-white mt-0.5">
-                  {stock.volume.toLocaleString('en-IN')}
+                  {safeVolume.toLocaleString('en-IN')}
                 </div>
               </div>
               <div>
@@ -373,7 +410,7 @@ export const StockDetailView: React.FC = () => {
               <div>
                 <div className="text-gray-400">Sector</div>
                 <div className="font-semibold text-sm text-gray-900 dark:text-white mt-0.5">
-                  {stock.sector}
+                  {stock.sector || 'NSE Equities'}
                 </div>
               </div>
             </div>
@@ -388,70 +425,81 @@ export const StockDetailView: React.FC = () => {
               <span className="text-xs text-gray-400">NSE Top 5 Bids & Asks</span>
             </div>
 
-            {/* Buy vs Sell pressure bar */}
-            {(() => {
-              const tot = marketDepth.totalBuyQty + marketDepth.totalSellQty || 1;
-              const buyPct = Math.round((marketDepth.totalBuyQty / tot) * 100);
-              const sellPct = 100 - buyPct;
-              return (
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-[#00B386]">Buy {buyPct}%</span>
-                    <span className="text-[#EB5B3C]">{sellPct}% Sell</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden flex bg-[#EB5B3C]/20">
-                    <div className="bg-[#00B386]" style={{ width: `${buyPct}%` }} />
-                    <div className="bg-[#EB5B3C]" style={{ width: `${sellPct}%` }} />
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs pt-2">
-              {/* Bid Side */}
-              <div>
-                <div className="flex justify-between text-gray-400 font-medium mb-2 pb-1 border-b border-gray-100 dark:border-[#282C37]">
-                  <span>Bid Price</span>
-                  <span>Orders</span>
-                  <span>Qty</span>
-                </div>
-                <div className="space-y-2">
-                  {marketDepth.bids.map((b, i) => (
-                    <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
-                      <span className="font-semibold text-[#00B386]">₹{b.price.toFixed(2)}</span>
-                      <span className="text-gray-400">{b.orders}</span>
-                      <span className="text-gray-800 dark:text-gray-200">{b.quantity.toLocaleString('en-IN')}</span>
+            {!planConfig.allowMarketDepth ? (
+              <LockedFeatureCard
+                requiredTier="advanced"
+                featureName="5-Level NSE Market Depth (Bids & Asks)"
+                description="Upgrade to the Advanced Package (₹699/mo) to view live 5-level Bid/Ask order book depth, buy vs. sell pressure bars, and click-to-fill limit prices."
+                compact
+              />
+            ) : (
+              <>
+                {/* Buy vs Sell pressure bar */}
+                {(() => {
+                  const tot = marketDepth.totalBuyQty + marketDepth.totalSellQty || 1;
+                  const buyPct = Math.round((marketDepth.totalBuyQty / tot) * 100);
+                  const sellPct = 100 - buyPct;
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-[#00B386]">Buy {buyPct}%</span>
+                        <span className="text-[#EB5B3C]">{sellPct}% Sell</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden flex bg-[#EB5B3C]/20">
+                        <div className="bg-[#00B386]" style={{ width: `${buyPct}%` }} />
+                        <div className="bg-[#EB5B3C]" style={{ width: `${sellPct}%` }} />
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#282C37] flex justify-between font-semibold text-xs">
-                  <span className="text-gray-500">Total Buy Qty</span>
-                  <span className="font-mono text-[#00B386]">{marketDepth.totalBuyQty.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
+                  );
+                })()}
 
-              {/* Ask Side */}
-              <div>
-                <div className="flex justify-between text-gray-400 font-medium mb-2 pb-1 border-b border-gray-100 dark:border-[#282C37]">
-                  <span>Ask Price</span>
-                  <span>Orders</span>
-                  <span>Qty</span>
-                </div>
-                <div className="space-y-2">
-                  {marketDepth.asks.map((a, i) => (
-                    <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
-                      <span className="font-semibold text-[#EB5B3C]">₹{a.price.toFixed(2)}</span>
-                      <span className="text-gray-400">{a.orders}</span>
-                      <span className="text-gray-800 dark:text-gray-200">{a.quantity.toLocaleString('en-IN')}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs pt-2">
+                  {/* Bid Side */}
+                  <div>
+                    <div className="flex justify-between text-gray-400 font-medium mb-2 pb-1 border-b border-gray-100 dark:border-[#282C37]">
+                      <span>Bid Price</span>
+                      <span>Orders</span>
+                      <span>Qty</span>
                     </div>
-                  ))}
+                    <div className="space-y-2">
+                      {marketDepth.bids.map((b, i) => (
+                        <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
+                          <span className="font-semibold text-[#00B386]">₹{b.price.toFixed(2)}</span>
+                          <span className="text-gray-400">{b.orders}</span>
+                          <span className="text-gray-800 dark:text-gray-200">{b.quantity.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#282C37] flex justify-between font-semibold text-xs">
+                      <span className="text-gray-500">Total Buy Qty</span>
+                      <span className="font-mono text-[#00B386]">{marketDepth.totalBuyQty.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  {/* Ask Side */}
+                  <div>
+                    <div className="flex justify-between text-gray-400 font-medium mb-2 pb-1 border-b border-gray-100 dark:border-[#282C37]">
+                      <span>Ask Price</span>
+                      <span>Orders</span>
+                      <span>Qty</span>
+                    </div>
+                    <div className="space-y-2">
+                      {marketDepth.asks.map((a, i) => (
+                        <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
+                          <span className="font-semibold text-[#EB5B3C]">₹{a.price.toFixed(2)}</span>
+                          <span className="text-gray-400">{a.orders}</span>
+                          <span className="text-gray-800 dark:text-gray-200">{a.quantity.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#282C37] flex justify-between font-semibold text-xs">
+                      <span className="text-gray-500">Total Sell Qty</span>
+                      <span className="font-mono text-[#EB5B3C]">{marketDepth.totalSellQty.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#282C37] flex justify-between font-semibold text-xs">
-                  <span className="text-gray-500">Total Sell Qty</span>
-                  <span className="font-mono text-[#EB5B3C]">{marketDepth.totalSellQty.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
           {/* 6. Fundamentals (Groww 2-column table layout) */}
@@ -462,15 +510,15 @@ export const StockDetailView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-xs">
               {[
-                { label: 'Market Cap', value: stock.fundamentals.marketCap },
-                { label: 'ROE', value: `${stock.fundamentals.roe}%` },
-                { label: 'P/E Ratio (TTM)', value: String(stock.fundamentals.peRatio) },
-                { label: 'EPS (TTM)', value: `₹${stock.fundamentals.eps}` },
-                { label: 'P/B Ratio', value: String(stock.fundamentals.pbRatio) },
-                { label: 'Dividend Yield', value: `${stock.fundamentals.divYield}%` },
-                { label: 'Industry P/E', value: String(stock.fundamentals.industryPe) },
-                { label: 'Book Value', value: `₹${stock.fundamentals.bookValue}` },
-                { label: 'Debt to Equity', value: String(stock.fundamentals.debtToEquity) },
+                { label: 'Market Cap', value: fundamentals.marketCap ?? '—' },
+                { label: 'ROE', value: `${fundamentals.roe ?? 15.0}%` },
+                { label: 'P/E Ratio (TTM)', value: String(fundamentals.peRatio ?? 22.0) },
+                { label: 'EPS (TTM)', value: `₹${fundamentals.eps ?? 42.0}` },
+                { label: 'P/B Ratio', value: String(fundamentals.pbRatio ?? 3.5) },
+                { label: 'Dividend Yield', value: `${fundamentals.divYield ?? 1.0}%` },
+                { label: 'Industry P/E', value: String(fundamentals.industryPe ?? 24.0) },
+                { label: 'Book Value', value: `₹${fundamentals.bookValue ?? 280.0}` },
+                { label: 'Debt to Equity', value: String(fundamentals.debtToEquity ?? 0.3) },
                 { label: 'Face Value', value: '₹10' },
               ].map((item) => (
                 <div
@@ -490,7 +538,7 @@ export const StockDetailView: React.FC = () => {
               About {stock.name}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-              {stock.about}
+              {aboutText}
             </p>
           </div>
         </div>
@@ -507,13 +555,13 @@ export const StockDetailView: React.FC = () => {
           onClick={() => openOrderModal(stock, 'SELL')}
           className="flex-1 h-11 bg-[#EB5B3C] hover:opacity-95 text-white font-semibold text-sm rounded-lg cursor-pointer"
         >
-          SELL
+          {marketStatus.isOpen ? 'Sell' : 'Schedule Sell'}
         </button>
         <button
           onClick={() => openOrderModal(stock, 'BUY')}
           className="flex-1 h-11 bg-[#00B386] hover:opacity-95 text-white font-semibold text-sm rounded-lg cursor-pointer"
         >
-          BUY
+          {marketStatus.isOpen ? 'Buy' : 'Schedule Buy'}
         </button>
       </div>
     </div>

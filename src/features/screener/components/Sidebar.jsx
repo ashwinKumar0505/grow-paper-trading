@@ -18,8 +18,18 @@ const PHASE_TEXT = {
 
 export default function Sidebar({ marketStatus, open, onClose }) {
   const pathname = usePathname();
-  const isOpen = !!marketStatus?.is_market_open;
-  const phase = marketStatus ? PHASE_TEXT[marketStatus.session_phase] || 'Market closed' : 'Checking market…';
+  const rawPhase = marketStatus?.session_phase;
+  const isOpen = Boolean(
+    marketStatus?.is_market_open &&
+      rawPhase !== 'POST_CLOSE' &&
+      rawPhase !== 'WEEKEND_CLOSED' &&
+      rawPhase !== 'HOLIDAY_CLOSED'
+  );
+  const isPreOpen = !isOpen && rawPhase === 'PRE_OPEN';
+  const phase = marketStatus
+    ? PHASE_TEXT[rawPhase] || (isOpen ? 'Market open' : 'Market closed')
+    : 'Checking market…';
+  const dotStateClass = isOpen ? 'on' : isPreOpen ? 'warn' : 'closed';
 
   return (
     <>
@@ -60,7 +70,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
                   <span>{label}</span>
                   <small>{hint}</small>
                 </span>
-                {live && <span className={`sb-dot ${isOpen ? 'on' : ''}`} title={isOpen ? 'Live' : 'Paused'} />}
+                {live && <span className={`sb-dot ${isOpen ? 'on' : 'closed'}`} title={isOpen ? 'Live' : 'Market Closed'} />}
               </AppLink>
             );
           })}
@@ -90,10 +100,12 @@ export default function Sidebar({ marketStatus, open, onClose }) {
 
         <div className="sb-spacer" />
 
-        <div className="sb-market" style={{ marginBottom: 0 }}>
+        <div className={`sb-market ${isOpen ? 'is-open' : 'is-closed'}`} style={{ marginBottom: 0 }}>
           <div className="sb-market-row">
-            <span className={`pulse-dot ${isOpen ? 'on' : ''}`} />
-            <strong>{phase}</strong>
+            <span className={`pulse-dot ${dotStateClass}`} />
+            <strong className={isOpen ? 'text-emerald-400' : isPreOpen ? 'text-amber-400' : 'text-rose-400'}>
+              {phase}
+            </strong>
           </div>
           <p>
             {isOpen

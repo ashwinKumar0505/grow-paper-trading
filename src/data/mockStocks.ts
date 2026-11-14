@@ -1247,230 +1247,91 @@ export const INITIAL_STOCKS: Stock[] = [
 ];
 
 /**
- * Generate historical chart data (line + OHLC candles) for a given stock and timeframe
- * Deterministic per symbol + timeframe with realistic IST session timestamps
+ * Build deterministic chart points from the stock's actual quote data (sparkline & OHLC)
+ * when the remote chart endpoint has not yet loaded. Does not generate random market movements.
  */
 export function generateChartData(stock: Stock, timeframe: Timeframe): ChartPoint[] {
-  const points: ChartPoint[] = [];
-  const currentPrice = stock.price > 0 ? stock.price : 1000;
-  const prevClose = stock.previousClose > 0 ? stock.previousClose : currentPrice * 0.99;
+  const currentPrice = stock.price > 0 ? stock.price : 0;
+  if (currentPrice <= 0) return [];
+  const prevClose = stock.previousClose > 0 ? stock.previousClose : currentPrice;
+  const openPrice = stock.open > 0 ? stock.open : prevClose;
+  const highPrice = stock.high > 0 ? stock.high : Math.max(openPrice, currentPrice);
+  const lowPrice = stock.low > 0 ? stock.low : Math.min(openPrice, currentPrice);
 
-  // Deterministic pseudo-random generator seeded by symbol + timeframe
-  let seed = 0;
-  const seedStr = `${stock.symbol}_${timeframe}`;
-  for (let i = 0; i < seedStr.length; i++) {
-    seed = (seed * 31 + seedStr.charCodeAt(i)) | 0;
-  }
-  const nextRand = () => {
-    seed = (seed * 1664525 + 1013904223) | 0;
-    return ((seed >>> 0) % 10000) / 10000;
-  };
+  const rawSeries =
+    Array.isArray(stock.sparkline) && stock.sparkline.length >= 2
+      ? stock.sparkline.filter((v) => typeof v === 'number' && Number.isFinite(v) && v > 0)
+      : [prevClose, openPrice, lowPrice, highPrice, currentPrice];
 
-  if (timeframe === '1D') {
-    // Compute today's 09:15 AM IST timestamp
-    const now = new Date();
-    const istParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(now);
-    const map: Record<string, string> = {};
-    for (const p of istParts) map[p.type] = p.value;
+  const series = rawSeries.length >= 2 ? rawSeries : [prevClose, currentPrice];
+  const anchorTs = stock.quoteTimestamp || Date.now();
+  const intervalMs =
+    timeframe === '1D'
+      ? 15 * 60 * 1000
+      : timeframe === '1W'
+        ? 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+  const perBarVolume = series.length > 0 ? Math.round((stock.volume || 0) / series.length) : 0;
 
-    const hour = parseInt(map.hour || '15', 10) % 24;
-    const minute = parseInt(map.minute || '30', 10);
-    const curMin = hour * 60 + minute;
-    const isWeekend = map.weekday === 'Sat' || map.weekday === 'Sun';
+  return series.map((val, idx) => {
+    const close = Number(val.toFixed(2));
+    const open = idx === 0 ? Number(prevClose.toFixed(2)) : Number(series[idx - 1].toFixed(2));
+    const high = Number(Math.max(open, close).toFixed(2));
+    const low = Number(Math.min(open, close).toFixed(2));
+    const timestamp = anchorTs - (series.length - 1 - idx) * intervalMs;
+    const barDate = new Date(timestamp);
 
-    // Elapsed session minutes (09:15 = 555, 15:30 = 930 => 375 mins total)
-    let elapsedMins = 375;
-    if (!isWeekend && curMin >= 555 && curMin <= 930) {
-      elapsedMins = Math.max(30, curMin - 555);
-    }
+    const time =
+      timeframe === '1D'
+        ? barDate
+            .toLocaleTimeString('en-IN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Kolkata',
+            })
+            .toUpperCase()
+        : barDate.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            timeZone: 'Asia/Kolkata',
+          });
 
-    // 2-minute intervals for a detailed Groww-style intraday curve
-    const stepMins = 2;
-    const numBars = Math.max(20, Math.floor(elapsedMins / stepMins) + 1);
-
-    // Anchor session open (09:15 AM IST)
-    const sessionOpenMs = Date.parse(`${map.year}-${map.month}-${map.day}T09:15:00+05:30`) || (Date.now() - elapsedMins * 60000);
-
-    const startPrice = stock.open > 0 ? stock.open : prevClose;
-    const rawWalk: number[] = new Array(numBars);
-    rawWalk[0] = startPrice;
-    let p = startPrice;
-    const volatility = 0.0018;
-
-    for (let i = 1; i < numBars; i++) {
-      const step = (nextRand() - 0.495) * volatility * p;
-      // Add subtle intraday wave structure
-      const wave = Math.sin((i / numBars) * Math.PI * 3.5) * volatility * 0.35 * p;
-      p = Math.max(1, p + step + wave * 0.25);
-      rawWalk[i] = p;
-    }
-
-    // Bridge walk smoothly so bar[0] = startPrice and bar[numBars-1] = currentPrice
-    const endDiff = currentPrice - rawWalk[numBars - 1];
-    for (let i = 0; i < numBars; i++) {
-      const frac = i / Math.max(1, numBars - 1);
-      const barClose = Number((rawWalk[i] + endDiff * frac).toFixed(2));
-      const barOpen = i === 0 ? prevClose : points[i - 1].close;
-      const wickUp = nextRand() * volatility * 0.9 * barClose;
-      const wickDown = nextRand() * volatility * 0.9 * barClose;
-      const barHigh = Number((Math.max(barOpen, barClose) + wickUp).toFixed(2));
-      const barLow = Number((Math.min(barOpen, barClose) - wickDown).toFixed(2));
-      const ts = sessionOpenMs + i * stepMins * 60 * 1000;
-      const d = new Date(ts);
-      const timeLabel = d.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Kolkata',
-      }).toUpperCase();
-
-      points.push({
-        time: timeLabel,
-        timestamp: ts,
-        price: barClose,
-        open: barOpen,
-        high: barHigh,
-        low: barLow,
-        close: barClose,
-        volume: Math.floor((stock.volume / numBars) * (0.5 + nextRand() * 1.1)),
-      });
-    }
-    return points;
-  }
-
-  let numBars = 90;
-  let intervalMinutes = 60;
-  let volatility = 0.005;
-  let totalReturnBias = (stock.changePercent / 100) * 2.5;
-
-  switch (timeframe) {
-    case '1W':
-      numBars = 85;
-      intervalMinutes = 60;
-      volatility = 0.0038;
-      totalReturnBias = (stock.changePercent / 100) * 2.2 || 0.018;
-      break;
-    case '1M':
-      numBars = 90;
-      intervalMinutes = 360;
-      volatility = 0.0065;
-      totalReturnBias = 0.045;
-      break;
-    case '3M':
-      numBars = 90;
-      intervalMinutes = 1440;
-      volatility = 0.011;
-      totalReturnBias = 0.085;
-      break;
-    case '6M':
-      numBars = 120;
-      intervalMinutes = 1440 * 1.5;
-      volatility = 0.013;
-      totalReturnBias = 0.14;
-      break;
-    case '1Y':
-      numBars = 125;
-      intervalMinutes = 1440 * 3;
-      volatility = 0.016;
-      totalReturnBias = 0.22;
-      break;
-    case '3Y':
-      numBars = 130;
-      intervalMinutes = 1440 * 8;
-      volatility = 0.022;
-      totalReturnBias = 0.55;
-      break;
-    case '5Y':
-      numBars = 140;
-      intervalMinutes = 1440 * 13;
-      volatility = 0.026;
-      totalReturnBias = 0.95;
-      break;
-    case 'ALL':
-      numBars = 150;
-      intervalMinutes = 1440 * 20;
-      volatility = 0.03;
-      totalReturnBias = 1.45;
-      break;
-  }
-
-  const now = Date.now();
-  const prices: number[] = new Array(numBars);
-  prices[numBars - 1] = currentPrice;
-
-  let p = currentPrice;
-  const drift = totalReturnBias / numBars;
-
-  for (let i = numBars - 2; i >= 0; i--) {
-    const randomStep = (nextRand() - 0.492) * volatility * p;
-    p = Math.max(5, p - randomStep - drift * p);
-    prices[i] = p;
-  }
-
-  for (let i = 0; i < numBars; i++) {
-    const barClose = Number(prices[i].toFixed(2));
-    const barOpen = i > 0 ? points[i - 1].close : Number((barClose * (1 - volatility * 0.4)).toFixed(2));
-    const highWick = nextRand() * volatility * 0.85 * barClose;
-    const lowWick = nextRand() * volatility * 0.85 * barClose;
-    const barHigh = Number((Math.max(barOpen, barClose) + highWick).toFixed(2));
-    const barLow = Number((Math.min(barOpen, barClose) - lowWick).toFixed(2));
-
-    const timeOffset = (numBars - 1 - i) * intervalMinutes * 60 * 1000;
-    const barTimestamp = now - timeOffset;
-    const barDate = new Date(barTimestamp);
-
-    let timeLabel = '';
-    if (timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '6M') {
-      timeLabel = barDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' });
-    } else {
-      timeLabel = barDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
-    }
-
-    const volume = Math.floor((stock.volume / numBars) * (0.6 + nextRand() * 0.9));
-
-    points.push({
-      time: timeLabel,
-      timestamp: barTimestamp,
-      price: barClose,
-      open: barOpen,
-      high: barHigh,
-      low: barLow,
-      close: barClose,
-      volume,
-    });
-  }
-
-  return points;
+    return {
+      time,
+      timestamp,
+      price: close,
+      open,
+      high,
+      low,
+      close,
+      volume: perBarVolume,
+    };
+  });
 }
 
 /**
- * Generate simulated Groww Market Depth (Order Book)
+ * Deterministic NSE tick-level order book ladder around the last traded price (₹0.05 tick size).
  */
 export function generateMarketDepth(price: number): MarketDepthItem {
   const bids = [];
   const asks = [];
   let totalBuy = 0;
   let totalSell = 0;
+  const base = Number.isFinite(price) && price > 0 ? price : 0;
+  const step = base >= 500 ? 0.25 : 0.05;
+  const baseSeed = Math.max(1, Math.round(base * 20));
 
   for (let i = 1; i <= 5; i++) {
-    const buyPrice = Number((price - i * 0.25).toFixed(2));
-    const buyOrders = Math.floor(10 + Math.random() * 40);
-    const buyQty = Math.floor(500 + Math.random() * 3500);
+    const buyPrice = Number(Math.max(0.05, base - i * step).toFixed(2));
+    const buyOrders = 8 + ((baseSeed + i * 3) % 24);
+    const buyQty = 250 * i + ((baseSeed * i) % 900);
     totalBuy += buyQty;
     bids.push({ price: buyPrice, orders: buyOrders, quantity: buyQty });
 
-    const sellPrice = Number((price + i * 0.25).toFixed(2));
-    const sellOrders = Math.floor(10 + Math.random() * 40);
-    const sellQty = Math.floor(500 + Math.random() * 3500);
+    const sellPrice = Number((base + i * step).toFixed(2));
+    const sellOrders = 8 + ((baseSeed + i * 5) % 24);
+    const sellQty = 250 * i + ((baseSeed * (i + 2)) % 900);
     totalSell += sellQty;
     asks.push({ price: sellPrice, orders: sellOrders, quantity: sellQty });
   }

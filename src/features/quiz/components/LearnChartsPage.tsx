@@ -15,12 +15,15 @@ import {
   TrendingDown,
   TrendingUp,
   X,
+  Lock,
 } from 'lucide-react';
 import { DifficultyLevel, GameMode, ChartType, IndicatorSettings } from '../types/trading';
 import { ASSETS, PATTERN_TEMPLATES, generatePatternExample } from '../utils/dataGenerator';
 import { TradingCanvas } from './TradingCanvas';
 import { ChartControls } from './ChartControls';
 import { navigate } from '../../../lib/navigation';
+import { useTrading } from '../../../context/TradingContext';
+import { LockedFeatureCard } from '../../../components/LockedFeatureCard';
 
 interface Props {
   onBackToHome: () => void;
@@ -38,6 +41,7 @@ const CATEGORIES = [
 ];
 
 export function LearnChartsPage({ onStartQuiz }: Props) {
+  const { planConfig, openUpgradeModal } = useTrading();
   const [patternName, setPatternName] = useState(PATTERN_TEMPLATES[0].name);
   const [symbol, setSymbol] = useState(ASSETS[0].symbol);
   const [query, setQuery] = useState('');
@@ -54,7 +58,13 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
     showRsi: false,
   });
 
+  const unlockedPatternNames = useMemo(
+    () => new Set(PATTERN_TEMPLATES.slice(0, planConfig.patternLibraryMaxFreePatterns).map((p) => p.name)),
+    [planConfig.patternLibraryMaxFreePatterns]
+  );
+
   const pattern = PATTERN_TEMPLATES.find((item) => item.name === patternName) || PATTERN_TEMPLATES[0];
+  const isCurrentPatternLocked = !unlockedPatternNames.has(pattern.name);
 
   const filtered = useMemo(
     () =>
@@ -159,6 +169,7 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
           {filtered.map((item) => {
             const isSelected = pattern.name === item.name;
             const itemBullish = item.expectedDirection === 'BUY';
+            const isLocked = !unlockedPatternNames.has(item.name);
             return (
               <button
                 key={item.name}
@@ -174,10 +185,11 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     {isSelected && <span className="w-2 h-2 rounded-full bg-[#00d09c] shrink-0" />}
+                    {isLocked && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                     <span className="block text-sm font-bold truncate">{shortName(item.name)}</span>
                   </div>
                   <span className="mt-1 block text-xs text-[#8fa99c] truncate">
-                    {item.simpleName} · {item.difficulty}
+                    {item.simpleName} · {item.difficulty} {isLocked ? '· Beginner+' : ''}
                   </span>
                 </div>
                 <span
@@ -261,6 +273,19 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
 
         {/* Ordered Lesson Content: 1. Title -> 2. Description -> 3. Why the Chart -> 4. Interactive Chart */}
         <main className="mx-auto w-full max-w-[1920px] px-4 py-6 sm:px-8 lg:px-10 sm:py-8 space-y-6">
+          {isCurrentPatternLocked ? (
+            <LockedFeatureCard
+              requiredTier="beginner"
+              featureName={`Unlock "${shortName(pattern.name)}" & Full 28-Pattern Interactive Library`}
+              description="Free Starter accounts include the 8 foundational beginner patterns. Upgrade to Beginner (₹299/mo) or Advanced (₹699/mo) to unlock all 28 Reversal, Continuation, Bilateral & Candlestick patterns with Entry, Stop-Loss, and Target rules."
+              bullets={[
+                'All 28 Interactive Chart Patterns (Reversal, Continuation, Bilateral & Special)',
+                'Full Entry Trigger, Stop-Loss Invalidation & Profit Target Playbook Rules',
+                'Unlimited New Chart Example Variations + SMA 50 & RSI Indicator Overlays',
+              ]}
+            />
+          ) : (
+          <>
           {/* 1. TITLE SECTION */}
           <section className="rounded-2xl border border-[#1d3a2d] bg-gradient-to-br from-[#0f2a1f] via-[#133628] to-[#0d241b] p-6 sm:p-7 text-white shadow-md">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -412,12 +437,25 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
                 <button
                   type="button"
                   onClick={() => {
+                    if (!planConfig.patternLibraryAllowVariations) {
+                      openUpgradeModal({
+                        requiredTier: 'beginner',
+                        featureName: 'Unlimited Chart Pattern Example Variations',
+                        featureDescription:
+                          'Generating unlimited randomized NSE stock chart variations for any pattern is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
+                      });
+                      return;
+                    }
                     setVariation((n) => n + 1);
                     setShowOutcome(false);
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-[#cfdcd5] dark:border-[#2c4538] bg-[#f6f9f7] dark:bg-[#16241e] hover:border-[#00b386] px-3 py-1.5 text-xs font-bold text-[#15241d] dark:text-white transition-colors"
                 >
-                  <RefreshCw className="h-3.5 w-3.5 text-[#00b386] dark:text-[#00d09c]" />
+                  {!planConfig.patternLibraryAllowVariations ? (
+                    <Lock className="h-3.5 w-3.5 text-amber-500" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5 text-[#00b386] dark:text-[#00d09c]" />
+                  )}
                   <span>New Example</span>
                 </button>
 
@@ -437,7 +475,18 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
               chartType={chartType}
               onChartType={setChartType}
               indicators={indicators}
-              onIndicator={(key) => setIndicators((prev) => ({ ...prev, [key]: !prev[key] }))}
+              onIndicator={(key) => {
+                if ((key === 'showSma50' || key === 'showRsi') && !planConfig.patternLibraryAllowAllIndicators) {
+                  openUpgradeModal({
+                    requiredTier: 'beginner',
+                    featureName: 'SMA 50 & RSI Indicator Overlays',
+                    featureDescription:
+                      'Adding 50-Day SMA and Relative Strength Index (RSI) momentum sub-charts is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
+                  });
+                  return;
+                }
+                setIndicators((prev) => ({ ...prev, [key]: !prev[key] }));
+              }}
             />
 
             {/* Explicit Height Canvas Wrapper so TradingCanvas never collapses */}
@@ -471,6 +520,8 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
               </div>
             </div>
           </section>
+          </>
+          )}
         </main>
       </div>
     </div>

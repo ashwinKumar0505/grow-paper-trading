@@ -2,10 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTrading } from '../context/TradingContext';
 import { Exchange, OrderAction, OrderProduct, OrderType, Stock } from '../types/market';
 import { calculateCharges } from '../utils/charges';
-import { INTRADAY_LEVERAGE, roundToTick } from '../utils/orderEngine';
+import {
+  getReservedSellQuantity,
+  INTRADAY_LEVERAGE,
+  MTF_LEVERAGE,
+  roundToTick,
+  SCHEDULED_ORDER_DISCLAIMER,
+} from '../utils/orderEngine';
 import { getISTParts, INTRADAY_SQUARE_OFF_MIN } from '../utils/marketHours';
 import { generateMarketDepth } from '../data/mockStocks';
-import { AlertCircle, ChevronsUpDown, Info, Settings, X } from 'lucide-react';
+import { AlertCircle, ChevronsUpDown, Info, Lock, Settings, X } from 'lucide-react';
 
 const BUY = '#00B386';
 const SELL = '#EB5B3C';
@@ -44,8 +50,9 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
     intradayPositions,
     orders,
     marketStatus,
-    isSimulating,
     setIsWalletModalOpen,
+    planConfig,
+    openUpgradeModal,
   } = useTrading();
 
   const [action, setAction] = useState<OrderAction>(defaultAction);
@@ -94,15 +101,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
 
   const holding = holdings.find((h) => h.symbol === stock.symbol);
   const heldQty = holding?.quantity || 0;
-  const reservedSell = orders
-    .filter(
-      (o) =>
-        o.status === 'PENDING' &&
-        o.product === 'DELIVERY' &&
-        o.action === 'SELL' &&
-        o.symbol === stock.symbol
-    )
-    .reduce((s, o) => s + o.quantity, 0);
+  const reservedSell = getReservedSellQuantity(orders, stock.symbol, exchange);
   const sellableQty = Math.max(0, heldQty - reservedSell);
 
   const position = intradayPositions.find((p) => p.symbol === stock.symbol && p.exchange === exchange);
@@ -111,7 +110,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
 
   // Quick quantity chips (like Groww's floating "6 | 9 | 15" badge above the Qty input)
   const quickQuantities = useMemo(() => {
-    if (product === 'DELIVERY' && !isBuy && sellableQty > 0) {
+    if ((product === 'DELIVERY' || product === 'MTF') && !isBuy && sellableQty > 0) {
       const q1 = Math.max(1, Math.floor(sellableQty * 0.25));
       const q2 = Math.max(1, Math.floor(sellableQty * 0.5));
       return Array.from(new Set([q1, q2, sellableQty])).slice(0, 3);
@@ -135,6 +134,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
   let required = 0;
   if (qty > 0) {
     if (product === 'DELIVERY') required = isBuy ? value + charges.total : 0;
+    else if (product === 'MTF') required = isBuy ? value / MTF_LEVERAGE + charges.total : 0;
     else if (isExit && position) {
       const closeQty = Math.min(qty, position.quantity);
       const released = position.marginBlocked * closeQty / position.quantity;
@@ -146,16 +146,30 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
   }
 
   const insufficient = required > balance;
-  const tradable = marketStatus.isOpen || isSimulating;
+  const tradable = marketStatus.isOpen;
   const istMin = getISTParts().minutes;
   const intradayBlocked =
     product === 'INTRADAY' &&
-    !isSimulating &&
-    (!marketStatus.isOpen || (istMin >= INTRADAY_SQUARE_OFF_MIN && !(isExit && reverseQty === 0)));
+    marketStatus.isOpen &&
+    istMin >= INTRADAY_SQUARE_OFF_MIN &&
+    !(isExit && reverseQty === 0);
 
   const depth = useMemo(() => generateMarketDepth(ltp), [ltp]);
 
   const switchType = (t: OrderType) => {
+    if (!planConfig.allowedOrderTypes.includes(t)) {
+      const reqTier = t === 'LIMIT' ? 'beginner' : 'advanced';
+      openUpgradeModal({
+        requiredTier: reqTier,
+        featureName: `${ORDER_TYPE_LABEL[t]} Order Type`,
+        featureDescription:
+          t === 'LIMIT'
+            ? 'Limit orders are unlocked on the Beginner Package (₹299/mo) and Advanced Package (₹699/mo).'
+            : 'Stop-Loss (SL) and Stop-Loss Market (SL-M) orders are exclusive to the Advanced Package (₹699/mo).',
+      });
+      setShowTypes(false);
+      return;
+    }
     setOrderType(t);
     setShowTypes(false);
     setError('');
@@ -185,11 +199,15 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
     onPlaced?.();
   };
 
-  let submitLabel = isBuy ? 'Buy' : 'Sell';
-  if (isExit && reverseQty === 0 && qty > 0) {
+  let submitLabel = tradable
+    ? isBuy
+      ? 'Buy'
+      : 'Sell'
+    : isBuy
+      ? 'Schedule Buy'
+      : 'Schedule Sell';
+  if (tradable && isExit && reverseQty === 0 && qty > 0) {
     submitLabel = qty >= position!.quantity ? `Exit (${action} ${qty})` : `${submitLabel} · Reduce`;
-  } else if (!tradable && product === 'DELIVERY') {
-    submitLabel = `${submitLabel} (AMO)`;
   }
 
   return (
@@ -227,10 +245,22 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setShowDepth((prev) => !prev)}
-                className="ml-1 font-semibold text-gray-800 dark:text-gray-200 border-b border-dashed border-gray-500 hover:text-[#00B386] cursor-pointer"
+                onClick={() => {
+                  if (!planConfig.allowMarketDepth) {
+                    openUpgradeModal({
+                      requiredTier: 'advanced',
+                      featureName: '5-Level NSE Market Depth (Bids & Asks)',
+                      featureDescription:
+                        'Inspecting live 5-level Bid/Ask order book depth and click-to-fill limit prices is exclusive to the Advanced Package.',
+                    });
+                    return;
+                  }
+                  setShowDepth((prev) => !prev);
+                }}
+                className="ml-1 font-semibold text-gray-800 dark:text-gray-200 border-b border-dashed border-gray-500 hover:text-[#00B386] cursor-pointer inline-flex items-center gap-1"
               >
-                Depth
+                {!planConfig.allowMarketDepth && <Lock className="w-2.5 h-2.5 text-amber-500" />}
+                <span>Depth</span>
               </button>
             </div>
           </div>
@@ -298,6 +328,13 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
         {(['BUY', 'SELL'] as OrderAction[]).map((a) => {
           const active = action === a;
           const c = a === 'BUY' ? BUY : SELL;
+          const tabLabel = tradable
+            ? a === 'BUY'
+              ? 'Buy'
+              : 'Sell'
+            : a === 'BUY'
+              ? 'Schedule Buy'
+              : 'Schedule Sell';
           return (
             <button
               key={a}
@@ -310,7 +347,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
               style={{ color: active ? c : undefined }}
             >
               <span className={active ? '' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}>
-                {a}
+                {tabLabel}
               </span>
               {active && (
                 <span
@@ -346,32 +383,52 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
             <button
               type="button"
               onClick={() => {
+                if (!planConfig.allowIntradayTrading) {
+                  openUpgradeModal({
+                    requiredTier: 'beginner',
+                    featureName: 'Intraday (MIS) 5x Leverage Trading',
+                    featureDescription:
+                      'Free Starter accounts include Delivery (CNC) trading only. Upgrade to Beginner (₹299/mo) or Advanced (₹699/mo) to unlock Intraday (MIS) 5x margin leverage & short selling.',
+                  });
+                  return;
+                }
                 setProduct('INTRADAY');
                 setError('');
               }}
-              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer border ${
+              className={`px-3.5 py-1.5 rounded-full text-xs transition-all cursor-pointer border inline-flex items-center gap-1 ${
                 product === 'INTRADAY'
                   ? 'border-gray-800 dark:border-white bg-gray-100/90 dark:bg-[#252A36] text-gray-900 dark:text-white font-semibold'
                   : 'border-gray-200 dark:border-[#2E3340] text-gray-600 dark:text-gray-400 hover:border-gray-300 font-medium'
               }`}
             >
-              Intraday
+              {!planConfig.allowIntradayTrading && <Lock className="w-3 h-3 text-amber-500" />}
+              <span>Intraday 5x</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
-                setProduct('INTRADAY');
+                if (!planConfig.allowIntradayTrading) {
+                  openUpgradeModal({
+                    requiredTier: 'beginner',
+                    featureName: 'MTF 5.00x Delivery Leverage',
+                    featureDescription:
+                      'MTF 5.00x (Pay 20% margin, carry forward delivery holdings) is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
+                  });
+                  return;
+                }
+                setProduct('MTF');
                 setError('');
               }}
-              className={`px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer border ${
-                product === 'INTRADAY'
-                  ? 'border-[#00B386]/50 bg-[#00B386]/10 text-[#00B386] font-semibold'
-                  : 'border-gray-200 dark:border-[#2E3340] text-gray-500 dark:text-gray-400 font-medium'
+              className={`px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer border inline-flex items-center gap-1 ${
+                product === 'MTF'
+                  ? 'border-[#00B386] bg-[#00B386]/15 text-[#00B386] dark:text-[#00D09C] font-semibold'
+                  : 'border-gray-200 dark:border-[#2E3340] text-gray-600 dark:text-gray-400 hover:border-gray-300 font-medium'
               }`}
-              title="5x Intraday Margin Leverage"
+              title="MTF 5.00x Delivery Margin (Pay 20%, Hold Delivery)"
             >
-              MTF 5.00x
+              {!planConfig.allowIntradayTrading && <Lock className="w-3 h-3 text-amber-500" />}
+              <span>MTF 5.00x</span>
             </button>
           </div>
 
@@ -401,7 +458,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
                 <ChevronsUpDown className="w-3 h-3 text-gray-400" />
               </button>
 
-              {product === 'DELIVERY' && !isBuy && (
+              {(product === 'DELIVERY' || product === 'MTF') && !isBuy && (
                 <button
                   type="button"
                   onClick={() => sellableQty > 0 && setQtyText(String(sellableQty))}
@@ -477,28 +534,34 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
             {showTypes && (
               <div className="absolute left-0 z-30 mt-1.5 w-44 rounded-xl border border-gray-200 dark:border-[#2E3340] bg-white dark:bg-[#20242F] shadow-xl py-1">
                 {([
-                  { id: 'MARKET', label: 'Market', desc: 'Execute at best live price' },
-                  { id: 'LIMIT', label: 'Limit', desc: 'Buy/Sell at a target price' },
-                  { id: 'SL', label: 'Stop Loss (SL)', desc: 'Trigger + Limit price' },
-                  { id: 'SL-M', label: 'SL-Market', desc: 'Trigger at price, fill at market' },
-                ] as { id: OrderType; label: string; desc: string }[]).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => switchType(item.id)}
-                    className={`w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#282D3B] cursor-pointer ${
-                      orderType === item.id ? 'bg-gray-50 dark:bg-[#282D3B]' : ''
-                    }`}
-                  >
-                    <div
-                      className="text-xs font-semibold"
-                      style={{ color: orderType === item.id ? accent : undefined }}
+                  { id: 'MARKET', label: 'Market', desc: 'Execute at best live price', tier: 'free' },
+                  { id: 'LIMIT', label: 'Limit', desc: 'Buy/Sell at a target price', tier: 'beginner' },
+                  { id: 'SL', label: 'Stop Loss (SL)', desc: 'Trigger + Limit price', tier: 'advanced' },
+                  { id: 'SL-M', label: 'SL-Market', desc: 'Trigger at price, fill at market', tier: 'advanced' },
+                ] as { id: OrderType; label: string; desc: string; tier: string }[]).map((item) => {
+                  const locked = !planConfig.allowedOrderTypes.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => switchType(item.id)}
+                      className={`w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#282D3B] cursor-pointer ${
+                        orderType === item.id ? 'bg-gray-50 dark:bg-[#282D3B]' : ''
+                      }`}
                     >
-                      {item.label}
-                    </div>
-                    <div className="text-[10px] text-gray-400">{item.desc}</div>
-                  </button>
-                ))}
+                      <div
+                        className="text-xs font-semibold flex items-center justify-between"
+                        style={{ color: orderType === item.id ? accent : undefined }}
+                      >
+                        <span>{item.label}</span>
+                        {locked && <Lock className="w-3 h-3 text-amber-500" />}
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        {locked ? `Requires ${item.tier === 'beginner' ? 'Beginner' : 'Advanced'}` : item.desc}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -544,21 +607,24 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
 
         {/* Contextual Information Notices */}
         <div className="min-h-[84px] flex flex-col justify-end space-y-2 pt-2">
-          {!tradable && product === 'DELIVERY' && (
+          {!tradable && (
             <Notice>
-              Market is closed. Order will be placed as an <strong>AMO</strong> and executed at 9:15 AM open.
+              {SCHEDULED_ORDER_DISCLAIMER}
             </Notice>
           )}
           {intradayBlocked && (
             <Notice warn>
-              {!marketStatus.isOpen
-                ? 'Market is closed. Intraday orders are allowed between 9:15 AM – 3:20 PM IST.'
-                : 'Intraday cut-off (3:20 PM) passed. Only position exits are permitted.'}
+              Intraday cut-off (3:20 PM) passed. Only position exits are permitted during the remainder of today's session.
             </Notice>
           )}
           {product === 'INTRADAY' && tradable && !intradayBlocked && !isExit && (
             <Notice>
-              Intraday (MIS) gives <strong>5x leverage</strong>. Open positions auto square-off at 3:20 PM (₹59 fee).
+              Intraday (MIS) gives <strong>5x leverage</strong> (20% margin). Open positions auto square-off at 3:20 PM (₹59 fee).
+            </Notice>
+          )}
+          {product === 'MTF' && isBuy && (
+            <Notice>
+              <strong>MTF 5.00x</strong>: Pay <strong>20% ({inr(value / MTF_LEVERAGE)})</strong> margin now; broker funds <strong>80% ({inr(value - value / MTF_LEVERAGE)})</strong> so you can carry delivery holdings past today.
             </Notice>
           )}
           {isExit && position && (
@@ -585,16 +651,28 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
 
           <button
             type="button"
-            onClick={() => setShowCharges((s) => !s)}
-            className="cursor-pointer text-right"
+            onClick={() => {
+              if (!planConfig.allowDetailedChargesBreakdown) {
+                openUpgradeModal({
+                  requiredTier: 'beginner',
+                  featureName: 'Full Statutory Charges Breakdown',
+                  featureDescription:
+                    'Inspecting exact Groww Brokerage, STT, Exchange Txn, SEBI, Stamp Duty, GST & DP charges is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
+                });
+                return;
+              }
+              setShowCharges((s) => !s);
+            }}
+            className="cursor-pointer text-right inline-flex items-center gap-1"
             title="Click to view full Groww brokerage & statutory charges breakdown"
           >
+            {!planConfig.allowDetailedChargesBreakdown && <Lock className="w-3 h-3 text-amber-500" />}
             <span className="border-b border-dashed border-gray-400">
-              {product === 'DELIVERY' && !isBuy ? 'Est. charges' : 'Approx req.'}
+              {(product === 'DELIVERY' || product === 'MTF') && !isBuy ? 'Est. charges' : 'Approx req.'}
             </span>{' '}
             :{' '}
             <strong className="font-semibold text-gray-700 dark:text-gray-200">
-              {product === 'DELIVERY' && !isBuy ? inr(charges.total, 0) : inr(required, 0)}
+              {(product === 'DELIVERY' || product === 'MTF') && !isBuy ? inr(charges.total, 0) : inr(required, 0)}
             </strong>
           </button>
         </div>
@@ -604,7 +682,13 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
           <div className="rounded-lg bg-gray-50 dark:bg-[#20242F] p-3 text-[11px] space-y-1 text-gray-600 dark:text-gray-300 tabular-nums border border-gray-100 dark:border-[#2E3340]">
             <Row label={`Turnover (${qty} × ${inr(effPrice)})`} value={inr(value)} />
             {product === 'INTRADAY' && !isExit && (
-              <Row label={`Intraday margin (${INTRADAY_LEVERAGE}x)`} value={inr(value / INTRADAY_LEVERAGE)} />
+              <Row label={`Intraday margin (${INTRADAY_LEVERAGE}x · 20%)`} value={inr(value / INTRADAY_LEVERAGE)} />
+            )}
+            {product === 'MTF' && isBuy && (
+              <>
+                <Row label={`Your MTF margin (${MTF_LEVERAGE}.00x · 20%)`} value={inr(value / MTF_LEVERAGE)} />
+                <Row label="Funded by broker (80%)" value={inr(value - value / MTF_LEVERAGE)} />
+              </>
             )}
             <div className="border-t border-gray-200 dark:border-[#2E3340] my-1" />
             <Row label="Groww Brokerage" value={inr(charges.brokerage)} />

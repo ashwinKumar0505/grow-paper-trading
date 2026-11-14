@@ -1,4 +1,4 @@
-import { BookOpen, ChartCandlestick, GraduationCap, Radar, Volume2, VolumeX, ArrowRight } from 'lucide-react';
+import { BookOpen, ChartCandlestick, Crown, Radar } from 'lucide-react';
 import { AppLink, usePathname } from '../../lib/navigation';
 import { useTrading } from '../../context/TradingContext';
 import { sound } from '../../features/quiz/utils/sound';
@@ -14,7 +14,8 @@ export function WorkspaceHeader() {
   const isTrade = pathname === '/trade';
   const isLearn = pathname === '/learn';
   const isQuiz = pathname === '/quiz' || pathname === '/quiz/play';
-  const isMuted = useSyncExternalStore(sound.subscribe, () => sound.getMuted());
+  const isPricing = pathname === '/pricing';
+  useSyncExternalStore(sound.subscribe, () => sound.getMuted());
 
   const modes = [
     {
@@ -35,6 +36,12 @@ export function WorkspaceHeader() {
       label: 'Learn',
       icon: BookOpen,
       active: isLearn || isQuiz,
+    },
+    {
+      href: '/pricing',
+      label: 'Pricing',
+      icon: Crown,
+      active: isPricing,
     },
   ];
 

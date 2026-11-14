@@ -68,7 +68,7 @@ function formatAxisLabel(ts: number, tf: Timeframe, fallback: string): string {
 const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
-  const { fetchRealChart, marketStatus, isSimulating } = useTrading();
+  const { fetchRealChart, marketStatus } = useTrading();
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [isTerminalMode, setIsTerminalMode] = useState<boolean>(false);
@@ -81,7 +81,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
   const height = isTerminalMode ? 370 : 300;
 
   const is1D = timeframe === '1D';
-  const isLive = marketStatus.isOpen || isSimulating;
+  const isLive = marketStatus.isOpen;
   const validPrice = stock.price > 0;
 
   // Measure container width so SVG renders at crisp 1:1 pixel ratio
@@ -102,8 +102,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     setHoverIdx(null);
     fetchRealChart(stock.symbol, timeframe).then((pts: ChartPoint[] | null) => {
       if (!alive) return;
-      // If 1D has too few points from remote, use high-resolution calibrated series
-      if (pts && pts.length >= (timeframe === '1D' ? 25 : 10)) {
+      if (pts && pts.length >= 2) {
         setPoints(pts);
       } else {
         setPoints(generateChartData(stock, timeframe));
@@ -116,7 +115,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stock.symbol, timeframe, fetchRealChart]);
 
-  // Synchronize latest point with live ticking price
+  // Synchronize latest point with live market quote during trading hours
   useEffect(() => {
     if (!is1D || !validPrice) return;
     setPoints((prev) => {
@@ -139,7 +138,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
             low: Math.min(last.close, price),
             close: price,
             price,
-            volume: Math.floor(1500 + Math.random() * 2000),
+            volume: last.volume || Math.round((stock.volume || 0) / Math.max(1, prev.length)),
           },
         ];
       }
@@ -154,7 +153,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
       };
       return copy;
     });
-  }, [stock.price, is1D, isLive, validPrice]);
+  }, [stock.price, stock.volume, is1D, isLive, validPrice]);
 
   const data = points || [];
   const prevClose = stock.previousClose > 0 ? stock.previousClose : data[0]?.open || 0;

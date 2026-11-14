@@ -27,6 +27,7 @@ import { SurvivalGameOverModal } from './components/SurvivalGameOverModal';
 import { ModeSelectPage } from './components/ModeSelectPage';
 import { navigate, usePathname } from '../../lib/navigation';
 import { LearnChartsPage } from './components/LearnChartsPage';
+import { useTrading } from '../../context/TradingContext';
 
 const DEFAULT_INDICATORS: IndicatorSettings = {
   showEma20: true,
@@ -77,6 +78,7 @@ const INITIAL_STATS: UserStats = {
 };
 
 export default function QuizApp() {
+  const { planConfig, consumeQuizQuestion, openUpgradeModal } = useTrading();
   // URL navigation keeps deep links and browser history in sync.
   const pathname = usePathname();
   const currentView =
@@ -249,6 +251,9 @@ export default function QuizApp() {
   const executeTrade = useCallback(
     (direction: TradeDirection, size: number = 1000) => {
       if (tradeInFlight.current || isRevealing || userTrade) return;
+      if (!consumeQuizQuestion()) {
+        return;
+      }
       tradeInFlight.current = true;
       size = gameMode === 'tournament' ? Math.min(Math.max(0, size), tournamentState.balance) : size;
 
@@ -455,6 +460,28 @@ export default function QuizApp() {
 
   // Launch Quiz from Mode & Difficulty Setup Page
   const handleLaunchQuiz = useCallback((selectedMode: GameMode, selectedDifficulty: DifficultyLevel = difficulty) => {
+    if (!planConfig.quizAllowedModes.includes(selectedMode)) {
+      openUpgradeModal({
+        requiredTier: selectedMode === 'survival' ? 'beginner' : 'advanced',
+        featureName: `Guess the Chart — ${selectedMode === 'survival' ? 'Survival' : 'Cash Challenge'} Mode`,
+        featureDescription:
+          selectedMode === 'survival'
+            ? '3-Lives Survival Mode is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.'
+            : '10-Round Cash Challenge Tournament is exclusive to the Advanced Package (₹699/mo).',
+      });
+      return;
+    }
+    if (!planConfig.quizAllowedDifficulties.includes(selectedDifficulty)) {
+      openUpgradeModal({
+        requiredTier: selectedDifficulty === 'Intermediate' ? 'beginner' : 'advanced',
+        featureName: `${selectedDifficulty} Chart Difficulty`,
+        featureDescription:
+          selectedDifficulty === 'Intermediate'
+            ? 'Intermediate chart setups require the Beginner (₹299/mo) or Advanced (₹699/mo) package.'
+            : 'Advanced & Mixed chart setups require the Advanced Package (₹699/mo).',
+      });
+      return;
+    }
     sound.playClick();
     setGameMode(selectedMode);
     setDifficulty(selectedDifficulty);

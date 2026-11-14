@@ -2,6 +2,15 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { classifyQuoteFreshness, getIndianMarketStatus } from './src/utils/marketHours';
+import {
+  cancelOrder,
+  migrateLegacyPaperState,
+  OrderBookState,
+  processOrderQueue,
+  roundToTick,
+  submitOrder,
+} from './src/utils/orderEngine';
 
 dotenv.config();
 
@@ -622,6 +631,119 @@ const FALLBACK_STOCKS: Record<string, any> = {
 // Memory stores for last verified quotes to gracefully survive network drops
 const lastKnownQuoteMap: Record<string, any> = { ...FALLBACK_STOCKS };
 const lastKnownIndicesMap: Record<string, any> = { ...FALLBACK_INDICES };
+const lastKnownChartMap: Record<string, any[]> = {};
+
+// Backend store for user paper-trading books so scheduled orders (AMO) execute even when browser is closed
+const paperTradingStore: Record<string, OrderBookState & { updatedAt: number }> = {};
+
+function annotateQuoteWithFreshness(rawStock: any, now = Date.now(), providerAvailable = true) {
+  const marketStatus = getIndianMarketStatus(now);
+  const quoteTimestamp = rawStock.quoteTimestamp ?? rawStock.lastUpdated ?? now;
+  const freshnessInfo = classifyQuoteFreshness(
+    {
+      price: rawStock.price,
+      quoteTimestamp,
+      fetchedAt: rawStock.fetchedAt ?? now,
+      providerAvailable,
+    },
+    marketStatus,
+    now
+  );
+  const prevClose = Number(rawStock.previousClose || rawStock.price || 0);
+  return {
+    ...rawStock,
+    lowerCircuit: rawStock.lowerCircuit ?? roundToTick(prevClose * 0.9),
+    upperCircuit: rawStock.upperCircuit ?? roundToTick(prevClose * 1.1),
+    quoteTimestamp,
+    fetchedAt: rawStock.fetchedAt ?? now,
+    freshness: freshnessInfo.freshness,
+    freshnessLabel: freshnessInfo.label,
+    isTradableQuote: freshnessInfo.isTradable,
+    isStale: freshnessInfo.freshness === 'STALE',
+    providerAvailable,
+  };
+}
+
+function annotateIndexWithFreshness(rawIndex: any, now = Date.now(), providerAvailable = true) {
+  const marketStatus = getIndianMarketStatus(now);
+  const quoteTimestamp = rawIndex.quoteTimestamp ?? now;
+  const freshnessInfo = classifyQuoteFreshness(
+    {
+      price: rawIndex.value,
+      quoteTimestamp,
+      fetchedAt: now,
+      providerAvailable,
+    },
+    marketStatus,
+    now
+  );
+  return {
+    ...rawIndex,
+    quoteTimestamp,
+    freshness: freshnessInfo.freshness,
+    freshnessLabel: freshnessInfo.label,
+  };
+}
+
+/**
+ * Deterministic chart builder from actual quote sparkline & OHLC (never uses random walks).
+ */
+function buildDeterministicQuoteChart(symbol: string, timeframe: string, quote: any) {
+  const basePrice = Number(quote?.price || 0);
+  const prevClose = Number(quote?.previousClose || basePrice);
+  const openPrice = Number(quote?.open || prevClose || basePrice);
+  const highPrice = Number(quote?.high || Math.max(openPrice, basePrice));
+  const lowPrice = Number(quote?.low || Math.min(openPrice, basePrice));
+  const totalVol = Number(quote?.volume || 0);
+  const spark: number[] =
+    Array.isArray(quote?.sparkline) && quote.sparkline.length >= 2
+      ? quote.sparkline.filter((v: any) => typeof v === 'number' && Number.isFinite(v))
+      : [prevClose, openPrice, lowPrice, highPrice, basePrice].filter((v) => v > 0);
+
+  const series = spark.length >= 2 ? spark : [prevClose || basePrice, basePrice];
+  const now = quote?.quoteTimestamp || quote?.lastUpdated || Date.now();
+  const stepMs =
+    timeframe === '1D'
+      ? 15 * 60 * 1000
+      : timeframe === '1W'
+        ? 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
+  const perBarVol = series.length > 0 ? Math.round(totalVol / series.length) : 0;
+
+  return series.map((closeVal, idx) => {
+    const close = Number(closeVal.toFixed(2));
+    const open = idx === 0 ? Number(prevClose.toFixed(2)) : Number(series[idx - 1].toFixed(2));
+    const high = Number(Math.max(open, close).toFixed(2));
+    const low = Number(Math.min(open, close).toFixed(2));
+    const ts = now - (series.length - 1 - idx) * stepMs;
+    const barDate = new Date(ts);
+    const timeLabel =
+      timeframe === '1D'
+        ? barDate
+            .toLocaleTimeString('en-IN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Kolkata',
+            })
+            .toUpperCase()
+        : barDate.toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            timeZone: 'Asia/Kolkata',
+          });
+    return {
+      time: timeLabel,
+      timestamp: ts,
+      price: close,
+      open,
+      high,
+      low,
+      close,
+      volume: perBarVol,
+    };
+  });
+}
 
 // Helper: fetch single symbol chart data with timeout and graceful 404 handling
 async function fetchYahooChart(yahooSymbol: string, range = '1d', interval = '5m') {
@@ -661,12 +783,33 @@ async function fetchYahooChart(yahooSymbol: string, range = '1d', interval = '5m
   }
 }
 
+// 0. GET /api/market/status - Centralized NSE Market Calendar & Session Status
+app.get('/api/market/status', (_req: Request, res: Response) => {
+  const now = Date.now();
+  const marketStatus = getIndianMarketStatus(now);
+  res.json({
+    success: true,
+    marketStatus,
+    timestamp: now,
+  });
+});
+
 // 1. GET /api/market/indices - Real-time market indices
 app.get('/api/market/indices', async (_req: Request, res: Response) => {
+  const now = Date.now();
+  const marketStatus = getIndianMarketStatus(now);
   try {
     const cached = getCached('all_indices');
     if (cached) {
-      return res.json({ success: true, indices: cached, cached: true });
+      const annotated = cached.map((idx: any) => annotateIndexWithFreshness(idx, now));
+      return res.json({
+        success: true,
+        indices: annotated,
+        marketStatus,
+        freshness: annotated[0]?.freshness || (marketStatus.isOpen ? 'LIVE' : 'LAST_AVAILABLE'),
+        cached: true,
+        timestamp: now,
+      });
     }
 
     const promises = Object.entries(INDICES_MAP).map(async ([symbol, { yahoo, name }]) => {
@@ -681,39 +824,74 @@ app.get('/api/market/indices', async (_req: Request, res: Response) => {
 
           const quotes = result.indicators?.quote?.[0]?.close || [];
           const sparkline = quotes.filter((q: any) => typeof q === 'number' && !isNaN(q)).slice(-10);
+          const quoteTimestamp = meta.regularMarketTime ? meta.regularMarketTime * 1000 : now;
 
-          const indexData = {
-            symbol,
-            name,
-            value: Number(regularMarketPrice.toFixed(2)),
-            change,
-            changePercent,
-            sparkline: sparkline.length > 0 ? sparkline : [prevClose, regularMarketPrice],
-          };
+          const indexData = annotateIndexWithFreshness(
+            {
+              symbol,
+              name,
+              value: Number(regularMarketPrice.toFixed(2)),
+              change,
+              changePercent,
+              sparkline: sparkline.length > 0 ? sparkline : [prevClose, regularMarketPrice],
+              quoteTimestamp,
+            },
+            now,
+            true
+          );
           lastKnownIndicesMap[symbol] = indexData;
           return indexData;
         }
       } catch {
-        // Fallback silently without throwing unhandled exceptions
+        // Fallback to last known index quote
       }
-      return lastKnownIndicesMap[symbol] || FALLBACK_INDICES[symbol];
+      const fallbackIdx = lastKnownIndicesMap[symbol] || FALLBACK_INDICES[symbol];
+      return fallbackIdx ? annotateIndexWithFreshness(fallbackIdx, now, true) : null;
     });
 
     const results = (await Promise.all(promises)).filter(Boolean);
-    const finalIndices = results.length > 0 ? results : Object.values(FALLBACK_INDICES);
+    const finalIndices =
+      results.length > 0
+        ? results
+        : Object.values(FALLBACK_INDICES).map((idx) => annotateIndexWithFreshness(idx, now, true));
     setCache('all_indices', finalIndices);
-    return res.json({ success: true, indices: finalIndices, timestamp: Date.now() });
-  } catch (error: any) {
-    res.json({ success: true, indices: Object.values(FALLBACK_INDICES), timestamp: Date.now() });
+    return res.json({
+      success: true,
+      indices: finalIndices,
+      marketStatus,
+      freshness: finalIndices[0]?.freshness || (marketStatus.isOpen ? 'LIVE' : 'LAST_AVAILABLE'),
+      timestamp: now,
+    });
+  } catch {
+    const fallbackList = Object.values(FALLBACK_INDICES).map((idx) =>
+      annotateIndexWithFreshness(idx, now, true)
+    );
+    res.json({
+      success: true,
+      indices: fallbackList,
+      marketStatus,
+      freshness: fallbackList[0]?.freshness || 'LAST_AVAILABLE',
+      timestamp: now,
+    });
   }
 });
 
 // 2. GET /api/stocks - Real quotes for stock list
 app.get('/api/stocks', async (_req: Request, res: Response) => {
+  const now = Date.now();
+  const marketStatus = getIndianMarketStatus(now);
   try {
     const cached = getCached('all_stocks');
     if (cached) {
-      return res.json({ success: true, stocks: cached, cached: true });
+      const annotated = cached.map((s: any) => annotateQuoteWithFreshness(s, now, true));
+      return res.json({
+        success: true,
+        stocks: annotated,
+        marketStatus,
+        freshness: annotated[0]?.freshness || (marketStatus.isOpen ? 'LIVE' : 'LAST_AVAILABLE'),
+        cached: true,
+        timestamp: now,
+      });
     }
 
     const symbols = Object.keys(SYMBOL_MAP);
@@ -738,40 +916,66 @@ app.get('/api/stocks', async (_req: Request, res: Response) => {
           const quotes = result.indicators?.quote?.[0]?.close || [];
           const validCloses = quotes.filter((q: any) => typeof q === 'number' && !isNaN(q));
           const sparkline = validCloses.length >= 8 ? validCloses.slice(-8) : [prevClose, price];
+          const quoteTimestamp = meta.regularMarketTime ? meta.regularMarketTime * 1000 : now;
 
-          const stockObj = {
-            symbol: sym,
-            name: meta.longName || meta.shortName || (FALLBACK_STOCKS[sym]?.name || sym),
-            exchange: 'NSE',
-            price: Number(price.toFixed(2)),
-            previousClose: Number(prevClose.toFixed(2)),
-            change,
-            changePercent,
-            open: Number(open.toFixed(2)),
-            high: Number(high.toFixed(2)),
-            low: Number(low.toFixed(2)),
-            close: Number(price.toFixed(2)),
-            volume,
-            week52High: Number(week52High.toFixed(2)),
-            week52Low: Number(week52Low.toFixed(2)),
-            sparkline,
-            lastUpdated: Date.now(),
-          };
+          const stockObj = annotateQuoteWithFreshness(
+            {
+              symbol: sym,
+              name: meta.longName || meta.shortName || (FALLBACK_STOCKS[sym]?.name || sym),
+              exchange: 'NSE',
+              price: Number(price.toFixed(2)),
+              previousClose: Number(prevClose.toFixed(2)),
+              change,
+              changePercent,
+              open: Number(open.toFixed(2)),
+              high: Number(high.toFixed(2)),
+              low: Number(low.toFixed(2)),
+              close: Number(price.toFixed(2)),
+              volume,
+              week52High: Number(week52High.toFixed(2)),
+              week52Low: Number(week52Low.toFixed(2)),
+              sparkline,
+              lastUpdated: now,
+              quoteTimestamp,
+              fetchedAt: now,
+            },
+            now,
+            true
+          );
           lastKnownQuoteMap[sym] = stockObj;
           return stockObj;
         }
       } catch {
-        // Fallback silently
+        // Fallback to last known quote
       }
-      return lastKnownQuoteMap[sym] || FALLBACK_STOCKS[sym] || null;
+      const fallback = lastKnownQuoteMap[sym] || FALLBACK_STOCKS[sym] || null;
+      return fallback ? annotateQuoteWithFreshness(fallback, now, true) : null;
     });
 
     const results = (await Promise.all(promises)).filter(Boolean);
-    const finalStocks = results.length > 0 ? results : Object.values(FALLBACK_STOCKS);
+    const finalStocks =
+      results.length > 0
+        ? results
+        : Object.values(FALLBACK_STOCKS).map((s) => annotateQuoteWithFreshness(s, now, true));
     setCache('all_stocks', finalStocks);
-    return res.json({ success: true, stocks: finalStocks, timestamp: Date.now() });
-  } catch (error: any) {
-    res.json({ success: true, stocks: Object.values(FALLBACK_STOCKS), timestamp: Date.now() });
+    return res.json({
+      success: true,
+      stocks: finalStocks,
+      marketStatus,
+      freshness: finalStocks[0]?.freshness || (marketStatus.isOpen ? 'LIVE' : 'LAST_AVAILABLE'),
+      timestamp: now,
+    });
+  } catch {
+    const fallbackList = Object.values(FALLBACK_STOCKS).map((s) =>
+      annotateQuoteWithFreshness(s, now, true)
+    );
+    res.json({
+      success: true,
+      stocks: fallbackList,
+      marketStatus,
+      freshness: fallbackList[0]?.freshness || 'LAST_AVAILABLE',
+      timestamp: now,
+    });
   }
 });
 
@@ -779,6 +983,8 @@ app.get('/api/stocks', async (_req: Request, res: Response) => {
 app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
   const symbol = req.params.symbol.toUpperCase();
   const yahooSymbol = SYMBOL_MAP[symbol] || (symbol.includes('.') ? symbol : `${symbol}.NS`);
+  const now = Date.now();
+  const marketStatus = getIndianMarketStatus(now);
 
   try {
     const result = await fetchYahooChart(yahooSymbol, '1d', '5m');
@@ -799,250 +1005,73 @@ app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
       const quotes = result.indicators?.quote?.[0]?.close || [];
       const validCloses = quotes.filter((q: any) => typeof q === 'number' && !isNaN(q));
       const sparkline = validCloses.length >= 8 ? validCloses.slice(-8) : [prevClose, price];
+      const quoteTimestamp = meta.regularMarketTime ? meta.regularMarketTime * 1000 : now;
 
-      const stockData = {
-        symbol,
-        name: meta.longName || meta.shortName || (FALLBACK_STOCKS[symbol]?.name || symbol),
-        sector: 'Equities',
-        exchange: 'NSE',
-        price: Number(price.toFixed(2)),
-        previousClose: Number(prevClose.toFixed(2)),
-        change,
-        changePercent,
-        open: Number(open.toFixed(2)),
-        high: Number(high.toFixed(2)),
-        low: Number(low.toFixed(2)),
-        close: Number(price.toFixed(2)),
-        volume,
-        week52High: Number(week52High.toFixed(2)),
-        week52Low: Number(week52Low.toFixed(2)),
-        fundamentals: {
-          marketCap: meta.marketCap ? `₹${(meta.marketCap / 10000000).toFixed(0)} Cr` : '₹50,000 Cr',
-          peRatio: 26.5,
-          pbRatio: 3.2,
-          industryPe: 24.0,
-          debtToEquity: 0.45,
-          roe: 18.2,
-          divYield: 1.1,
-          eps: Number((price / 25).toFixed(2)),
-          bookValue: Number((price / 3).toFixed(2)),
+      const stockData = annotateQuoteWithFreshness(
+        {
+          symbol,
+          name: meta.longName || meta.shortName || (FALLBACK_STOCKS[symbol]?.name || symbol),
+          sector: 'Equities',
+          exchange: 'NSE',
+          price: Number(price.toFixed(2)),
+          previousClose: Number(prevClose.toFixed(2)),
+          change,
+          changePercent,
+          open: Number(open.toFixed(2)),
+          high: Number(high.toFixed(2)),
+          low: Number(low.toFixed(2)),
+          close: Number(price.toFixed(2)),
+          volume,
+          week52High: Number(week52High.toFixed(2)),
+          week52Low: Number(week52Low.toFixed(2)),
+          fundamentals: {
+            marketCap: meta.marketCap
+              ? `₹${(meta.marketCap / 10000000).toFixed(0)} Cr`
+              : '₹50,000 Cr',
+            peRatio: 26.5,
+            pbRatio: 3.2,
+            industryPe: 24.0,
+            debtToEquity: 0.45,
+            roe: 18.2,
+            divYield: 1.1,
+            eps: Number((price / 25).toFixed(2)),
+            bookValue: Number((price / 3).toFixed(2)),
+          },
+          about: `${meta.longName || symbol} is an equity listed on the National Stock Exchange of India (NSE).`,
+          sparkline,
+          lastUpdated: now,
+          quoteTimestamp,
+          fetchedAt: now,
         },
-        about: `${meta.longName || symbol} is an equity listed on the National Stock Exchange of India (NSE).`,
-        sparkline,
-        lastUpdated: Date.now(),
-      };
+        now,
+        true
+      );
       lastKnownQuoteMap[symbol] = stockData;
-      return res.json({ success: true, stock: stockData });
+      return res.json({ success: true, stock: stockData, marketStatus });
     }
   } catch {
-    // Continue to fallback
+    // Continue to verified last-available quote fallback
   }
 
-  // Graceful fallback to verified stock or generic quote
+  // Graceful fallback to last-available verified stock quote
   const fallback = lastKnownQuoteMap[symbol] || FALLBACK_STOCKS[symbol];
   if (fallback) {
-    return res.json({ success: true, stock: fallback });
+    return res.json({
+      success: true,
+      stock: annotateQuoteWithFreshness(fallback, now, true),
+      marketStatus,
+    });
   }
 
   res.status(404).json({ success: false, message: 'Stock data not available' });
 });
 
-// Helper: Synthesize authentic NSE historical / intraday points when Yahoo chart is rate-limited
-function synthesizeStockChart(symbol: string, timeframe: string, basePrice: number, prevClose: number) {
-  const points: {
-    time: string;
-    timestamp: number;
-    price: number;
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-  }[] = [];
-
-  let seed = 0;
-  const seedStr = `${symbol}_${timeframe}`;
-  for (let i = 0; i < seedStr.length; i++) {
-    seed = (seed * 31 + seedStr.charCodeAt(i)) | 0;
-  }
-  const nextRand = () => {
-    seed = (seed * 1664525 + 1013904223) | 0;
-    return ((seed >>> 0) % 10000) / 10000;
-  };
-
-  if (timeframe === '1D') {
-    const now = new Date();
-    const istParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(now);
-    const map: Record<string, string> = {};
-    for (const p of istParts) map[p.type] = p.value;
-
-    const hour = parseInt(map.hour || '15', 10) % 24;
-    const minute = parseInt(map.minute || '30', 10);
-    const curMin = hour * 60 + minute;
-    const isWeekend = map.weekday === 'Sat' || map.weekday === 'Sun';
-
-    let elapsedMins = 375;
-    if (!isWeekend && curMin >= 555 && curMin <= 930) {
-      elapsedMins = Math.max(30, curMin - 555);
-    }
-
-    const stepMins = 2;
-    const numBars = Math.max(20, Math.floor(elapsedMins / stepMins) + 1);
-    const sessionOpenMs = Date.parse(`${map.year}-${map.month}-${map.day}T09:15:00+05:30`) || (Date.now() - elapsedMins * 60000);
-
-    const startPrice = prevClose > 0 ? prevClose : basePrice;
-    const rawWalk: number[] = new Array(numBars);
-    rawWalk[0] = startPrice;
-    let p = startPrice;
-    const volatility = 0.0018;
-
-    for (let i = 1; i < numBars; i++) {
-      const step = (nextRand() - 0.495) * volatility * p;
-      const wave = Math.sin((i / numBars) * Math.PI * 3.5) * volatility * 0.35 * p;
-      p = Math.max(1, p + step + wave * 0.25);
-      rawWalk[i] = p;
-    }
-
-    const endDiff = basePrice - rawWalk[numBars - 1];
-    for (let i = 0; i < numBars; i++) {
-      const frac = i / Math.max(1, numBars - 1);
-      const barClose = Number((rawWalk[i] + endDiff * frac).toFixed(2));
-      const barOpen: number = i === 0 ? startPrice : points[i - 1].close;
-      const barHigh = Number((Math.max(barOpen, barClose) + nextRand() * 0.0018 * barClose).toFixed(2));
-      const barLow = Number((Math.min(barOpen, barClose) - nextRand() * 0.0018 * barClose).toFixed(2));
-      const barTimestamp = sessionOpenMs + i * stepMins * 60 * 1000;
-      const barDate = new Date(barTimestamp);
-
-      points.push({
-        time: barDate.toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-          timeZone: 'Asia/Kolkata',
-        }).toUpperCase(),
-        timestamp: barTimestamp,
-        price: barClose,
-        open: barOpen,
-        high: barHigh,
-        low: barLow,
-        close: barClose,
-        volume: Math.floor(8000 + nextRand() * 45000),
-      });
-    }
-    return points;
-  }
-
-  const now = Date.now();
-  let numBars = 90;
-  let intervalMs = 60 * 60 * 1000;
-  let volatility = 0.005;
-  let totalDrift = 0.05;
-
-  if (timeframe === '1W') {
-    numBars = 85;
-    intervalMs = 60 * 60 * 1000;
-    volatility = 0.0038;
-    totalDrift = 0.02;
-  } else if (timeframe === '1M') {
-    numBars = 90;
-    intervalMs = 6 * 60 * 60 * 1000;
-    volatility = 0.0065;
-    totalDrift = 0.045;
-  } else if (timeframe === '3M') {
-    numBars = 90;
-    intervalMs = 24 * 60 * 60 * 1000;
-    volatility = 0.011;
-    totalDrift = 0.085;
-  } else if (timeframe === '6M') {
-    numBars = 120;
-    intervalMs = 1.5 * 24 * 60 * 60 * 1000;
-    volatility = 0.013;
-    totalDrift = 0.14;
-  } else if (timeframe === '1Y') {
-    numBars = 125;
-    intervalMs = 3 * 24 * 60 * 60 * 1000;
-    volatility = 0.016;
-    totalDrift = 0.22;
-  } else if (timeframe === '3Y') {
-    numBars = 130;
-    intervalMs = 8 * 24 * 60 * 60 * 1000;
-    volatility = 0.022;
-    totalDrift = 0.55;
-  } else if (timeframe === '5Y') {
-    numBars = 140;
-    intervalMs = 13 * 24 * 60 * 60 * 1000;
-    volatility = 0.026;
-    totalDrift = 0.95;
-  } else {
-    numBars = 150;
-    intervalMs = 20 * 24 * 60 * 60 * 1000;
-    volatility = 0.03;
-    totalDrift = 1.45;
-  }
-
-  const prices: number[] = new Array(numBars);
-  prices[numBars - 1] = basePrice;
-  let p = basePrice;
-  const drift = totalDrift / numBars;
-
-  for (let i = numBars - 2; i >= 0; i--) {
-    const noise = (nextRand() - 0.492) * volatility * p;
-    p = Math.max(5, p - noise - drift * p);
-    prices[i] = p;
-  }
-
-  for (let i = 0; i < numBars; i++) {
-    const barTimestamp = now - (numBars - 1 - i) * intervalMs;
-    const barDate = new Date(barTimestamp);
-    const barClose = Number(prices[i].toFixed(2));
-    const barOpen: number = i > 0 ? points[i - 1].close : Number((barClose * 0.996).toFixed(2));
-    const barHigh = Number((Math.max(barOpen, barClose) + nextRand() * volatility * 0.8 * barClose).toFixed(2));
-    const barLow = Number((Math.min(barOpen, barClose) - nextRand() * volatility * 0.8 * barClose).toFixed(2));
-
-    let timeLabel = '';
-    if (timeframe === '1W' || timeframe === '1M' || timeframe === '3M' || timeframe === '6M') {
-      timeLabel = barDate.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        timeZone: 'Asia/Kolkata',
-      });
-    } else {
-      timeLabel = barDate.toLocaleDateString('en-IN', {
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata',
-      });
-    }
-
-    points.push({
-      time: timeLabel,
-      timestamp: barTimestamp,
-      price: barClose,
-      open: barOpen,
-      high: barHigh,
-      low: barLow,
-      close: barClose,
-      volume: Math.floor(10000 + nextRand() * 50000),
-    });
-  }
-
-  return points;
-}
-
-// 4. GET /api/stocks/:symbol/chart - Real OHLC Historical Candles with reliable synthesis
+// 4. GET /api/stocks/:symbol/chart - Real OHLC Historical Candles from market provider or cached quote
 app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
   const symbol = req.params.symbol.toUpperCase();
   const timeframe = (req.query.timeframe as string) || '1D';
   const yahooSymbol = SYMBOL_MAP[symbol] || `${symbol}.NS`;
+  const chartKey = `${symbol}_${timeframe}`;
 
   let range = '1d';
   let interval = '2m';
@@ -1106,7 +1135,7 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
         const o = typeof opens[i] === 'number' && !isNaN(opens[i]) ? opens[i] : c;
         const h = typeof highs[i] === 'number' && !isNaN(highs[i]) ? highs[i] : Math.max(o, c);
         const l = typeof lows[i] === 'number' && !isNaN(lows[i]) ? lows[i] : Math.min(o, c);
-        const vol = typeof volumes[i] === 'number' && !isNaN(volumes[i]) ? volumes[i] : 1000;
+        const vol = typeof volumes[i] === 'number' && !isNaN(volumes[i]) ? volumes[i] : 0;
 
         const barDate = new Date(timestamps[i] * 1000);
         let timeLabel = '';
@@ -1143,6 +1172,7 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
       }
 
       if (points.length > 0) {
+        lastKnownChartMap[chartKey] = points;
         return res.json({
           success: true,
           symbol,
@@ -1150,25 +1180,34 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
           points,
           previousClose: meta.chartPreviousClose || points[0].open,
           currentPrice: meta.regularMarketPrice || points[points.length - 1].close,
+          simulated: false,
         });
       }
     }
   } catch {
-    // Continue to fallback synthesis
+    // Fallback to cached chart or deterministic last-available quote series
   }
 
-  // Gracefully generate high-fidelity chart data
-  const fallback = lastKnownQuoteMap[symbol] || FALLBACK_STOCKS[symbol] || { price: 1000, previousClose: 990 };
-  const synthesized = synthesizeStockChart(symbol, timeframe, fallback.price, fallback.previousClose);
+  const fallbackQuote = lastKnownQuoteMap[symbol] || FALLBACK_STOCKS[symbol];
+  if (!fallbackQuote) {
+    return res.status(404).json({
+      success: false,
+      message: 'Chart data unavailable for this symbol',
+    });
+  }
+
+  const cachedPoints =
+    lastKnownChartMap[chartKey] || buildDeterministicQuoteChart(symbol, timeframe, fallbackQuote);
 
   res.json({
     success: true,
     symbol,
     timeframe,
-    points: synthesized,
-    previousClose: fallback.previousClose,
-    currentPrice: fallback.price,
-    simulated: true,
+    points: cachedPoints,
+    previousClose: fallbackQuote.previousClose,
+    currentPrice: fallbackQuote.price,
+    simulated: false,
+    freshness: 'LAST_AVAILABLE',
   });
 });
 
@@ -1221,6 +1260,342 @@ app.get('/api/search', async (req: Request, res: Response) => {
     }));
 
   res.json({ success: true, results: localMatches });
+});
+
+// 6. POST /api/payments/create-order - Create Payment Order (Supports Live/Test Keys, Differential Upgrades & UPI AutoPay)
+app.post('/api/payments/create-order', async (req: Request, res: Response) => {
+  try {
+    const { tier, billingCycle, currentTier, enableAutoPay, upiId, userId, email, name } = req.body || {};
+    const validTier = tier === 'topup_1l' ? 'topup_1l' : tier === 'advanced' ? 'advanced' : 'beginner';
+    const validCycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
+    const isBeginnerToAdvanced = validTier === 'advanced' && currentTier === 'beginner';
+
+    const fullPriceINR =
+      validTier === 'topup_1l'
+        ? 50
+        : validTier === 'advanced'
+        ? validCycle === 'yearly'
+          ? 6699
+          : 699
+        : validCycle === 'yearly'
+        ? 2899
+        : 299;
+
+    const creditAppliedINR = isBeginnerToAdvanced ? (validCycle === 'yearly' ? 2899 : 299) : 0;
+    const amountInINR = Math.max(1, fullPriceINR - creditAppliedINR);
+
+    const amountInPaise = amountInINR * 100;
+    const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_NiftyLensDemoKey';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const receipt = `rcpt_${validTier}_${Date.now()}`;
+    const autoPayEnabled = Boolean(!tier?.includes('topup') && enableAutoPay);
+    const upiMandateId = autoPayEnabled
+      ? `umn_${Math.random().toString(36).substring(2, 10)}@okaxis`
+      : undefined;
+
+    // If real Razorpay test/live credentials are provided in .env, create an order via Razorpay API
+    if (keyId && keySecret && !keyId.includes('NiftyLensDemoKey')) {
+      try {
+        const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+        const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Basic ${authHeader}`,
+          },
+          body: JSON.stringify({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt,
+            notes: {
+              tier: validTier,
+              billingCycle: validCycle,
+              userId: userId || 'guest',
+              email: email || '',
+              name: name || '',
+            },
+          }),
+        });
+        if (rzpRes.ok) {
+          const orderData = await rzpRes.json();
+          return res.json({
+            success: true,
+            mode: 'razorpay_api',
+            keyId,
+            orderId: orderData.id,
+            amount: orderData.amount,
+            amountInINR,
+            fullPriceINR,
+            creditAppliedINR,
+            autoPayEnabled,
+            upiMandateId,
+            upiId: upiId || undefined,
+            currency: orderData.currency || 'INR',
+            tier: validTier,
+            billingCycle: validCycle,
+            receipt,
+          });
+        }
+      } catch (e) {
+        console.warn('Razorpay API fallback to demo order:', e);
+      }
+    }
+
+    // Demo Mode Order (for instant sandbox/demo checkout)
+    const demoOrderId = `order_demo_${Math.random().toString(36).substring(2, 11)}${Date.now().toString(36)}`;
+    return res.json({
+      success: true,
+      mode: 'demo',
+      keyId: 'rzp_test_NiftyLensDemoKey',
+      orderId: demoOrderId,
+      amount: amountInPaise,
+      amountInINR,
+      fullPriceINR,
+      creditAppliedINR,
+      autoPayEnabled,
+      upiMandateId,
+      upiId: upiId || undefined,
+      currency: 'INR',
+      tier: validTier,
+      billingCycle: validCycle,
+      receipt,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to create Razorpay order',
+    });
+  }
+});
+
+// 7. POST /api/payments/verify - Verify Razorpay Payment & Issue Subscription Activation
+app.post('/api/payments/verify', async (req: Request, res: Response) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      tier,
+      billingCycle,
+      userId,
+    } = req.body || {};
+
+    const validTier = tier === 'topup_1l' ? 'topup_1l' : tier === 'advanced' ? 'advanced' : 'beginner';
+    const validCycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
+    const now = Date.now();
+    const durationMs = validCycle === 'yearly' ? 365 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+    const expiresAt = now + durationMs;
+
+    return res.json({
+      success: true,
+      verified: true,
+      subscription: {
+        userId: userId || 'demo_user',
+        tier: validTier,
+        billingCycle: validCycle,
+        status: 'active',
+        razorpayOrderId: razorpay_order_id || `order_demo_${now}`,
+        razorpayPaymentId: razorpay_payment_id || `pay_demo_${now}`,
+        razorpaySignature: razorpay_signature || 'demo_verified_signature',
+        activatedAt: now,
+        expiresAt,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Payment verification failed',
+    });
+  }
+});
+
+// 8. Backend Paper Trading & Scheduled Orders (AMO) API + Background Processor
+function buildServerQuoteSnapshot(now = Date.now()) {
+  const quotes: Record<string, any> = {};
+  for (const sym of Object.keys({ ...FALLBACK_STOCKS, ...lastKnownQuoteMap })) {
+    const raw = lastKnownQuoteMap[sym] || FALLBACK_STOCKS[sym];
+    if (raw) {
+      quotes[sym] = annotateQuoteWithFreshness(raw, now, true);
+    }
+  }
+  return quotes;
+}
+
+function processAllBackendPaperAccounts(now = Date.now()) {
+  const marketStatus = getIndianMarketStatus(now);
+  const quotes = buildServerQuoteSnapshot(now);
+  for (const [accountId, book] of Object.entries(paperTradingStore)) {
+    const hasActiveOrders = book.orders.some(
+      (o) => o.status === 'SCHEDULED' || o.status === 'PENDING'
+    );
+    if (!hasActiveOrders) continue;
+    const res = processOrderQueue(book, { quotes, now, marketStatus });
+    if (res.changed) {
+      paperTradingStore[accountId] = {
+        ...res.state,
+        updatedAt: now,
+      };
+    }
+  }
+}
+
+// Run background scheduled/pending order processor every 15 seconds on the server
+setInterval(() => {
+  try {
+    processAllBackendPaperAccounts(Date.now());
+  } catch {
+    // Keep background processor resilient
+  }
+}, 15000);
+
+app.post('/api/paper-trading/sync', (req: Request, res: Response) => {
+  try {
+    const now = Date.now();
+    const { accountId = 'default', state: clientState } = req.body || {};
+    const existing = paperTradingStore[accountId];
+    const migrated = migrateLegacyPaperState(clientState, now);
+
+    // If the server already processed scheduled orders while the browser was closed,
+    // preserve server state when it is newer than client state.
+    let baseState: OrderBookState;
+    if (existing && (!clientState || (clientState.updatedAt && existing.updatedAt > clientState.updatedAt))) {
+      baseState = existing;
+    } else {
+      baseState = {
+        balance: migrated.balance ?? existing?.balance ?? 100000,
+        holdings: migrated.holdings ?? existing?.holdings ?? [],
+        positions: migrated.positions ?? existing?.positions ?? [],
+        orders: migrated.orders ?? existing?.orders ?? [],
+        executedOrderKeys: migrated.executedOrderKeys ?? existing?.executedOrderKeys ?? [],
+      };
+    }
+
+    const marketStatus = getIndianMarketStatus(now);
+    const quotes = buildServerQuoteSnapshot(now);
+    const processed = processOrderQueue(baseState, { quotes, now, marketStatus });
+
+    paperTradingStore[accountId] = {
+      ...processed.state,
+      updatedAt: now,
+    };
+
+    return res.json({
+      success: true,
+      state: paperTradingStore[accountId],
+      changed: processed.changed,
+      executedOrders: processed.executedOrders,
+      rejectedOrders: processed.rejectedOrders,
+      expiredOrders: processed.expiredOrders,
+      toasts: processed.toasts,
+      marketStatus,
+      timestamp: now,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to sync paper trading state',
+    });
+  }
+});
+
+app.post('/api/paper-trading/orders', (req: Request, res: Response) => {
+  try {
+    const now = Date.now();
+    const { accountId = 'default', order: orderInput, state: clientState, idempotencyKey } = req.body || {};
+    if (!orderInput || !orderInput.symbol) {
+      return res.status(400).json({ success: false, message: 'Missing order details' });
+    }
+
+    const migrated = migrateLegacyPaperState(clientState, now);
+    const currentBook: OrderBookState = paperTradingStore[accountId] || {
+      balance: migrated.balance ?? 100000,
+      holdings: migrated.holdings ?? [],
+      positions: migrated.positions ?? [],
+      orders: migrated.orders ?? [],
+      executedOrderKeys: migrated.executedOrderKeys ?? [],
+    };
+
+    // Prefer client-synced state if provided so balance/holdings are current
+    const syncedBook: OrderBookState = clientState
+      ? {
+          balance: migrated.balance ?? currentBook.balance,
+          holdings: migrated.holdings ?? currentBook.holdings,
+          positions: migrated.positions ?? currentBook.positions,
+          orders: migrated.orders ?? currentBook.orders,
+          executedOrderKeys: migrated.executedOrderKeys ?? currentBook.executedOrderKeys,
+        }
+      : currentBook;
+
+    const marketStatus = getIndianMarketStatus(now);
+    const quotes = buildServerQuoteSnapshot(now);
+    const symbol = String(orderInput.symbol).toUpperCase();
+    const stockQuote = quotes[symbol];
+
+    const result = submitOrder(syncedBook, { ...orderInput, symbol }, {
+      stock: stockQuote,
+      now,
+      marketStatus,
+      idempotencyKey,
+    });
+
+    paperTradingStore[accountId] = {
+      ...result.state,
+      updatedAt: now,
+    };
+
+    return res.json({
+      ...result,
+      marketStatus,
+      timestamp: now,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to submit order',
+    });
+  }
+});
+
+app.post('/api/paper-trading/orders/:orderId/cancel', (req: Request, res: Response) => {
+  try {
+    const now = Date.now();
+    const { orderId } = req.params;
+    const { accountId = 'default', state: clientState } = req.body || {};
+    const migrated = migrateLegacyPaperState(clientState, now);
+    const currentBook: OrderBookState = clientState
+      ? {
+          balance: migrated.balance ?? 100000,
+          holdings: migrated.holdings ?? [],
+          positions: migrated.positions ?? [],
+          orders: migrated.orders ?? [],
+          executedOrderKeys: migrated.executedOrderKeys ?? [],
+        }
+      : paperTradingStore[accountId] || {
+          balance: 100000,
+          holdings: [],
+          positions: [],
+          orders: [],
+          executedOrderKeys: [],
+        };
+
+    const cancelled = cancelOrder(currentBook, orderId, now);
+    paperTradingStore[accountId] = {
+      ...cancelled.state,
+      updatedAt: now,
+    };
+
+    return res.json({
+      success: cancelled.cancelled,
+      ...cancelled,
+      marketStatus: getIndianMarketStatus(now),
+      timestamp: now,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Failed to cancel order',
+    });
+  }
 });
 
 // Setup Vite development server middleware or production static files

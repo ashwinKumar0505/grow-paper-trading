@@ -34,10 +34,14 @@ export function calculateCharges(params: {
     return { brokerage: 0, stt: 0, exchangeTxn: 0, sebi: 0, ipft: 0, stampDuty: 0, gst: 0, dp: 0, total: 0 };
   }
 
-  const isDelivery = product === 'DELIVERY';
+  const isDelivery = product === 'DELIVERY' || product === 'MTF';
   const isBuy = action === 'BUY';
 
-  const brokerage = Math.min(turnover * 0.025, Math.max(5, Math.min(20, turnover * 0.001)));
+  // Groww brokerage: ₹20 or 0.1% (min ₹5) for Delivery & Intraday; 0.1% for MTF
+  const brokerage =
+    product === 'MTF'
+      ? turnover * 0.001
+      : Math.min(turnover * 0.025, Math.max(5, Math.min(20, turnover * 0.001)));
   const stt = isDelivery ? Math.round(turnover * 0.001) : !isBuy ? Math.round(turnover * 0.00025) : 0;
   const exchangeTxn = turnover * (exchange === 'BSE' ? 0.0000375 : 0.0000307);
   const sebi = turnover * 0.000001;

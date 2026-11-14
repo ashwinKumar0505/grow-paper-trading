@@ -17,6 +17,9 @@ import { AuthGatePlaceholder } from './components/AuthGatePlaceholder';
 
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
+import { PricingPage } from './components/PricingPage';
+import { UpgradeModal } from './components/UpgradeModal';
+import { RazorpayCheckoutModal } from './components/RazorpayCheckoutModal';
 
 const QuizApp = lazy(() => import('./features/quiz/QuizApp'));
 const ScreenerApp = lazy(() => import('./features/screener/App'));
@@ -38,6 +41,11 @@ const MainContent: React.FC = () => {
 const WorkspaceContent: React.FC = () => {
   const { user, setShowLandingPage, setCurrentTab } = useTrading();
   const pathname = usePathname();
+
+  // 0. Pricing & Subscription Packages Page (/pricing) is open to everyone
+  if (pathname === '/pricing') {
+    return <PricingPage />;
+  }
 
   // 1. Stock Screener modules require login
   if (pathname.startsWith('/screener')) {
@@ -152,8 +160,10 @@ function AppContent() {
       : pathname.startsWith('/quiz')
       ? 'Guess the Chart Quiz | NiftyLens'
       : pathname === '/trade'
-      ? 'Virtual Trading Desk | NiftyLens'
-      : 'NiftyLens – NSE Stock Screener, Virtual Trading & Chart Learning';
+      ? 'Paper Trading Desk | NiftyLens'
+      : pathname === '/pricing'
+      ? 'Pricing & Membership Packages | NiftyLens'
+      : 'NiftyLens – NSE Stock Screener, Paper Trading & Chart Learning';
   }, [pathname, setCurrentTab]);
 
   if (pathname === '/') {
@@ -162,6 +172,8 @@ function AppContent() {
         <LandingPage />
         <WalletModal />
         <AuthModal />
+        <UpgradeModal />
+        <RazorpayCheckoutModal />
         <ToastContainer />
       </>
     );
@@ -172,6 +184,8 @@ function AppContent() {
       <WorkspaceContent />
       <WalletModal />
       <AuthModal />
+      <UpgradeModal />
+      <RazorpayCheckoutModal />
       <ToastContainer />
     </div>
   );

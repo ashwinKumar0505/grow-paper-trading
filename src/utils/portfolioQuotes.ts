@@ -1,7 +1,7 @@
 import type { Holding, IntradayPosition, Order, Stock } from '../types/market';
 
 export function portfolioQuoteSymbols(holdings: Holding[], positions: IntradayPosition[], orders: Order[]): string[] {
-  return [...new Set([...holdings, ...positions, ...orders.filter(o => o.status === 'PENDING')]
+  return [...new Set([...holdings, ...positions, ...orders.filter(o => o.status === 'PENDING' || o.status === 'SCHEDULED')]
     .filter(item => item.exchange === 'NSE')
     .map(item => item.symbol.toUpperCase()))].sort();
 }

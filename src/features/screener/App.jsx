@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Menu, WifiOff } from 'lucide-react';
 import { usePathname } from '../../lib/navigation';
 import { useTrading } from '../../context/TradingContext';
@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar';
 import SwingScannerPage from './pages/SwingScannerPage';
 import IntradayScannerPage from './pages/IntradayScannerPage';
 import StockAnalysisPage from './pages/StockAnalysisPage';
-import { api } from './api/client';
+import { api, onScreenerApiStatus } from './api/client';
 import './App.css';
 
 const TITLES = {
@@ -17,11 +17,38 @@ const TITLES = {
 
 export default function ScreenerApp() {
   const pathname = usePathname();
-  const { isDarkMode } = useTrading();
+  const { isDarkMode, addToast } = useTrading();
   const theme = isDarkMode ? 'dark' : 'light';
   const [marketStatus, setMarketStatus] = useState(null);
   const [offline, setOffline] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const lastBgToastRef = useRef(0);
+  const lastActionToastRef = useRef(0);
+
+  useEffect(() => {
+    const unsubscribe = onScreenerApiStatus(({ ok, path }) => {
+      if (ok) {
+        setOffline(false);
+        return;
+      }
+      setOffline(true);
+      const now = Date.now();
+      const isBackground = path.startsWith('/market/status') || path.startsWith('/stocks/search');
+      if (isBackground) {
+        if (now - lastBgToastRef.current < 60000) return;
+        lastBgToastRef.current = now;
+      } else {
+        if (now - lastActionToastRef.current < 3000) return;
+        lastActionToastRef.current = now;
+      }
+      addToast(
+        'Server Unavailable',
+        'Screener backend is down or unreachable. Showing offline snapshot — please try again in some time.',
+        'error'
+      );
+    });
+    return unsubscribe;
+  }, [addToast]);
 
   useEffect(() => {
     const fetchStatus = () =>
@@ -29,7 +56,6 @@ export default function ScreenerApp() {
         .getMarketStatus()
         .then((res) => {
           setMarketStatus(res);
-          setOffline(false);
         })
         .catch(() => setOffline(true));
     fetchStatus();
@@ -70,14 +96,10 @@ export default function ScreenerApp() {
           {pathname === '/screener/intraday' ? (
             <IntradayScannerPage marketStatus={marketStatus} />
           ) : pathname === '/screener/analysis' ? (
-            <StockAnalysisPage />
+            <StockAnalysisPage marketStatus={marketStatus} />
           ) : (
-            <SwingScannerPage />
+            <SwingScannerPage marketStatus={marketStatus} />
           )}
-          <footer className="app-footer">
-            NiftyLens Stock Screener · For learning and research only — not investment advice. Targets and dates are
-            estimates based on past price behaviour.
-          </footer>
         </main>
       </div>
     </div>

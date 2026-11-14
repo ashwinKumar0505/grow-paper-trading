@@ -9,7 +9,7 @@ const tone = (n: number) => n < 0 ? 'text-[#d84949] dark:text-red-400' : 'text-[
 
 export const HoldingsView: React.FC = () => {
   const { holdings, intradayPositions, stocks, orders, balance, selectStockBySymbol, openOrderModal,
-    setIsWalletModalOpen, setCurrentTab, isSimulating, isLiveConnected, lastLiveUpdate } = useTrading();
+    setIsWalletModalOpen, setCurrentTab, isLiveConnected, lastLiveUpdate, marketStatus, marketDataFreshness } = useTrading();
   const [activeTab, setActiveTab] = useState<'delivery' | 'intraday'>(() => holdings.length === 0 && intradayPositions.length > 0 ? 'intraday' : 'delivery');
   const [search, setSearch] = useState('');
   const summary = summarizePortfolio(balance, holdings, intradayPositions, orders, stocks);
@@ -24,7 +24,13 @@ export const HoldingsView: React.FC = () => {
       quantity: p.quantity, average: p.entryPrice, cost: p.marginBlocked, side: p.action }));
   const filtered = rows.filter(r => `${r.symbol} ${r.name}`.toLowerCase().includes(search.toLowerCase()));
   const tabPnl = isDelivery ? summary.holdingsValue - summary.invested : summary.positionPnl;
-  const status = isSimulating ? 'Simulation' : isLiveConnected ? 'Connected quotes' : 'Offline · last available quotes';
+  const status = !isLiveConnected
+    ? 'Offline · last available quotes'
+    : marketDataFreshness === 'LIVE'
+      ? 'Live market quotes'
+      : marketDataFreshness === 'DELAYED'
+        ? 'Delayed market quotes'
+        : 'Market Closed · Last available quotes';
   const metric = (label: string, value: number | null, pnl = false) => <div className="min-w-0">
     <dt className="text-sm text-gray-500 dark:text-gray-400">{label}</dt>
     <dd className={`mt-2 text-xl sm:text-2xl font-semibold tabular-nums tracking-tight ${pnl && value !== null ? tone(value) : ''}`}>{value === null ? '—' : pnl ? signed(value) : formatINR(value)}</dd>
@@ -33,7 +39,7 @@ export const HoldingsView: React.FC = () => {
   return <div className="space-y-6 pb-12 text-gray-800 dark:text-gray-100 animate-fade-in">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-semibold">Your investments</h1><p className="mt-1 text-sm text-gray-500">Paper portfolio · Practice with virtual money</p></div>
-      <div className="text-right text-xs text-gray-500"><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${isLiveConnected && !isSimulating ? 'bg-emerald-500' : 'bg-amber-500'}`} />{status}</span>
+      <div className="text-right text-xs text-gray-500"><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${isLiveConnected && marketStatus.isOpen ? 'bg-emerald-500' : 'bg-amber-500'}`} />{status}</span>
         {!!lastLiveUpdate && <p className="mt-1">Updated {new Date(lastLiveUpdate).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' })} IST</p>}</div>
     </div>
     <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D24]">
