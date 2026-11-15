@@ -76,7 +76,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
           })}
         </nav>
 
-        <div className="sb-section-label" style={{ marginTop: 18 }}>Quick Jump</div>
+        <div className="sb-section-label mt-[18px]">Quick Jump</div>
         <nav className="sb-nav">
           <AppLink href="/trade" onClick={onClose} className="sb-link">
             <span className="sb-link-icon">
@@ -100,7 +100,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
 
         <div className="sb-spacer" />
 
-        <div className={`sb-market ${isOpen ? 'is-open' : 'is-closed'}`} style={{ marginBottom: 0 }}>
+        <div className={`sb-market mb-0 ${isOpen ? 'is-open' : 'is-closed'}`}>
           <div className="sb-market-row">
             <span className={`pulse-dot ${dotStateClass}`} />
             <strong className={isOpen ? 'text-emerald-400' : isPreOpen ? 'text-amber-400' : 'text-rose-400'}>

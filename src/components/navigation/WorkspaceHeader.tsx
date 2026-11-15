@@ -1,8 +1,6 @@
-import { BookOpen, ChartCandlestick, Crown, Radar } from 'lucide-react';
-import { AppLink, usePathname } from '../../lib/navigation';
+import { BookOpen,ChartCandlestick,Crown,Radar } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
-import { sound } from '../../features/quiz/utils/sound';
-import { useSyncExternalStore } from 'react';
+import { AppLink,usePathname } from '../../lib/navigation';
 import { HeaderFrame } from './HeaderFrame';
 import { ThemeToggle } from './ThemeToggle';
 import { UserProfileMenu } from './UserProfileMenu';
@@ -15,7 +13,6 @@ export function WorkspaceHeader() {
   const isLearn = pathname === '/learn';
   const isQuiz = pathname === '/quiz' || pathname === '/quiz/play';
   const isPricing = pathname === '/pricing';
-  useSyncExternalStore(sound.subscribe, () => sound.getMuted());
 
   const modes = [
     {

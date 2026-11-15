@@ -364,17 +364,22 @@ function emitScreenerApiStatus(event) {
   });
 }
 
+const DEFAULT_TIMEOUT_MS = 2500;
+const SCANNER_TIMEOUT_MS = 45000;
+const FORCE_REFRESH_TIMEOUT_MS = 90000;
+
 async function request(path, options = {}) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, headers, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2200);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(`${SCREENER_API_BASE}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...(headers || {}),
       },
       signal: controller.signal,
-      ...options,
+      ...fetchOptions,
     });
     clearTimeout(timeout);
     if (!res.ok) {
@@ -392,11 +397,14 @@ async function request(path, options = {}) {
     return json;
   } catch (err) {
     clearTimeout(timeout);
-    emitScreenerApiStatus({
-      ok: false,
-      path,
-      error: err instanceof Error ? err.message : 'Server unreachable',
-    });
+    const isHeavyTimeout = err?.name === 'AbortError' && timeoutMs > DEFAULT_TIMEOUT_MS;
+    if (!isHeavyTimeout) {
+      emitScreenerApiStatus({
+        ok: false,
+        path,
+        error: err instanceof Error ? err.message : 'Server unreachable',
+      });
+    }
     // Seamless built-in fallback when standalone port 8001 service is not running
     if (path.startsWith('/health')) return { status: 'ok', fallback: true };
     if (path.startsWith('/market/status')) {
@@ -438,7 +446,10 @@ export const api = {
   } = {}) =>
     request(
       `/scanner/swing?universe_limit=${universeLimit}&min_confidence=${minConfidence}&signal_type=${signalType}&force_refresh=${forceRefresh}`,
-      { method: 'POST' }
+      {
+        method: 'POST',
+        timeoutMs: forceRefresh ? FORCE_REFRESH_TIMEOUT_MS : SCANNER_TIMEOUT_MS,
+      }
     ),
   runIntradayScanner: ({
     universeLimit = 100,
@@ -446,10 +457,23 @@ export const api = {
     includeLastSession = true,
   } = {}) =>
     request(
-      `/scanner/intraday?universe_limit=${universeLimit}&force_refresh=${forceRefresh}&include_last_session_when_closed=${includeLastSession}`
+      `/scanner/intraday?universe_limit=${universeLimit}&force_refresh=${forceRefresh}&include_last_session_when_closed=${includeLastSession}`,
+      {
+        timeoutMs: forceRefresh ? FORCE_REFRESH_TIMEOUT_MS : SCANNER_TIMEOUT_MS,
+      }
     ),
   getStockAnalysis: (symbol, forceRefresh = false) =>
-    request(`/stocks/${encodeURIComponent(symbol)}/analysis?force_refresh=${forceRefresh}`),
+    request(
+      `/stocks/${encodeURIComponent(symbol)}/analysis?force_refresh=${forceRefresh}`,
+      {
+        timeoutMs: forceRefresh ? FORCE_REFRESH_TIMEOUT_MS : SCANNER_TIMEOUT_MS,
+      }
+    ),
   getStockFinancials: (symbol, forceRefresh = false) =>
-    request(`/stocks/${encodeURIComponent(symbol)}/financials?force_refresh=${forceRefresh}`),
+    request(
+      `/stocks/${encodeURIComponent(symbol)}/financials?force_refresh=${forceRefresh}`,
+      {
+        timeoutMs: forceRefresh ? FORCE_REFRESH_TIMEOUT_MS : SCANNER_TIMEOUT_MS,
+      }
+    ),
 };

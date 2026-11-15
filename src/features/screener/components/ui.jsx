@@ -1,13 +1,13 @@
-import React from 'react';
 import { Info } from 'lucide-react';
+import { Badge as SharedBadge } from '../../../components/ui/badge';
 import { confidenceLevel } from '../utils/format';
 
 export function Badge({ tone = 'neutral', children, title, icon: Icon }) {
   return (
-    <span className={`badge tone-${tone}`} title={title}>
+    <SharedBadge variant="unstyled" className={`badge tone-${tone}`} title={title}>
       {Icon && <Icon size={12} strokeWidth={2.5} />}
       {children}
-    </span>
+    </SharedBadge>
   );
 }
 

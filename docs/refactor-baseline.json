@@ -1,0 +1,537 @@
+[
+  {
+    "path": "src/App.tsx",
+    "total": 240,
+    "code": 215
+  },
+  {
+    "path": "src/components/AuthGatePlaceholder.tsx",
+    "total": 248,
+    "code": 228
+  },
+  {
+    "path": "src/components/AuthModal.tsx",
+    "total": 459,
+    "code": 408
+  },
+  {
+    "path": "src/components/BrandLogo.tsx",
+    "total": 96,
+    "code": 87
+  },
+  {
+    "path": "src/components/ExploreView.tsx",
+    "total": 454,
+    "code": 418
+  },
+  {
+    "path": "src/components/FloatingIllustration.tsx",
+    "total": 78,
+    "code": 72
+  },
+  {
+    "path": "src/components/HoldingsView.tsx",
+    "total": 106,
+    "code": 103
+  },
+  {
+    "path": "src/components/IndicesTicker.tsx",
+    "total": 134,
+    "code": 128
+  },
+  {
+    "path": "src/components/LandingPage.tsx",
+    "total": 1032,
+    "code": 957
+  },
+  {
+    "path": "src/components/LearningSection.tsx",
+    "total": 183,
+    "code": 170
+  },
+  {
+    "path": "src/components/LegalPages.tsx",
+    "total": 260,
+    "code": 245
+  },
+  {
+    "path": "src/components/LockedFeatureCard.tsx",
+    "total": 137,
+    "code": 126
+  },
+  {
+    "path": "src/components/OrderModal.tsx",
+    "total": 33,
+    "code": 24
+  },
+  {
+    "path": "src/components/OrderPanel.tsx",
+    "total": 749,
+    "code": 700
+  },
+  {
+    "path": "src/components/OrderSuccessModal.tsx",
+    "total": 141,
+    "code": 129
+  },
+  {
+    "path": "src/components/OrdersView.tsx",
+    "total": 450,
+    "code": 421
+  },
+  {
+    "path": "src/components/PricingPage.tsx",
+    "total": 37,
+    "code": 33
+  },
+  {
+    "path": "src/components/RazorpayCheckoutModal.tsx",
+    "total": 676,
+    "code": 631
+  },
+  {
+    "path": "src/components/StockChart.tsx",
+    "total": 693,
+    "code": 633
+  },
+  {
+    "path": "src/components/StockDetailView.tsx",
+    "total": 569,
+    "code": 528
+  },
+  {
+    "path": "src/components/StockSearchModal.tsx",
+    "total": 282,
+    "code": 259
+  },
+  {
+    "path": "src/components/ToastContainer.tsx",
+    "total": 49,
+    "code": 45
+  },
+  {
+    "path": "src/components/TradingToolbar.tsx",
+    "total": 226,
+    "code": 213
+  },
+  {
+    "path": "src/components/UpgradeModal.tsx",
+    "total": 310,
+    "code": 286
+  },
+  {
+    "path": "src/components/WalletModal.tsx",
+    "total": 669,
+    "code": 628
+  },
+  {
+    "path": "src/components/WatchlistView.tsx",
+    "total": 417,
+    "code": 394
+  },
+  {
+    "path": "src/components/landing/ScreenerLivePreviewCard.tsx",
+    "total": 368,
+    "code": 350
+  },
+  {
+    "path": "src/components/navigation/HeaderFrame.tsx",
+    "total": 50,
+    "code": 46
+  },
+  {
+    "path": "src/components/navigation/ThemeToggle.tsx",
+    "total": 10,
+    "code": 9
+  },
+  {
+    "path": "src/components/navigation/UserProfileMenu.tsx",
+    "total": 242,
+    "code": 227
+  },
+  {
+    "path": "src/components/navigation/WorkspaceHeader.tsx",
+    "total": 84,
+    "code": 80
+  },
+  {
+    "path": "src/context/TradingContext.tsx",
+    "total": 2116,
+    "code": 1859
+  },
+  {
+    "path": "src/data/mockStocks.ts",
+    "total": 1345,
+    "code": 1326
+  },
+  {
+    "path": "src/features/pricing/components/BillingToggle.tsx",
+    "total": 51,
+    "code": 47
+  },
+  {
+    "path": "src/features/pricing/components/FeatureComparison.tsx",
+    "total": 153,
+    "code": 145
+  },
+  {
+    "path": "src/features/pricing/components/InfoTooltip.tsx",
+    "total": 32,
+    "code": 29
+  },
+  {
+    "path": "src/features/pricing/components/PricingCTA.tsx",
+    "total": 43,
+    "code": 41
+  },
+  {
+    "path": "src/features/pricing/components/PricingCard.tsx",
+    "total": 187,
+    "code": 176
+  },
+  {
+    "path": "src/features/pricing/components/PricingCards.tsx",
+    "total": 124,
+    "code": 110
+  },
+  {
+    "path": "src/features/pricing/components/PricingFAQ.tsx",
+    "total": 29,
+    "code": 27
+  },
+  {
+    "path": "src/features/pricing/components/PricingFeatureList.tsx",
+    "total": 34,
+    "code": 31
+  },
+  {
+    "path": "src/features/pricing/components/PricingHero.tsx",
+    "total": 26,
+    "code": 24
+  },
+  {
+    "path": "src/features/pricing/components/ProductHighlights.tsx",
+    "total": 54,
+    "code": 52
+  },
+  {
+    "path": "src/features/pricing/components/VirtualCapitalInfo.tsx",
+    "total": 70,
+    "code": 66
+  },
+  {
+    "path": "src/features/pricing/pricingConfig.ts",
+    "total": 271,
+    "code": 240
+  },
+  {
+    "path": "src/features/pricing/pricingStyles.ts",
+    "total": 21,
+    "code": 12
+  },
+  {
+    "path": "src/features/quiz/QuizApp.tsx",
+    "total": 707,
+    "code": 600
+  },
+  {
+    "path": "src/features/quiz/components/ActionDock.tsx",
+    "total": 138,
+    "code": 132
+  },
+  {
+    "path": "src/features/quiz/components/ChartControls.tsx",
+    "total": 78,
+    "code": 74
+  },
+  {
+    "path": "src/features/quiz/components/ChartHeader.tsx",
+    "total": 153,
+    "code": 144
+  },
+  {
+    "path": "src/features/quiz/components/DogOutcomeIllustration.tsx",
+    "total": 262,
+    "code": 224
+  },
+  {
+    "path": "src/features/quiz/components/HistoryDrawer.tsx",
+    "total": 296,
+    "code": 271
+  },
+  {
+    "path": "src/features/quiz/components/LearnChartsPage.tsx",
+    "total": 529,
+    "code": 496
+  },
+  {
+    "path": "src/features/quiz/components/ModeSelectPage.tsx",
+    "total": 185,
+    "code": 175
+  },
+  {
+    "path": "src/features/quiz/components/OutcomeModal.tsx",
+    "total": 558,
+    "code": 521
+  },
+  {
+    "path": "src/features/quiz/components/PatternGuideModal.tsx",
+    "total": 270,
+    "code": 250
+  },
+  {
+    "path": "src/features/quiz/components/QuizToolbar.tsx",
+    "total": 301,
+    "code": 278
+  },
+  {
+    "path": "src/features/quiz/components/SurvivalGameOverModal.tsx",
+    "total": 123,
+    "code": 110
+  },
+  {
+    "path": "src/features/quiz/components/TournamentResultModal.tsx",
+    "total": 186,
+    "code": 166
+  },
+  {
+    "path": "src/features/quiz/components/TradingCanvas.tsx",
+    "total": 1013,
+    "code": 821
+  },
+  {
+    "path": "src/features/quiz/types/trading.ts",
+    "total": 125,
+    "code": 113
+  },
+  {
+    "path": "src/features/quiz/utils/dataGenerator.ts",
+    "total": 1098,
+    "code": 965
+  },
+  {
+    "path": "src/features/quiz/utils/indicators.ts",
+    "total": 129,
+    "code": 93
+  },
+  {
+    "path": "src/features/quiz/utils/sound.ts",
+    "total": 175,
+    "code": 122
+  },
+  {
+    "path": "src/features/screener/App.css",
+    "total": 3542,
+    "code": 3016
+  },
+  {
+    "path": "src/features/screener/App.jsx",
+    "total": 107,
+    "code": 100
+  },
+  {
+    "path": "src/features/screener/api/client.js",
+    "total": 455,
+    "code": 433
+  },
+  {
+    "path": "src/features/screener/components/DataLoader.jsx",
+    "total": 43,
+    "code": 38
+  },
+  {
+    "path": "src/features/screener/components/FinancialsSection.jsx",
+    "total": 192,
+    "code": 182
+  },
+  {
+    "path": "src/features/screener/components/Illustrations.jsx",
+    "total": 49,
+    "code": 45
+  },
+  {
+    "path": "src/features/screener/components/MarketStatusBadge.jsx",
+    "total": 69,
+    "code": 61
+  },
+  {
+    "path": "src/features/screener/components/PremiumFeatureGate.jsx",
+    "total": 97,
+    "code": 91
+  },
+  {
+    "path": "src/features/screener/components/PriceChart.jsx",
+    "total": 159,
+    "code": 141
+  },
+  {
+    "path": "src/features/screener/components/RecommendationTable.jsx",
+    "total": 120,
+    "code": 116
+  },
+  {
+    "path": "src/features/screener/components/ResearchDisclaimer.jsx",
+    "total": 44,
+    "code": 42
+  },
+  {
+    "path": "src/features/screener/components/ScreenerHeader.jsx",
+    "total": 29,
+    "code": 27
+  },
+  {
+    "path": "src/features/screener/components/ScreenerLayout.jsx",
+    "total": 23,
+    "code": 22
+  },
+  {
+    "path": "src/features/screener/components/ScreenerStatsGrid.jsx",
+    "total": 42,
+    "code": 38
+  },
+  {
+    "path": "src/features/screener/components/Sidebar.jsx",
+    "total": 126,
+    "code": 118
+  },
+  {
+    "path": "src/features/screener/components/SignalFilters.jsx",
+    "total": 110,
+    "code": 104
+  },
+  {
+    "path": "src/features/screener/components/StockAnalysisDrawer.jsx",
+    "total": 270,
+    "code": 250
+  },
+  {
+    "path": "src/features/screener/components/StockRecommendationRow.jsx",
+    "total": 203,
+    "code": 195
+  },
+  {
+    "path": "src/features/screener/components/ui.jsx",
+    "total": 87,
+    "code": 81
+  },
+  {
+    "path": "src/features/screener/pages/IntradayScannerPage.jsx",
+    "total": 384,
+    "code": 362
+  },
+  {
+    "path": "src/features/screener/pages/StockAnalysisPage.jsx",
+    "total": 806,
+    "code": 779
+  },
+  {
+    "path": "src/features/screener/pages/SwingScannerPage.jsx",
+    "total": 347,
+    "code": 331
+  },
+  {
+    "path": "src/features/screener/utils/format.js",
+    "total": 71,
+    "code": 61
+  },
+  {
+    "path": "src/features/screener/utils/scanCache.js",
+    "total": 34,
+    "code": 27
+  },
+  {
+    "path": "src/features/screener/utils/screenerHelpers.ts",
+    "total": 176,
+    "code": 165
+  },
+  {
+    "path": "src/features/screener/utils/terms.js",
+    "total": 64,
+    "code": 55
+  },
+  {
+    "path": "src/index.css",
+    "total": 175,
+    "code": 147
+  },
+  {
+    "path": "src/lib/firebase.ts",
+    "total": 61,
+    "code": 54
+  },
+  {
+    "path": "src/lib/navigation.tsx",
+    "total": 86,
+    "code": 78
+  },
+  {
+    "path": "src/lib/subscription.ts",
+    "total": 221,
+    "code": 213
+  },
+  {
+    "path": "src/main.tsx",
+    "total": 5,
+    "code": 4
+  },
+  {
+    "path": "src/types/market.ts",
+    "total": 224,
+    "code": 187
+  },
+  {
+    "path": "src/utils/charges.ts",
+    "total": 66,
+    "code": 52
+  },
+  {
+    "path": "src/utils/marketHours.ts",
+    "total": 515,
+    "code": 439
+  },
+  {
+    "path": "src/utils/orderEngine.test.ts",
+    "total": 656,
+    "code": 571
+  },
+  {
+    "path": "src/utils/orderEngine.ts",
+    "total": 1328,
+    "code": 1168
+  },
+  {
+    "path": "src/utils/portfolio.ts",
+    "total": 24,
+    "code": 22
+  },
+  {
+    "path": "src/utils/portfolioQuotes.test.ts",
+    "total": 25,
+    "code": 25
+  },
+  {
+    "path": "src/utils/portfolioQuotes.ts",
+    "total": 15,
+    "code": 12
+  },
+  {
+    "path": "src/utils/pricing.test.ts",
+    "total": 95,
+    "code": 83
+  },
+  {
+    "path": "src/utils/pricing.ts",
+    "total": 139,
+    "code": 99
+  },
+  {
+    "path": "src/utils/quizGenerator.test.ts",
+    "total": 31,
+    "code": 30
+  },
+  {
+    "path": "src/utils/screenerHelpers.test.ts",
+    "total": 178,
+    "code": 167
+  }
+]

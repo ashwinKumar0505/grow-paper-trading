@@ -1,160 +1,51 @@
-import React, { useState, useMemo } from 'react';
 import {
-  Sparkles,
-  RefreshCw,
-  CheckCircle2,
-  Layers,
-  TrendingUp,
-  Clock,
-  SearchX,
   Lock,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
-import { useTrading } from '../../../context/TradingContext';
-import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
-import { api } from '../api/client';
-import DataLoader from '../components/DataLoader';
-import ScreenerLayout from '../components/ScreenerLayout';
-import ScreenerHeader from '../components/ScreenerHeader';
-import MarketStatusBadge from '../components/MarketStatusBadge';
-import { ScreenerStatsGrid } from '../components/ScreenerStatsGrid';
-import SignalFilters from '../components/SignalFilters';
-import RecommendationTable from '../components/RecommendationTable';
-import PremiumFeatureGate from '../components/PremiumFeatureGate';
-import StockAnalysisDrawer from '../components/StockAnalysisDrawer';
+import { Button } from '../../../components/ui/button';
 import { HeroChartIllustration } from '../components/Illustrations';
-import { loadCachedScan, saveCachedScan, CACHE_KEYS } from '../utils/scanCache';
-import { timeAgo, shortDate } from '../utils/format';
-import {
-  extractSectors,
-  filterSwingSignals,
-  computeSwingCounts,
-} from '../utils/screenerHelpers';
-
-const SCAN_MIN_CONFIDENCE = 50;
+import MarketStatusBadge from '../components/MarketStatusBadge';
+import PremiumFeatureGate from '../components/PremiumFeatureGate';
+import ScreenerHeader from '../components/ScreenerHeader';
+import ScreenerLayout from '../components/ScreenerLayout';
+import { ScreenerStatsGrid } from '../components/ScreenerStatsGrid';
+import StockAnalysisDrawer from '../components/StockAnalysisDrawer';
+import { SwingResultsSection } from '../components/SwingResultsSection';
+import { shortDate } from '../utils/format';
+import { useSwingScanner } from '../hooks/useSwingScanner';
 
 export default function SwingScannerPage({ marketStatus }) {
-  const { subscriptionTier, planConfig, openUpgradeModal, addToast } = useTrading();
-  const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.swing));
-  const [loading, setLoading] = useState(false);
-  const [loadingMode, setLoadingMode] = useState('scan');
-  const [error, setError] = useState('');
-
-  const [minConfidence, setMinConfidence] = useState(60);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [sectorFilter, setSectorFilter] = useState('ALL');
-  const [sortBy, setSortBy] = useState('confidence_score');
-  const [sortDir, setSortDir] = useState('desc');
-  const [selectedSignal, setSelectedSignal] = useState(null);
-
-  const data = scan?.data;
-
-  const runScan = async (forceRefresh) => {
-    if (forceRefresh && !planConfig.swingAllowForceRefresh) {
-      openUpgradeModal({
-        requiredTier: 'advanced',
-        featureName: 'Live Market Data Force Refresh',
-        featureDescription:
-          'Downloading fresh real-time Nifty 500 market prices on-demand is an Advanced Package feature. Free and Beginner plans use cached scanner snapshots.',
-      });
-      return;
-    }
-    setLoading(true);
-    setLoadingMode(forceRefresh ? 'refresh' : 'scan');
-    setError('');
-    try {
-      const res = await api.runSwingScanner({
-        universeLimit: 500,
-        minConfidence: SCAN_MIN_CONFIDENCE,
-        signalType: 'ALL',
-        forceRefresh,
-      });
-      setScan(saveCachedScan(CACHE_KEYS.swing, res));
-      setSelectedSignal(null);
-    } catch (err) {
-      const msg = err.message || 'Server is down or unreachable. Please try again in some time.';
-      setError(msg);
-      addToast('Scan Failed', msg, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sectors = useMemo(() => extractSectors(data?.signals), [data]);
-
-  const counts = useMemo(
-    () => computeSwingCounts(data?.signals, minConfidence, sectorFilter),
-    [data, minConfidence, sectorFilter]
-  );
-
-  const rows = useMemo(
-    () =>
-      filterSwingSignals(data?.signals, {
-        minConfidence,
-        statusFilter,
-        sectorFilter,
-        sortBy,
-        sortDir,
-      }),
-    [data, minConfidence, statusFilter, sectorFilter, sortBy, sortDir]
-  );
-
-  const onSort = (field) => {
-    if (sortBy === field) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortBy(field);
-      setSortDir('desc');
-    }
-  };
-
-  const resetFilters = () => {
-    setMinConfidence(SCAN_MIN_CONFIDENCE);
-    setStatusFilter('ALL');
-    setSectorFilter('ALL');
-  };
-
-  const readyCount = (data?.signals || []).filter((s) => s.signal_type === 'CONFIRMED_SIGNAL').length;
-  const visibleRows = rows.slice(0, planConfig.swingMaxSignals);
-  const lockedCount = Math.max(0, rows.length - planConfig.swingMaxSignals);
-  const nextTier = subscriptionTier === 'free' ? 'beginner' : 'advanced';
-  const nextPlan = SUBSCRIPTION_PLANS[nextTier];
-
-  const stats = data
-    ? [
-        {
-          icon: Layers,
-          label: 'Stocks screened',
-          value: data.total_scanned,
-          sub:
-            data.total_scanned < data.total_universe_count
-              ? `${data.total_scanned} of ${data.total_universe_count} Nifty 500 (incomplete symbols skipped)`
-              : `of ${data.total_universe_count} in Nifty 500`,
-          hint:
-            data.total_scanned < data.total_universe_count
-              ? 'Stocks with insufficient recent price history are excluded from screening.'
-              : undefined,
-        },
-        {
-          icon: TrendingUp,
-          label: 'Technical Setups',
-          value: data.bullish_signals_found,
-          sub: 'Matched backtested chart patterns',
-          tone: 'primary',
-        },
-        {
-          icon: CheckCircle2,
-          label: 'Confirmed setups',
-          value: readyCount,
-          sub: 'All chart conditions aligned',
-        },
-        {
-          icon: Clock,
-          label: 'Data as of',
-          value: shortDate(data.data_as_of_date),
-          sub: scan?.savedAt ? `Screened ${timeAgo(scan.savedAt)}` : 'Latest snapshot',
-        },
-      ]
-    : [];
+  const model = useSwingScanner();
+  const {
+    planConfig,
+    scan,
+    loading,
+    loadingMode,
+    error,
+    minConfidence,
+    setMinConfidence,
+    statusFilter,
+    setStatusFilter,
+    sectorFilter,
+    setSectorFilter,
+    sortBy,
+    sortDir,
+    selectedSignal,
+    setSelectedSignal,
+    data,
+    runScan,
+    sectors,
+    counts,
+    rows,
+    onSort,
+    resetFilters,
+    visibleRows,
+    lockedCount,
+    nextTier,
+    nextPlan,
+    stats,
+  } = model;
 
   return (
     <ScreenerLayout
@@ -167,7 +58,9 @@ export default function SwingScannerPage({ marketStatus }) {
           illustration={<HeroChartIllustration />}
           actions={
             <>
-              <button
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={() => runScan(false)}
@@ -180,8 +73,10 @@ export default function SwingScannerPage({ marketStatus }) {
                   <Sparkles size={15} />
                 )}
                 <span>{loading && loadingMode === 'scan' ? 'Screening stocks…' : 'Scan Nifty 500'}</span>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 type="button"
                 className="btn btn-ghost-dark btn-sm"
                 onClick={() => runScan(true)}
@@ -199,7 +94,7 @@ export default function SwingScannerPage({ marketStatus }) {
                     ? 'Refreshing prices…'
                     : `Refresh data${!planConfig.swingAllowForceRefresh ? ' (Pro)' : ''}`}
                 </span>
-              </button>
+              </Button>
             </>
           }
         />
@@ -221,26 +116,33 @@ export default function SwingScannerPage({ marketStatus }) {
         error ? (
           <div className="alert alert-error sc-alert-retry">
             <span>{error}</span>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => runScan(false)}>
+            <Button
+              variant="unstyled"
+              size="unstyled"
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => runScan(false)}
+            >
               Retry
-            </button>
+            </Button>
           </div>
         ) : null
       }
       stats={<ScreenerStatsGrid stats={stats} loading={loading && !data} />}
       gate={
-        data && !loading && lockedCount > 0 ? (
+        lockedCount > 0 && nextTier ? (
           <PremiumFeatureGate
             requiredTier={nextTier}
-            title="Unlock More Swing Trading Setups"
-            description={`Showing ${visibleRows.length} of ${rows.length} matching setups on your ${planConfig.name}. Access additional technical setups, advanced analysis, and premium screening capabilities.`}
-            ctaLabel={`Upgrade to ${nextPlan.name.replace(' Package', '')}`}
+            title={`Unlock ${lockedCount} More Swing Setups`}
+            description={`Your ${planConfig.name} shows the top ${planConfig.swingMaxSignals} swing setups per scan. Upgrade to ${nextPlan.name} for ${
+              nextTier === 'advanced' ? 'unlimited Nifty 500 setups' : `up to ${nextPlan.swingMaxSignals} setups`
+            } and force live market refresh.`}
             benefits={
               nextTier === 'beginner'
                 ? [
-                    `Top ${nextPlan.swingMaxSignals} Nifty 200 swing setups with entry, target & stop-loss`,
-                    'One-click Send Setup to Paper Trading Desk',
-                    `${nextPlan.analysisDailyLimit} AI stock analyses/day with financials`,
+                    `Up to ${nextPlan.swingMaxSignals} swing setups per scan (vs ${planConfig.swingMaxSignals} today)`,
+                    '5x intraday paper trading & ₹10,00,000 capital',
+                    'Interactive chart pattern quiz practice',
                   ]
                 : [
                     'Full Nifty 500 swing screener (all matching setups)',
@@ -252,89 +154,28 @@ export default function SwingScannerPage({ marketStatus }) {
         ) : null
       }
     >
-      <section className="card sc-results-card">
-        <header className="card-head">
-          <div>
-            <h3 className="card-title">Swing Technical Setups</h3>
-            <p className="card-sub">
-              {data
-                ? 'Click any stock to inspect its trade plan, reasoning, and backtested pattern details.'
-                : 'Run the screener to view backtested swing setups.'}
-            </p>
-          </div>
-          {data && !loading && <span className="count-pill">{rows.length} setups</span>}
-        </header>
-
-        {data && !loading && (
-          <SignalFilters
-            minConfidence={minConfidence}
-            onMinConfidenceChange={setMinConfidence}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            statusLabel="Setup status"
-            statusHint="Confirmed: all technical conditions met. Watchlist: promising pattern awaiting confirmation."
-            statusOptions={[
-              { value: 'ALL', label: `All (${counts.ALL})` },
-              { value: 'CONFIRMED_SIGNAL', label: `Confirmed (${counts.CONFIRMED_SIGNAL})` },
-              { value: 'PROJECTED_SETUP', label: `Watchlist (${counts.PROJECTED_SETUP})` },
-            ]}
-            sectors={sectors}
-            sectorFilter={sectorFilter}
-            onSectorFilterChange={setSectorFilter}
-            minSlider={SCAN_MIN_CONFIDENCE}
-          />
-        )}
-
-        {loading ? (
-          <DataLoader
-            title={loadingMode === 'refresh' ? 'Getting the latest prices…' : 'Screening Nifty 500 stocks…'}
-            subtitle="Running backtested pattern recognition and multi-indicator chart analysis across the universe."
-            stages={[
-              loadingMode === 'refresh' ? 'Downloading latest daily prices' : 'Loading saved daily prices',
-              'Checking price trends and moving averages',
-              'Matching historical backtested chart patterns',
-              'Scoring each setup’s technical confluence',
-              'Calculating pivot, resistance and risk levels',
-            ]}
-          />
-        ) : !data ? (
-          <div className="empty">
-            <div className="empty-icon">
-              <Sparkles size={24} />
-            </div>
-            <h4>No technical setups loaded yet</h4>
-            <p>
-              Press “Scan Nifty 500” to screen stocks using our backtested pattern & chart analysis
-              engine.
-            </p>
-            <button type="button" className="btn btn-primary" onClick={() => runScan(false)}>
-              <Sparkles size={16} /> Scan Nifty 500
-            </button>
-          </div>
-        ) : visibleRows.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon muted">
-              <SearchX size={24} />
-            </div>
-            <h4>No stocks match these filters</h4>
-            <p>Try lowering the minimum confidence or resetting your active filters.</p>
-            <button type="button" className="btn btn-outline btn-sm" onClick={resetFilters}>
-              Reset filters
-            </button>
-          </div>
-        ) : (
-          <RecommendationTable
-            signals={visibleRows}
-            mode="swing"
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onSort={onSort}
-            selectedSymbol={selectedSignal?.symbol}
-            onSelectSignal={setSelectedSignal}
-            isRefreshing={loading}
-          />
-        )}
-      </section>
+      <SwingResultsSection
+        data={data}
+        loading={loading}
+        loadingMode={loadingMode}
+        rows={rows}
+        visibleRows={visibleRows}
+        minConfidence={minConfidence}
+        setMinConfidence={setMinConfidence}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        counts={counts}
+        sectors={sectors}
+        sectorFilter={sectorFilter}
+        setSectorFilter={setSectorFilter}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onSort={onSort}
+        runScan={runScan}
+        resetFilters={resetFilters}
+        selectedSignal={selectedSignal}
+        setSelectedSignal={setSelectedSignal}
+      />
 
       <StockAnalysisDrawer
         signal={selectedSignal}

@@ -1,17 +1,14 @@
+import { Dialog, DialogContent, DialogTitle } from '../../../components/ui/dialog';
 import React, { useState } from 'react';
 import {
   X,
   BookOpen,
-  Check,
-  AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
   Image as ImageIcon,
-  Target,
-  ArrowRightCircle,
-  AlertOctagon,
 } from 'lucide-react';
 import { PATTERN_TEMPLATES } from '../utils/dataGenerator';
+import { PatternGuideDetails } from './PatternGuideDetails';
 
 interface PatternGuideModalProps {
   isOpen: boolean;
@@ -36,8 +33,8 @@ export const PatternGuideModal: React.FC<PatternGuideModalProps> = ({
   const current = filteredPatterns[selectedIdx] || filteredPatterns[0] || PATTERN_TEMPLATES[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-      <div className="bg-[#121824] border border-slate-700/80 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent aria-describedby={undefined} onPointerDownOutside={(event) => event.preventDefault()} overlayClassName="bg-black/75 backdrop-blur-sm animate-in fade-in duration-200" className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#121824] border border-slate-700/80 rounded-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2.5rem)] max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-[#0B0E14]">
           <div className="flex items-center gap-3">
@@ -45,12 +42,12 @@ export const PatternGuideModal: React.FC<PatternGuideModalProps> = ({
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
+              <DialogTitle className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-2">
                 <span>Technical Chart Patterns Reference</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                   15 Core Cheat Sheet Patterns
                 </span>
-              </h2>
+              </DialogTitle>
             </div>
           </div>
 
@@ -83,6 +80,7 @@ export const PatternGuideModal: React.FC<PatternGuideModalProps> = ({
 
             <button
               onClick={onClose}
+              aria-label="Close pattern reference"
               className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -151,90 +149,7 @@ export const PatternGuideModal: React.FC<PatternGuideModalProps> = ({
             </div>
 
             {/* Details Pane */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-[#121824]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                        current.expectedDirection === 'BUY'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50'
-                          : 'bg-rose-950 text-rose-400 border border-rose-800/50'
-                      }`}
-                    >
-                      {current.expectedDirection === 'BUY' ? 'GOES UP (BUY)' : 'GOES DOWN (SELL)'}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {current.cheatSheetGroup} Pattern
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-500">
-                      {current.difficulty} Tier
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-100">
-                    {current.name}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Mental Analogy */}
-              <p className="text-xs text-slate-300 leading-relaxed bg-[#0B0E14] p-3.5 rounded-xl border border-slate-800">
-                {current.explanation}
-              </p>
-
-              {/* Strategy Rules Triad */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                  <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-mono font-bold uppercase">
-                    <ArrowRightCircle className="w-3.5 h-3.5" />
-                    <span>Entry</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-tight">
-                    {current.entryRule}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                  <div className="flex items-center gap-1.5 text-rose-400 text-[10px] font-mono font-bold uppercase">
-                    <AlertOctagon className="w-3.5 h-3.5" />
-                    <span>Stop Loss</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-tight">
-                    {current.stopLossRule}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                  <div className="flex items-center gap-1.5 text-cyan-400 text-[10px] font-mono font-bold uppercase">
-                    <Target className="w-3.5 h-3.5" />
-                    <span>Target</span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 leading-tight">
-                    {current.targetRule}
-                  </p>
-                </div>
-              </div>
-
-              {/* Key Observation */}
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  What to Look For On The Chart:
-                </h4>
-                <p className="text-xs text-slate-300 pl-5">
-                  {current.keyObservation}
-                </p>
-              </div>
-
-              {/* Pro Tip */}
-              <div className="bg-indigo-950/20 border border-indigo-900/40 p-3 rounded-xl text-xs space-y-1">
-                <h4 className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-indigo-400" />
-                  Pro Execution Strategy:
-                </h4>
-                <p className="text-indigo-200/90 pl-5">{current.proTip}</p>
-              </div>
-            </div>
+            <PatternGuideDetails current={current} />
           </div>
         ) : (
           /* Tab 2: Visual Cheat Sheet Image View */
@@ -264,7 +179,7 @@ export const PatternGuideModal: React.FC<PatternGuideModalProps> = ({
             Got It
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

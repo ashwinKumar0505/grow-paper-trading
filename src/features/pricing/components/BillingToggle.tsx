@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../../../components/ui/button';
 import type { PaidBillingCycle } from '../../../utils/pricing';
 import { focusRing } from '../pricingStyles';
 
@@ -23,7 +24,7 @@ export const BillingToggle: React.FC<BillingToggleProps> = ({ value, onChange, s
     {OPTIONS.map((opt) => {
       const active = value === opt.value;
       return (
-        <button
+        <Button variant="unstyled" size="unstyled"
           key={opt.value}
           type="button"
           aria-pressed={active}
@@ -44,7 +45,7 @@ export const BillingToggle: React.FC<BillingToggleProps> = ({ value, onChange, s
               Save up to {savingsPercent}%
             </span>
           )}
-        </button>
+        </Button>
       );
     })}
   </div>
