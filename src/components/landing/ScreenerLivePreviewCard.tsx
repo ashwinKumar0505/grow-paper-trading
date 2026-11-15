@@ -28,7 +28,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
             </div>
           </div>
 
-          <div className="inline-flex rounded-xl bg-[#12281F] p-1 border border-[#1D3A2D]">
+          <div className="flex w-full sm:w-auto sm:inline-flex overflow-x-auto no-scrollbar rounded-xl bg-[#12281F] p-1 border border-[#1D3A2D]">
             {[
               { id: 'swing' as const, label: 'Swing Picks' },
               { id: 'intraday' as const, label: 'Intraday 15m' },
@@ -38,7 +38,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial whitespace-nowrap px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                   activeTab === tab.id
                     ? 'bg-[#00D09C] text-[#04261C] shadow-xs'
                     : 'text-[#9AB0A5] hover:text-white'

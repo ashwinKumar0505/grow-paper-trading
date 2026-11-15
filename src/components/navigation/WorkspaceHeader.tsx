@@ -45,7 +45,7 @@ export function WorkspaceHeader() {
   const navigation = (
     <nav
       aria-label="Workspace modes"
-      className="flex w-max items-center gap-1 rounded-full border border-emerald-900/10 bg-[#EEF5F1] p-1 dark:border-[#1E352B] dark:bg-[#111F19]"
+      className="mx-auto flex w-max items-center gap-0.5 sm:gap-1 rounded-full border border-emerald-900/10 bg-[#EEF5F1] p-1 dark:border-[#1E352B] dark:bg-[#111F19]"
     >
       {modes.map(({ href, label, icon: Icon, active, select }) => (
         <AppLink
@@ -53,13 +53,13 @@ export function WorkspaceHeader() {
           href={href}
           onClick={select}
           aria-current={active ? 'page' : undefined}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-all ${
+          className={`flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all ${
             active
               ? 'bg-[#00B386] text-white shadow-xs dark:bg-[#00D09C] dark:text-[#04261C]'
               : 'text-[#3A5247] hover:bg-[#00B386] hover:text-white dark:text-[#9AB0A5] dark:hover:bg-[#00D09C] dark:hover:text-[#04261C]'
           }`}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-3.5 w-3.5 shrink-0" />
           <span>{label}</span>
         </AppLink>
       ))}

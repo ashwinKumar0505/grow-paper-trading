@@ -63,7 +63,7 @@ export const ScreenerPreviewIntradayTab: React.FC = () => {
                 </span>
               </div>
             </div>
-            <div className="mt-3.5 pt-3 border-t border-[#1D3A2D] grid grid-cols-4 gap-2 text-xs items-center">
+            <div className="mt-3.5 pt-3 border-t border-[#1D3A2D] grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-2 text-xs items-center">
               <div>
                 <span className="text-[#7F9C8E] block text-[10px]">Entry</span>
                 <strong className="font-mono text-white">{pick.entry}</strong>
@@ -76,7 +76,7 @@ export const ScreenerPreviewIntradayTab: React.FC = () => {
                 <span className="text-[#7F9C8E] block text-[10px]">Stop-Loss</span>
                 <strong className="font-mono text-[#F0614A]">{pick.stopLoss}</strong>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <button
                   type="button"
                   onClick={() => navigate('/screener/intraday')}

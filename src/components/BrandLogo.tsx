@@ -12,17 +12,17 @@ export const BrandLogo: React.FC<LogoProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-2.5 select-none transition-transform active:scale-[0.98] ${
+      className={`flex items-center gap-2 sm:gap-2.5 select-none transition-transform active:scale-[0.98] ${
         onClick ? 'cursor-pointer hover:opacity-95' : ''
       } ${className}`}
     >
       {/* Nifty Lens Custom Chart-in-Lens Icon */}
-      <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
+      <div className="relative w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shrink-0">
         <svg
           viewBox="0 0 40 40"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-9 h-9 drop-shadow-xs"
+          className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-xs"
         >
           <defs>
             <linearGradient id="niftylensBg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
@@ -87,7 +87,7 @@ export const BrandLogo: React.FC<LogoProps> = ({
 
       {/* Nifty Lens Wordmark */}
       <div className="flex items-center gap-1.5">
-        <span className="font-extrabold text-lg sm:text-xl tracking-tight text-[#15241D] dark:text-white font-sans">
+        <span className="font-extrabold text-base sm:text-xl tracking-tight whitespace-nowrap text-[#15241D] dark:text-white font-sans">
           Nifty <span className="text-[#00B386] dark:text-[#00D09C]">Lens</span>
         </span>
       </div>

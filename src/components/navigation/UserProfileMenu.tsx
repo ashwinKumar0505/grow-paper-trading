@@ -28,20 +28,21 @@ export const UserProfileMenu: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         <button
           type="button"
           onClick={() => openAuthModal('signin')}
-          className="px-3 py-1.5 text-xs font-bold text-[#3A5247] dark:text-[#9AB0A5] hover:text-[#15241D] dark:hover:text-white rounded-full hover:bg-emerald-900/5 dark:hover:bg-[#16241E] transition-colors cursor-pointer"
+          className="px-2 sm:px-3 py-1.5 text-xs font-bold whitespace-nowrap text-[#3A5247] dark:text-[#9AB0A5] hover:text-[#15241D] dark:hover:text-white rounded-full hover:bg-emerald-900/5 dark:hover:bg-[#16241E] transition-colors cursor-pointer"
         >
           Sign In
         </button>
         <button
           type="button"
           onClick={() => openAuthModal('signup')}
-          className="px-3.5 py-1.5 h-9 text-xs font-extrabold text-white dark:text-[#04261C] bg-[#00B386] hover:bg-[#009A73] dark:bg-[#00D09C] dark:hover:bg-[#00E6A8] rounded-full transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
+          className="px-2.5 sm:px-3.5 py-1.5 h-8 sm:h-9 text-[11px] sm:text-xs font-extrabold text-white dark:text-[#04261C] bg-[#00B386] hover:bg-[#009A73] dark:bg-[#00D09C] dark:hover:bg-[#00E6A8] rounded-full transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
         >
-          Start Free Account
+          <span className="sm:hidden">Start Free</span>
+          <span className="hidden sm:inline">Start Free Account</span>
         </button>
       </div>
     );
