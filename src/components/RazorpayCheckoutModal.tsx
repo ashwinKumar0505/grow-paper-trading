@@ -114,7 +114,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
         upiId: paymentMethod === 'upi' ? upiId : undefined,
         userId: user?.uid || 'demo_user',
         email: user?.email || 'trader@niftylens.in',
-        name: user?.name || 'NiftyLens Trader',
+        name: user?.name || 'Nifty Lens Trader',
       }),
     })
       .then((r) => r.json())
@@ -262,7 +262,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
       role="dialog"
       aria-modal="true"
-      aria-label="NiftyLens Secure Checkout"
+      aria-label="Nifty Lens Secure Checkout"
     >
       <div className="fixed inset-0" onClick={() => !isProcessing && closeRazorpayCheckout()} />
 
@@ -275,7 +275,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight">NiftyLens Checkout</span>
+                <span className="font-bold text-base tracking-tight">Nifty Lens Checkout</span>
                 <span className="rounded-full bg-[#00D09C]/15 border border-[#00D09C]/30 px-2 py-0.5 text-[10px] font-semibold text-[#00D09C]">
                   Instant Activation
                 </span>

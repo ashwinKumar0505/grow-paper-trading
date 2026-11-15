@@ -1,6 +1,6 @@
 /**
  * Shared Tailwind class tokens for the pricing page. Colours reuse the existing
- * NiftyLens palette (#00D09C / #00B386 accents, #0B1310 / #111C17 dark surfaces).
+ * Nifty Lens palette (#00D09C / #00B386 accents, #0B1310 / #111C17 dark surfaces).
  */
 export const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00B386] dark:focus-visible:ring-[#00D09C] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F3F6F4] dark:focus-visible:ring-offset-[#0B1310]';

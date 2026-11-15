@@ -3,8 +3,8 @@ import { AppLink, usePathname } from '../../../lib/navigation';
 import { TrendingUp, Zap, Search, X, Clock, ChartCandlestick, BookOpen } from 'lucide-react';
 
 const NAV = [
-  { to: '/screener', label: 'Swing recommendations', icon: TrendingUp, end: true, hint: 'Backtested multi-day setups' },
-  { to: '/screener/intraday', label: 'Intraday signals', icon: Zap, hint: '15-min chart setups', live: true },
+  { to: '/screener', label: 'Swing screener', icon: TrendingUp, end: true, hint: 'Backtested multi-day setups' },
+  { to: '/screener/intraday', label: 'Intraday scanner', icon: Zap, hint: '15-min chart setups', live: true },
   { to: '/screener/analysis', label: 'Stock analysis', icon: Search, hint: 'Chart & backtest check' },
 ];
 
@@ -45,7 +45,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
           </div>
           <div>
             <div className="sb-title">Stock Screener</div>
-            <div className="sb-tag">NiftyLens · NSE 500</div>
+            <div className="sb-tag">Nifty Lens · NSE 500</div>
           </div>
           <button className="sb-close icon-btn" onClick={onClose} aria-label="Close menu">
             <X size={18} />

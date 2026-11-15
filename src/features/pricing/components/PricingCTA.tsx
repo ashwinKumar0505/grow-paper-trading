@@ -36,7 +36,7 @@ export const PricingCTA: React.FC = () => {
         </AppLink>
       </div>
       <p className={`mt-6 text-xs ${textMuted}`}>
-        NiftyLens is an educational simulator. No real money is invested and no returns are guaranteed.
+        Nifty Lens is an educational simulator. No real money is invested and no returns are guaranteed.
       </p>
     </section>
   );

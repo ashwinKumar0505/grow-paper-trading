@@ -74,9 +74,9 @@ export const StockDetailView: React.FC = () => {
 
   // Dynamic SEO Page Title for active stock
   useEffect(() => {
-    const originalTitle = 'NiftyLens – Live NSE/BSE Stock Paper Trading Simulator';
+    const originalTitle = 'Nifty Lens – Live NSE/BSE Stock Paper Trading Simulator';
     const safePrice = Number(stock.price || 0);
-    document.title = `${stock.name} (${stock.symbol}) ₹${safePrice.toFixed(2)} – NiftyLens`;
+    document.title = `${stock.name} (${stock.symbol}) ₹${safePrice.toFixed(2)} – Nifty Lens`;
     return () => {
       document.title = originalTitle;
     };

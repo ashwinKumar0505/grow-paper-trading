@@ -20,6 +20,7 @@ import { AuthModal } from './components/AuthModal';
 import { PricingPage } from './components/PricingPage';
 import { UpgradeModal } from './components/UpgradeModal';
 import { RazorpayCheckoutModal } from './components/RazorpayCheckoutModal';
+import { LegalPage, type LegalPageKind } from './components/LegalPages';
 
 const QuizApp = lazy(() => import('./features/quiz/QuizApp'));
 const ScreenerApp = lazy(() => import('./features/screener/App'));
@@ -47,6 +48,18 @@ const WorkspaceContent: React.FC = () => {
     return <PricingPage />;
   }
 
+  // 0b. Legal & Compliance Pages are public
+  const legalRoutes: Record<string, LegalPageKind> = {
+    '/terms': 'terms',
+    '/privacy': 'privacy',
+    '/refund-policy': 'refund-policy',
+    '/disclaimer': 'disclaimer',
+    '/contact': 'contact',
+  };
+  if (pathname in legalRoutes) {
+    return <LegalPage kind={legalRoutes[pathname]} />;
+  }
+
   // 1. Stock Screener modules require login
   if (pathname.startsWith('/screener')) {
     if (!user) {
@@ -56,7 +69,7 @@ const WorkspaceContent: React.FC = () => {
       <Suspense
         fallback={
           <div className="p-12 text-center text-slate-500 dark:text-[#9ab0a5]" role="status">
-            Loading NiftyLens Stock Screener…
+            Loading Nifty Lens Stock Screener…
           </div>
         }
       >
@@ -97,7 +110,7 @@ const WorkspaceContent: React.FC = () => {
       <main className="p-12 text-center">
         <h1 className="text-3xl font-bold">Page not found</h1>
         <AppLink href="/" className="mt-6 inline-block text-[#00B386] dark:text-[#00D09C] font-semibold">
-          Return to NiftyLens
+          Return to Nifty Lens
         </AppLink>
       </main>
     );
@@ -118,7 +131,7 @@ const WorkspaceContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-[#20332a] bg-white dark:bg-[#111c17] py-6 px-4 sm:px-6 lg:px-8 mt-auto">
-        <div className="w-full max-w-[1920px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <div className="w-full max-w-[1920px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
@@ -128,13 +141,30 @@ const WorkspaceContent: React.FC = () => {
               }}
               className="font-bold text-gray-800 dark:text-gray-200 hover:text-[#00D09C] transition-colors cursor-pointer"
             >
-              NiftyLens
+              Nifty Lens
             </button>
             <span>·</span>
             <span>Stock Screener, Virtual Trading & Chart Pattern Lab</span>
           </div>
-          <div className="text-center sm:text-right text-[11px] text-gray-400">
-            For educational and strategy backtesting purposes only. No real capital at risk.
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] font-medium">
+            <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+              Terms
+            </AppLink>
+            <AppLink href="/privacy" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+              Privacy
+            </AppLink>
+            <AppLink href="/refund-policy" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+              Refund Policy
+            </AppLink>
+            <AppLink href="/disclaimer" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+              SEBI Disclaimer
+            </AppLink>
+            <AppLink href="/contact" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+              Contact
+            </AppLink>
+          </div>
+          <div className="text-center md:text-right text-[11px] text-gray-400">
+            Not SEBI registered. For educational and strategy backtesting purposes only. No real capital at risk.
           </div>
         </div>
       </footer>
@@ -154,16 +184,26 @@ function AppContent() {
       window.history.replaceState(null, '', pathname + window.location.search + window.location.hash);
     }
     document.title = pathname.startsWith('/screener')
-      ? 'Stock Screener & Stock Recommendations | NiftyLens'
+      ? 'Stock Screener & Quantitative Analysis | Nifty Lens'
       : pathname === '/learn' || pathname === '/pattern-library'
-      ? 'Learn Chart Patterns | NiftyLens'
+      ? 'Learn Chart Patterns | Nifty Lens'
       : pathname.startsWith('/quiz')
-      ? 'Guess the Chart Quiz | NiftyLens'
+      ? 'Guess the Chart Quiz | Nifty Lens'
       : pathname === '/trade'
-      ? 'Paper Trading Desk | NiftyLens'
+      ? 'Paper Trading Desk | Nifty Lens'
       : pathname === '/pricing'
-      ? 'Pricing & Membership Packages | NiftyLens'
-      : 'NiftyLens – NSE Stock Screener, Paper Trading & Chart Learning';
+      ? 'Pricing & Membership Packages | Nifty Lens'
+      : pathname === '/terms'
+      ? 'Terms of Service | Nifty Lens'
+      : pathname === '/privacy'
+      ? 'Privacy Policy | Nifty Lens'
+      : pathname === '/refund-policy'
+      ? 'Cancellation & Refund Policy | Nifty Lens'
+      : pathname === '/disclaimer'
+      ? 'SEBI & Market Risk Disclaimer | Nifty Lens'
+      : pathname === '/contact'
+      ? 'Contact & Support | Nifty Lens'
+      : 'Nifty Lens – NSE Stock Screener, Paper Trading & Chart Learning';
   }, [pathname, setCurrentTab]);
 
   if (pathname === '/') {

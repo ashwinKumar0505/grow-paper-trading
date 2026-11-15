@@ -657,14 +657,14 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
                   requiredTier: 'beginner',
                   featureName: 'Full Statutory Charges Breakdown',
                   featureDescription:
-                    'Inspecting exact Groww Brokerage, STT, Exchange Txn, SEBI, Stamp Duty, GST & DP charges is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
+                    'Inspecting exact Estimated Brokerage, STT, Exchange Txn, SEBI, Stamp Duty, GST & DP charges is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.',
                 });
                 return;
               }
               setShowCharges((s) => !s);
             }}
             className="cursor-pointer text-right inline-flex items-center gap-1"
-            title="Click to view full Groww brokerage & statutory charges breakdown"
+            title="Click to view full estimated brokerage & statutory charges breakdown"
           >
             {!planConfig.allowDetailedChargesBreakdown && <Lock className="w-3 h-3 text-amber-500" />}
             <span className="border-b border-dashed border-gray-400">
@@ -691,7 +691,7 @@ export const OrderPanel: React.FC<OrderPanelProps> = ({
               </>
             )}
             <div className="border-t border-gray-200 dark:border-[#2E3340] my-1" />
-            <Row label="Groww Brokerage" value={inr(charges.brokerage)} />
+            <Row label="Estimated Brokerage" value={inr(charges.brokerage)} />
             <Row label="STT" value={inr(charges.stt)} />
             <Row label={`Exchange txn (${exchange})`} value={inr(charges.exchangeTxn)} />
             <Row label="SEBI turnover fee" value={inr(charges.sebi)} />

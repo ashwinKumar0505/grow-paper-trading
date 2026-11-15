@@ -65,7 +65,7 @@ export default function ScreenerApp() {
 
   const title = TITLES[pathname] || 'Stock Screener';
   useEffect(() => {
-    document.title = `${title} · NiftyLens`;
+    document.title = `${title} · Nifty Lens`;
     window.scrollTo(0, 0);
   }, [title]);
 

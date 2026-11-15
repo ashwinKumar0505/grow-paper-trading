@@ -71,7 +71,7 @@ export const UserProfileMenu: React.FC = () => {
           onClick={() =>
             openUpgradeModal({
               requiredTier: subscriptionTier === 'free' ? 'beginner' : 'advanced',
-              featureName: 'Upgrade Your NiftyLens Membership',
+              featureName: 'Upgrade Your Nifty Lens Membership',
             })
           }
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#00B386] to-[#00D09C] text-[#04261C] font-extrabold text-[11px] shadow-xs hover:opacity-95 transition-opacity cursor-pointer"
@@ -113,14 +113,14 @@ export const UserProfileMenu: React.FC = () => {
             <div className="px-4 py-3 border-b border-emerald-900/10 dark:border-[#20332A]">
               <div className="flex items-center justify-between gap-2">
                 <div className="font-extrabold text-sm text-[#15241D] dark:text-white truncate">
-                  {user.name || 'NiftyLens Trader'}
+                  {user.name || 'Nifty Lens Trader'}
                 </div>
                 <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${tierBadgeClass}`}>
                   {planConfig.name}
                 </span>
               </div>
               <div className="text-xs text-[#5B7066] dark:text-[#9AB0A5] font-mono mt-0.5 truncate">
-                {user.email || (user.phone ? `+91 ${user.phone}` : 'NiftyLens Account')}
+                {user.email || (user.phone ? `+91 ${user.phone}` : 'Nifty Lens Account')}
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-[10px] text-[#00B386] dark:text-[#00D09C] font-semibold flex items-center gap-1">
@@ -217,7 +217,7 @@ export const UserProfileMenu: React.FC = () => {
                 className="w-full px-3 py-2 text-xs font-semibold text-[#5B7066] dark:text-[#9AB0A5] hover:bg-[#EEF5F1] dark:hover:bg-[#16241E] rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <ShieldCheck className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-                <span>NiftyLens Overview Home</span>
+                <span>Nifty Lens Overview Home</span>
               </button>
 
               <div className="my-1 border-t border-emerald-900/10 dark:border-[#20332A]" />

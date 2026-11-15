@@ -19,16 +19,16 @@ interface AuthGatePlaceholderProps {
 
 const FEATURE_COPY = {
   screener: {
-    eyebrow: 'NIFTYLENS STOCK SCREENER & STOCK RECOMMENDATIONS',
-    title: 'Sign in to access Stock Recommendations & Chart Analysis',
+    eyebrow: 'NIFTYLENS QUANTITATIVE STOCK SCREENER',
+    title: 'Sign in to access Technical Screeners & Chart Analysis',
     description:
-      'Unlock our Nifty 500 Swing & Intraday Screener powered by historical backtested patterns, multi-indicator chart analysis, and complete entry, target, and stop-loss recommendations.',
+      'Unlock our Nifty 500 Swing & Intraday Screener powered by historical backtested patterns, multi-indicator chart analysis, and technical pivot, resistance, and risk-level projections.',
   },
   trade: {
     eyebrow: 'NIFTYLENS VIRTUAL TRADING PLATFORM',
     title: 'Sign in to access the Virtual Trading Desk',
     description:
-      'Practice your stock recommendations risk-free with up to ₹10,00,000 in virtual capital, Delivery (CNC) and 5x Intraday (MIS) orders, and live NSE session charts.',
+      'Practice your technical strategies risk-free with up to ₹10,00,000 in virtual capital, Delivery (CNC) and 5x Intraday (MIS) orders, and live NSE session charts.',
   },
   quiz: {
     eyebrow: 'GUESS THE CHART · INTERACTIVE QUIZ ARENA',
@@ -63,7 +63,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
           {/* One Account Unlocks All 3 Modules */}
           <div className="space-y-3 pt-1">
             <div className="text-xs font-extrabold uppercase tracking-wider text-[#5B7066] dark:text-[#7F9C8E]">
-              One free NiftyLens account unlocks:
+              One free Nifty Lens account unlocks:
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-[#E2EAE6] dark:border-[#20332A] bg-[#F6F9F7] dark:bg-[#16241E] p-3.5 space-y-1">
@@ -72,7 +72,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
                   <span>Stock Screener</span>
                 </div>
                 <p className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5] leading-snug">
-                  Backtested Swing & Intraday stock recommendations + full stock analysis.
+                  Backtested Swing & Intraday technical setups + full chart analysis.
                 </p>
               </div>
 
@@ -134,13 +134,13 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
           </div>
         </div>
 
-        {/* Right Column: Custom NiftyLens Illustration */}
+        {/* Right Column: Custom Nifty Lens Illustration */}
         <div className="lg:col-span-5">
           <div className="relative rounded-2xl border border-[#1D3A2D] bg-gradient-to-br from-[#0C1D16] via-[#122B21] to-[#0A1812] p-6 text-white overflow-hidden shadow-inner">
             <div className="flex items-center justify-between text-xs text-[#9AB0A5] mb-4">
               <span className="inline-flex items-center gap-1.5 font-bold text-[#00D09C]">
                 <ShieldCheck className="w-4 h-4" />
-                NiftyLens Member Workspace
+                Nifty Lens Member Workspace
               </span>
               <span className="rounded-md bg-[#00D09C]/15 px-2 py-0.5 text-[10px] font-mono font-bold text-[#00D09C]">
                 NSE · NIFTY 500
@@ -152,7 +152,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
               viewBox="0 0 360 230"
               className="w-full h-auto rounded-xl bg-[#091510] border border-[#1D3A2D] p-3"
               role="img"
-              aria-label="NiftyLens Screener, Virtual Trading and Chart Analysis Illustration"
+              aria-label="Nifty Lens Screener, Virtual Trading and Chart Analysis Illustration"
             >
               <defs>
                 <linearGradient id="authAreaGrad" x1="0" y1="0" x2="0" y2="1">

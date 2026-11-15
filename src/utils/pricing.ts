@@ -13,6 +13,13 @@ export function formatLakh(amount: number): string {
   return `₹${(amount / 100000).toLocaleString('en-IN', { maximumFractionDigits: 1 })}L`;
 }
 
+/** Human-readable lakh label for virtual capital (100000 → "₹1 Lakh", 1000000 → "₹10 Lakhs"). */
+export function formatLakhsWords(amount: number): string {
+  const lakhs = amount / 100000;
+  const formatted = lakhs.toLocaleString('en-IN', { maximumFractionDigits: 1 });
+  return `₹${formatted} ${lakhs === 1 ? 'Lakh' : 'Lakhs'}`;
+}
+
 export interface PlanPriceView {
   /** Amount actually charged at checkout for the selected cycle. */
   charged: number;

@@ -293,7 +293,7 @@ export default function IntradayScannerPage({ marketStatus }) {
         <section className="card sc-results-card">
           <header className="card-head">
             <div>
-              <h3 className="card-title">Intraday Stock Recommendations</h3>
+              <h3 className="card-title">Intraday Technical Setups</h3>
               <p className="card-sub">
                 {isMarketOpen
                   ? 'Live 15-minute setups. Click any stock to view its trade plan and reasoning.'

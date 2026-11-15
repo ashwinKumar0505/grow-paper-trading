@@ -47,9 +47,9 @@ export const INTRADAY_STATUS = {
 };
 
 export const RECOMMENDATION = {
-  BUY: { label: 'Bullish recommendation', tone: 'positive' },
-  WAIT: { label: 'Wait and watch', tone: 'warning' },
-  AVOID: { label: 'Avoid for now', tone: 'negative' },
+  BUY: { label: 'Bullish technical setup', tone: 'positive' },
+  WAIT: { label: 'Neutral / Wait', tone: 'warning' },
+  AVOID: { label: 'Bearish / Caution', tone: 'negative' },
 };
 
 export const OUTLOOK_LABEL = (v = '') =>

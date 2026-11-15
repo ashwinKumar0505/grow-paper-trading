@@ -2,14 +2,14 @@ import React from 'react';
 import { CalendarClock, PlusCircle, ShieldCheck, Wallet } from 'lucide-react';
 import { useTrading } from '../../../context/TradingContext';
 import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
-import { formatLakh } from '../../../utils/pricing';
+import { formatLakhsWords } from '../../../utils/pricing';
 import { PLAN_ORDER } from '../pricingConfig';
 import { accentText, btnSecondary, textMuted, textStrong } from '../pricingStyles';
 
 const POINTS = [
   { icon: ShieldCheck, text: '100% simulated money. It cannot be withdrawn or converted to real cash.' },
   { icon: CalendarClock, text: "Balance resets automatically to your plan's capital at the start of each month." },
-  { icon: PlusCircle, text: 'Top-ups: ₹50 per +₹1L on Free; free top-ups up to your plan limit on paid plans.' },
+  { icon: PlusCircle, text: 'Top-ups: ₹50 per +₹1 Lakh on Free; free top-ups up to your plan limit on paid plans.' },
 ];
 
 export const VirtualCapitalInfo: React.FC = () => {
@@ -41,7 +41,7 @@ export const VirtualCapitalInfo: React.FC = () => {
             >
               <dt className={`inline ${textMuted}`}>{SUBSCRIPTION_PLANS[tier].name.replace(' Package', '')}: </dt>
               <dd className={`inline font-extrabold tabular-nums ${accentText}`}>
-                {formatLakh(SUBSCRIPTION_PLANS[tier].defaultStartingCash)}
+                {formatLakhsWords(SUBSCRIPTION_PLANS[tier].defaultStartingCash)}
               </dd>
             </div>
           ))}

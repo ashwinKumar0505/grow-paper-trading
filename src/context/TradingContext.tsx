@@ -1477,7 +1477,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const currentUser = user || {
       uid: `user_demo_${now}`,
-      name: 'NiftyLens Trader',
+      name: 'Nifty Lens Trader',
       email: 'demo@niftylens.in',
       authProvider: 'email' as const,
       initialCash: targetPlan.defaultStartingCash,

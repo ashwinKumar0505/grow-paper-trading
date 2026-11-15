@@ -16,7 +16,7 @@ export const BrandLogo: React.FC<LogoProps> = ({
         onClick ? 'cursor-pointer hover:opacity-95' : ''
       } ${className}`}
     >
-      {/* NiftyLens Custom Chart-in-Lens Icon */}
+      {/* Nifty Lens Custom Chart-in-Lens Icon */}
       <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
         <svg
           viewBox="0 0 40 40"
@@ -85,10 +85,10 @@ export const BrandLogo: React.FC<LogoProps> = ({
         </svg>
       </div>
 
-      {/* NiftyLens Wordmark */}
+      {/* Nifty Lens Wordmark */}
       <div className="flex items-center gap-1.5">
         <span className="font-extrabold text-lg sm:text-xl tracking-tight text-[#15241D] dark:text-white font-sans">
-          Nifty<span className="text-[#00B386] dark:text-[#00D09C]">Lens</span>
+          Nifty <span className="text-[#00B386] dark:text-[#00D09C]">Lens</span>
         </span>
       </div>
     </div>

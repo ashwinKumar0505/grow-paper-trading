@@ -12,11 +12,11 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
               Three Integrated Applications · One Green Workspace
             </p>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              Everything you need in <span className="text-[#00B386] dark:text-[#00D09C]">NiftyLens</span>.
+              Everything you need in <span className="text-[#00B386] dark:text-[#00D09C]">Nifty Lens</span>.
             </h2>
           </div>
           <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
-            Scan Nifty 500 stocks for actionable technical setups, practice risk-free orders on a Groww-style virtual desk, and master chart patterns through interactive lessons and quizzes.
+            Scan Nifty 500 stocks for actionable technical setups, practice risk-free orders on the Nifty Lens virtual desk, and master chart patterns through interactive lessons and quizzes.
           </p>
         </div>
 
@@ -34,18 +34,18 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
               </div>
 
               <h3 className="mt-6 text-2xl font-extrabold text-white">
-                Screener & Stock Recommendations
+                Quantitative Stock Screener
               </h3>
               <p className="mt-3 text-sm leading-6 text-[#9ab0a5]">
-                Screen Nifty 500 equities using AI-powered insights, historical backtested strategies, and technical chart analysis to get curated Swing & Intraday stock recommendations.
+                Screen Nifty 500 equities using rule-based quantitative insights, historical backtested strategies, and technical chart analysis to discover Swing & Intraday technical setups.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#d6e6de]">
                 {[
-                  'AI-Powered Stock Analysis',
+                  'Quantitative Stock Analysis',
                   'Backtested Pattern Screener',
-                  '15-Min Intraday Recommendations',
-                  'Reference Entry, Target & Stop-Loss',
+                  '15-Min Intraday Setups',
+                  'Technical Pivot, Resistance & Risk Levels',
                 ].map((label) => (
                   <span key={label} className="rounded-lg border border-[#1d3a2d] bg-[#12281f] px-3 py-1.5 font-medium">
                     {label}
@@ -86,7 +86,7 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
               </div>
 
               <h3 className="mt-6 text-2xl font-extrabold text-slate-900 dark:text-white">
-                Groww-Style Paper Trading
+                Realistic NSE Paper Trading
               </h3>
               <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
                 Execute simulated Delivery (CNC) and 5x Intraday (MIS) trades with real NSE quotes, realistic statutory charges, and up to ₹10,00,000 virtual capital.
@@ -96,7 +96,7 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
                 {[
                   'Up to ₹10L Virtual Cash',
                   'Delivery & 5x Intraday MIS',
-                  'Groww-Style Live Charts',
+                  'Interactive Live Charts',
                   'Realistic Brokerage & Taxes',
                 ].map((label) => (
                   <span

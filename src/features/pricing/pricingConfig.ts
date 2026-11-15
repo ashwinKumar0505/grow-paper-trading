@@ -17,7 +17,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { SUBSCRIPTION_PLANS, type SubscriptionTier } from '../../lib/subscription';
-import { formatINR, formatLakh } from '../../utils/pricing';
+import { formatLakhsWords } from '../../utils/pricing';
 
 export const PLAN_ORDER: SubscriptionTier[] = ['free', 'beginner', 'advanced'];
 
@@ -47,7 +47,7 @@ export const PLAN_CARDS: Record<SubscriptionTier, PlanCardContent> = {
     tier: 'free',
     description: 'Explore and learn at your own pace.',
     features: [
-      { icon: Wallet, text: `${formatINR(F.defaultStartingCash)} virtual capital` },
+      { icon: Wallet, text: `${formatLakhsWords(F.defaultStartingCash)} virtual capital` },
       { icon: ChartCandlestick, text: 'Delivery (CNC) market orders' },
       { icon: Radar, text: `Top ${F.swingMaxSignals} backtested swing setups` },
       { icon: Sparkles, text: `${F.analysisDailyLimit} chart & AI stock analyses/day` },
@@ -61,13 +61,13 @@ export const PLAN_CARDS: Record<SubscriptionTier, PlanCardContent> = {
     description: 'For learners ready to practice more seriously.',
     inheritsFrom: 'Everything in Free, plus:',
     features: [
-      { icon: Wallet, text: `${formatINR(B.defaultStartingCash)} virtual capital` },
+      { icon: Wallet, text: `${formatLakhsWords(B.defaultStartingCash)} virtual capital` },
       { icon: ChartCandlestick, text: '5x Intraday (MIS), MTF 5.00x & limit orders' },
-      { icon: Radar, text: `Top ${B.swingMaxSignals} swing + ${B.intradayMaxSignals} intraday strategy picks` },
+      { icon: Radar, text: `Top ${B.swingMaxSignals} swing + ${B.intradayMaxSignals} intraday technical setups` },
       { icon: Sparkles, text: `${B.analysisDailyLimit} analyses/day · 2-year backtests, levels & financials` },
       { icon: BookOpen, text: 'All 28+ chart patterns unlocked' },
       { icon: Gamepad2, text: 'Unlimited quiz + Survival mode' },
-      { icon: RotateCcw, text: `Free top-ups & resets up to ${formatLakh(B.maxWalletLimit)}` },
+      { icon: RotateCcw, text: `Free top-ups & resets up to ${formatLakhsWords(B.maxWalletLimit)}` },
     ],
   },
   advanced: {
@@ -76,7 +76,7 @@ export const PLAN_CARDS: Record<SubscriptionTier, PlanCardContent> = {
     description: 'For active traders who want deeper tools and insights.',
     inheritsFrom: 'Everything in Beginner, plus:',
     features: [
-      { icon: Wallet, text: `${formatINR(A.defaultStartingCash)} virtual capital` },
+      { icon: Wallet, text: `${formatLakhsWords(A.defaultStartingCash)} virtual capital` },
       { icon: ChartCandlestick, text: 'SL, SL-M & after-market orders' },
       { icon: Radar, text: 'Full Nifty 500 backtested scan + live intraday refresh' },
       { icon: Sparkles, text: 'Unlimited chart & AI analysis + 5-year strategy backtests' },
@@ -166,12 +166,12 @@ export const COMPARISON_CATEGORIES: ComparisonCategory[] = [
       {
         feature: 'Virtual capital',
         tooltip: 'Simulated money for practice trades. It has no cash value and cannot be withdrawn.',
-        values: byTier((t) => formatINR(plan(t).defaultStartingCash)),
+        values: byTier((t) => formatLakhsWords(plan(t).defaultStartingCash)),
       },
-      { feature: 'Automatic monthly reset', values: byTier((t) => `To ${formatLakh(plan(t).defaultStartingCash)}`) },
+      { feature: 'Automatic monthly reset', values: byTier((t) => `To ${formatLakhsWords(plan(t).defaultStartingCash)}`) },
       {
         feature: 'Capital top-ups',
-        values: { free: '₹50 per +₹1L', beginner: `Free, up to ${formatLakh(B.maxWalletLimit)}`, advanced: `Free, up to ${formatLakh(A.maxWalletLimit)}` },
+        values: { free: '₹50 per +₹1 Lakh', beginner: `Free, up to ${formatLakhsWords(B.maxWalletLimit)}`, advanced: `Free, up to ${formatLakhsWords(A.maxWalletLimit)}` },
       },
       { feature: 'Manual portfolio reset', values: byTier((t) => (plan(t).allowUnlimitedWalletResets ? 'Unlimited' : false)) },
       {
@@ -249,12 +249,12 @@ export interface PricingFaqItem {
 
 export const PRICING_FAQS: PricingFaqItem[] = [
   {
-    q: 'How does virtual trading work on NiftyLens?',
+    q: 'How does virtual trading work on Nifty Lens?',
     a: 'You place simulated buy and sell orders on NSE stocks using virtual capital. No real money is invested, and simulated profits or losses cannot be withdrawn. The order types and products available depend on your plan.',
   },
   {
     q: 'How do virtual capital resets and top-ups work?',
-    a: `At the start of each calendar month your balance is automatically reset to your plan's capital: ${formatINR(F.defaultStartingCash)} on Free, ${formatINR(B.defaultStartingCash)} on Beginner and ${formatINR(A.defaultStartingCash)} on Advanced. Free users can add +₹1,00,000 for ₹50 but cannot reset manually. Beginner and Advanced include free top-ups up to the plan limit and unlimited manual resets.`,
+    a: `At the start of each calendar month your balance is automatically reset to your plan's capital: ${formatLakhsWords(F.defaultStartingCash)} on Free, ${formatLakhsWords(B.defaultStartingCash)} on Beginner and ${formatLakhsWords(A.defaultStartingCash)} on Advanced. Free users can add +₹1 Lakh for ₹50 but cannot reset manually. Beginner and Advanced include free top-ups up to the plan limit and unlimited manual resets.`,
   },
   {
     q: 'What is included in each subscription?',

@@ -136,7 +136,7 @@ export default function SwingScannerPage({ marketStatus }) {
         },
         {
           icon: TrendingUp,
-          label: 'Recommendations',
+          label: 'Technical Setups',
           value: data.bullish_signals_found,
           sub: 'Matched backtested chart patterns',
           tone: 'primary',
@@ -161,8 +161,8 @@ export default function SwingScannerPage({ marketStatus }) {
       header={
         <ScreenerHeader
           eyebrow="Multi-Day Setups · Nifty 500"
-          title="Swing Recommendations"
-          description="Explore AI-powered multi-day trading setups identified through technical analysis, historical patterns, and backtesting."
+          title="Swing Technical Screener"
+          description="Explore rule-based multi-day technical setups identified through chart patterns, quantitative indicators, and historical backtesting."
           methodologyNote="Screens Nifty 500 equities using trend alignment, volume confirmation, and 2-year backtested candlestick & breakout patterns."
           illustration={<HeroChartIllustration />}
           actions={
@@ -179,7 +179,7 @@ export default function SwingScannerPage({ marketStatus }) {
                 ) : (
                   <Sparkles size={15} />
                 )}
-                <span>{loading && loadingMode === 'scan' ? 'Screening stocks…' : 'Get recommendations'}</span>
+                <span>{loading && loadingMode === 'scan' ? 'Screening stocks…' : 'Scan Nifty 500'}</span>
               </button>
               <button
                 type="button"
@@ -233,7 +233,7 @@ export default function SwingScannerPage({ marketStatus }) {
           <PremiumFeatureGate
             requiredTier={nextTier}
             title="Unlock More Swing Trading Setups"
-            description={`Showing ${visibleRows.length} of ${rows.length} matching setups on your ${planConfig.name}. Access additional recommendations, advanced analysis, and premium screening capabilities.`}
+            description={`Showing ${visibleRows.length} of ${rows.length} matching setups on your ${planConfig.name}. Access additional technical setups, advanced analysis, and premium screening capabilities.`}
             ctaLabel={`Upgrade to ${nextPlan.name.replace(' Package', '')}`}
             benefits={
               nextTier === 'beginner'
@@ -255,7 +255,7 @@ export default function SwingScannerPage({ marketStatus }) {
       <section className="card sc-results-card">
         <header className="card-head">
           <div>
-            <h3 className="card-title">Swing Stock Recommendations</h3>
+            <h3 className="card-title">Swing Technical Setups</h3>
             <p className="card-sub">
               {data
                 ? 'Click any stock to inspect its trade plan, reasoning, and backtested pattern details.'
@@ -293,8 +293,8 @@ export default function SwingScannerPage({ marketStatus }) {
               loadingMode === 'refresh' ? 'Downloading latest daily prices' : 'Loading saved daily prices',
               'Checking price trends and moving averages',
               'Matching historical backtested chart patterns',
-              'Scoring each recommendation’s confidence',
-              'Calculating reference entry, target and stop loss',
+              'Scoring each setup’s technical confluence',
+              'Calculating pivot, resistance and risk levels',
             ]}
           />
         ) : !data ? (
@@ -302,13 +302,13 @@ export default function SwingScannerPage({ marketStatus }) {
             <div className="empty-icon">
               <Sparkles size={24} />
             </div>
-            <h4>No recommendations loaded yet</h4>
+            <h4>No technical setups loaded yet</h4>
             <p>
-              Press “Get recommendations” to screen Nifty 500 stocks using our backtested pattern & chart analysis
+              Press “Scan Nifty 500” to screen stocks using our backtested pattern & chart analysis
               engine.
             </p>
             <button type="button" className="btn btn-primary" onClick={() => runScan(false)}>
-              <Sparkles size={16} /> Get recommendations
+              <Sparkles size={16} /> Scan Nifty 500
             </button>
           </div>
         ) : visibleRows.length === 0 ? (

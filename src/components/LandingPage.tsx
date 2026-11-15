@@ -77,8 +77,8 @@ export const LandingPage: React.FC = () => {
 
   const faqs = [
     {
-      q: 'What are the 3 tools included inside NiftyLens?',
-      a: 'NiftyLens brings together three connected tools in one place: (1) AI-Powered Stock Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 using chart analysis and backtested strategies, (2) Virtual Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹10,00,000 in virtual capital, and (3) Interactive Learning & Guess the Chart to master 28+ candlestick patterns and replay market movements.',
+      q: 'What are the 3 tools included inside Nifty Lens?',
+      a: 'Nifty Lens brings together three connected tools in one place: (1) AI-Powered Stock Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 using chart analysis and backtested strategies, (2) Virtual Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹10,00,000 in virtual capital, and (3) Interactive Learning & Guess the Chart to master 28+ candlestick patterns and replay market movements.',
     },
     {
       q: 'How does the AI-Powered Stock Screener evaluate stocks?',
@@ -98,7 +98,7 @@ export const LandingPage: React.FC = () => {
     },
     {
       q: 'Is any real money or SEBI brokerage account involved?',
-      a: 'No. NiftyLens is strictly for educational learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, historical backtests or AI insights never guarantee future profits, and nothing on the platform is investment advice.',
+      a: 'No. Nifty Lens is strictly for educational learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, historical backtests or AI insights never guarantee future profits, and nothing on the platform is investment advice.',
     },
   ];
 
@@ -125,7 +125,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black text-[#15241D] dark:text-white tracking-tight leading-[1.08]">
-              Backtested Stock Recommendations.{' '}
+              Backtested Quantitative Screeners.{' '}
               <span className="text-[#00B386] dark:text-[#00D09C]">
                 Chart Analysis &amp; Virtual Practice.
               </span>
@@ -203,7 +203,7 @@ export const LandingPage: React.FC = () => {
           <div className="w-full lg:w-[55%] flex items-center justify-center">
             <FloatingIllustration
               src="/images/landing/hero-trading.png"
-              alt="NiftyLens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Virtual Trading portfolio, and Interactive Learning"
+              alt="Nifty Lens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Virtual Trading portfolio, and Interactive Learning"
               loading="eager"
               fetchPriority="high"
               glowVariant="emerald-blue"
@@ -281,7 +281,7 @@ export const LandingPage: React.FC = () => {
             <div className="lg:col-span-6 order-2 lg:order-1">
               <FloatingIllustration
                 src="/images/landing/virtual-trading.png"
-                alt="NiftyLens Virtual Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
+                alt="Nifty Lens Virtual Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
                 loading="lazy"
                 glowVariant="emerald"
                 delayMs={400}
@@ -501,7 +501,7 @@ export const LandingPage: React.FC = () => {
             <div className="lg:col-span-6">
               <FloatingIllustration
                 src="/images/landing/stock-screener.png"
-                alt="NiftyLens AI Stock Screener 3D illustration displaying Swing Trading, Intraday Trading, and Stock Analyser panels with technical indicators, breakout chart analysis, confidence score, and backtesting results"
+                alt="Nifty Lens AI Stock Screener 3D illustration displaying Swing Trading, Intraday Trading, and Stock Analyser panels with technical indicators, breakout chart analysis, confidence score, and backtesting results"
                 loading="lazy"
                 glowVariant="blue-cyan"
                 delayMs={200}
@@ -691,7 +691,7 @@ export const LandingPage: React.FC = () => {
             <div className="lg:col-span-6 order-2 lg:order-1">
               <FloatingIllustration
                 src="/images/landing/interactive-learning.png"
-                alt="NiftyLens Interactive Learning 3D illustration featuring Learn Chart Patterns, Bullish Engulfing breakdown, Chart Pattern Library, Guess the Chart quiz, and Chart Replay"
+                alt="Nifty Lens Interactive Learning 3D illustration featuring Learn Chart Patterns, Bullish Engulfing breakdown, Chart Pattern Library, Guess the Chart quiz, and Chart Replay"
                 loading="lazy"
                 glowVariant="indigo-emerald"
                 delayMs={300}
@@ -882,7 +882,7 @@ export const LandingPage: React.FC = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-xs sm:text-sm text-[#5B7066] dark:text-[#9AB0A5]">
-              Everything you need to know about NiftyLens AI Stock Screener, Virtual Trading, and Pattern Learning.
+              Everything you need to know about Nifty Lens AI Stock Screener, Virtual Trading, and Pattern Learning.
             </p>
           </div>
 
@@ -968,7 +968,7 @@ export const LandingPage: React.FC = () => {
             <div
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="cursor-pointer shrink-0"
-              title="NiftyLens Homepage"
+              title="Nifty Lens Homepage"
             >
               <BrandLogo />
             </div>
@@ -997,7 +997,7 @@ export const LandingPage: React.FC = () => {
 
           <div className="space-y-2 text-[11px] leading-relaxed text-[#5B7066] dark:text-[#7F9C8E]">
             <p>
-              <strong>Disclaimer:</strong> NiftyLens is an educational stock screening, AI-assisted chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and AI insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
+              <strong>Disclaimer:</strong> Nifty Lens is an educational stock screening, AI-assisted chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and AI insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
             </p>
             <p>
               This platform is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, sub-broker, portfolio manager, or investment adviser. Nothing on this website constitutes investment advice, financial guidance, tax advisory, or a recommendation to buy or sell any financial instrument.
@@ -1005,8 +1005,25 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-emerald-900/10 dark:border-[#20332A] text-[11px]">
-            <div>© {new Date().getFullYear()} NiftyLens. NSE Stock Screener, Virtual Trading &amp; Chart Pattern Studio.</div>
-            <div>Educational Research &amp; Paper Trading Sandbox · Virtual Capital: ₹1,00,000 – ₹10,00,000</div>
+            <div>© {new Date().getFullYear()} Nifty Lens. NSE Stock Screener, Virtual Trading &amp; Chart Pattern Studio.</div>
+            <div className="flex flex-wrap items-center justify-center gap-4 font-semibold">
+              <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+                Terms of Service
+              </AppLink>
+              <AppLink href="/privacy" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+                Privacy Policy
+              </AppLink>
+              <AppLink href="/refund-policy" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+                Refund Policy
+              </AppLink>
+              <AppLink href="/disclaimer" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+                SEBI Disclaimer
+              </AppLink>
+              <AppLink href="/contact" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
+                Contact
+              </AppLink>
+            </div>
+            <div>Educational Research &amp; Paper Trading Sandbox · Virtual Capital: ₹1,00,000 – ₹50,00,000</div>
           </div>
         </div>
       </footer>
