@@ -1,5 +1,12 @@
 import { db, doc, getDoc, setDoc } from '../../../lib/firebase';
 import { BillingCycle, SubscriptionTier } from '../../../lib/subscription';
+import type {
+  Holding,
+  IntradayPosition,
+  Order,
+  WalletTransaction,
+  Watchlist,
+} from '../../../types/market';
 
 export interface RemoteUserRecord {
   userId?: string;
@@ -10,6 +17,13 @@ export interface RemoteUserRecord {
   authProvider?: 'google' | 'email';
   balance?: number;
   initialBalance?: number;
+  holdings?: Holding[];
+  intradayPositions?: IntradayPosition[];
+  orders?: Order[];
+  executedOrderKeys?: string[];
+  watchlists?: Watchlist[];
+  walletTransactions?: WalletTransaction[];
+  portfolioUpdatedAt?: number;
   subscriptionTier?: SubscriptionTier;
   subscriptionBillingCycle?: BillingCycle;
   subscriptionStatus?: 'active' | 'expired' | 'cancelled';

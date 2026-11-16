@@ -8,6 +8,14 @@ import {
 } from '../../../lib/subscription';
 import { UserProfile, WalletTransaction } from '../../../types/market';
 import {
+  applyPortfolioSnapshot,
+  buildRemotePortfolioPayload,
+  createDefaultPortfolioSnapshot,
+  extractPortfolioFromRemote,
+  loadScopedPortfolioFromStorage,
+} from '../utils/portfolioSync';
+import { DEFAULT_WATCHLISTS } from '../utils/storageKeys';
+import {
   buildEmailUid,
   fetchUserProfileFromFirestore,
   normalizeEmail,
@@ -21,12 +29,17 @@ type Options = Pick<
   | 'setUser'
   | 'setBalance'
   | 'setInitialBalance'
+  | 'setHoldings'
+  | 'setIntradayPositions'
+  | 'setOrders'
+  | 'setExecutedOrderKeys'
   | 'setUsageQuota'
   | 'setWatchlists'
   | 'setActiveWatchlistId'
   | 'setIsAuthModalOpen'
   | 'setShowLandingPage'
   | 'setWalletTransactions'
+  | 'isDarkMode'
 > &
   Pick<TradingContextType, 'addToast'>;
 
@@ -34,15 +47,31 @@ export function useSignUp({
   setUser,
   setBalance,
   setInitialBalance,
+  setHoldings,
+  setIntradayPositions,
+  setOrders,
+  setExecutedOrderKeys,
   setUsageQuota,
   setWatchlists,
   setActiveWatchlistId,
   setIsAuthModalOpen,
   setShowLandingPage,
   setWalletTransactions,
+  isDarkMode,
   addToast,
 }: Options) {
-  // Sign Up User (Google or Email OTP) — preserves existing paid subscription if account already exists
+  const portfolioSetters = {
+    setBalance,
+    setInitialBalance,
+    setHoldings,
+    setIntradayPositions,
+    setOrders,
+    setExecutedOrderKeys,
+    setWatchlists,
+    setWalletTransactions,
+  };
+
+  // Sign Up User (Google or Email OTP) — preserves existing paid subscription & portfolio if account exists
   const signUpUser = async (data: {
     uid?: string;
     name: string;
@@ -68,6 +97,13 @@ export function useSignUp({
           ? Math.min(tierMaxCash, existingRemote.initialBalance)
           : restoredBalance;
 
+      const remotePortfolio = extractPortfolioFromRemote(existingRemote, tierMaxCash);
+      const localPortfolio = loadScopedPortfolioFromStorage(effectiveUid);
+      const resolvedPortfolio =
+        remotePortfolio || localPortfolio || createDefaultPortfolioSnapshot(restoredBalance);
+      resolvedPortfolio.balance = restoredBalance;
+      resolvedPortfolio.initialBalance = restoredInitial;
+
       const restoredProfile: UserProfile = {
         uid: effectiveUid,
         name: existingRemote.name || data.name,
@@ -88,12 +124,9 @@ export function useSignUp({
         subscriptionUpiMandateId: existingRemote.subscriptionUpiMandateId,
       };
 
+      applyPortfolioSnapshot(portfolioSetters, resolvedPortfolio, effectiveUid, isDarkMode);
       setUser(restoredProfile);
-      setBalance(restoredBalance);
-      setInitialBalance(restoredInitial);
-      if (existingRemote.usage) {
-        setUsageQuota(normalizeUsageQuota(existingRemote.usage));
-      }
+      setUsageQuota(normalizeUsageQuota(existingRemote.usage ?? null));
       try {
         localStorage.setItem('mypaper_user_v2', JSON.stringify(restoredProfile));
       } catch {}
@@ -111,6 +144,21 @@ export function useSignUp({
     const starterLimit = SUBSCRIPTION_PLANS.free.maxWalletLimit;
     const clampedCash = Math.min(starterLimit, Math.max(1000, data.initialCash || starterLimit));
     const now = Date.now();
+    const initialTx: WalletTransaction = {
+      id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+      type: 'DEPOSIT',
+      amount: clampedCash,
+      description: `Free Starter Account credit (${data.authProvider === 'google' ? 'Google' : 'Email OTP'} verified)`,
+      timestamp: now,
+    };
+    const starterWatchlist = {
+      ...DEFAULT_WATCHLISTS[0],
+      symbols: DEFAULT_WATCHLISTS[0].symbols.slice(0, SUBSCRIPTION_PLANS.free.maxStocksPerWatchlist),
+    };
+    const newSnapshot = createDefaultPortfolioSnapshot(clampedCash);
+    newSnapshot.watchlists = [starterWatchlist];
+    newSnapshot.walletTransactions = [initialTx];
+
     const profile: UserProfile = {
       uid: effectiveUid,
       name: data.name,
@@ -126,13 +174,10 @@ export function useSignUp({
       subscriptionUpdatedAt: now,
       subscriptionExpiresAt: null,
     };
+
+    applyPortfolioSnapshot(portfolioSetters, newSnapshot, effectiveUid, isDarkMode);
     setUser(profile);
-    setBalance(clampedCash);
-    setInitialBalance(clampedCash);
-    setWatchlists((prev) => {
-      const first = prev[0] || { id: 'default', name: 'My Watchlist', symbols: ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY'] };
-      return [{ ...first, symbols: first.symbols.slice(0, SUBSCRIPTION_PLANS.free.maxStocksPerWatchlist) }];
-    });
+    setUsageQuota(normalizeUsageQuota(null));
     setActiveWatchlistId('default');
     setIsAuthModalOpen(false);
     setShowLandingPage(false);
@@ -148,16 +193,13 @@ export function useSignUp({
       phone: profile.phone || '',
       avatar: profile.avatar || '',
       authProvider: profile.authProvider,
-      balance: clampedCash,
-      initialBalance: clampedCash,
       subscriptionTier: 'free',
       subscriptionBillingCycle: 'free',
       subscriptionStatus: 'active',
       subscriptionUpdatedAt: now,
       subscriptionExpiresAt: null,
-      usage: normalizeUsageQuota(null),
       createdAt: profile.createdAt,
-      updatedAt: now,
+      ...buildRemotePortfolioPayload(newSnapshot, normalizeUsageQuota(null)),
     }).catch((err) => console.warn('Firestore user write error:', err));
 
     setDoc(
@@ -177,14 +219,6 @@ export function useSignUp({
       { merge: true }
     ).catch(() => {});
 
-    const initialTx: WalletTransaction = {
-      id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-      type: 'DEPOSIT',
-      amount: clampedCash,
-      description: `Free Starter Account credit (${data.authProvider === 'google' ? 'Google' : 'Email OTP'} verified)`,
-      timestamp: now,
-    };
-    setWalletTransactions([initialTx]);
     addToast(
       `Welcome, ${data.name}!`,
       `Free Starter Account activated with ₹${clampedCash.toLocaleString('en-IN')} virtual capital (1L Automatic Monthly Reset). Upgrade anytime for ₹10L–₹50L & Pro tools.`,

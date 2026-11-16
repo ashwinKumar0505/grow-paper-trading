@@ -21,7 +21,11 @@ UserProfile,
 WalletTransaction,
 Watchlist
 } from '../../../types/market';
-import { USAGE_QUOTA_KEY } from '../utils/storageKeys';
+import {
+  DEFAULT_WATCHLISTS,
+  getUsageQuotaStorageKey,
+  getWalletTxsStorageKey,
+} from '../utils/storageKeys';
 
 export function useTradingState(){
   // Load initial state from localStorage if available
@@ -54,7 +58,7 @@ export function useTradingState(){
 
   const [usageQuota, setUsageQuota] = useState<UserUsageQuota>(() => {
     try {
-      const saved = localStorage.getItem(USAGE_QUOTA_KEY);
+      const saved = localStorage.getItem(getUsageQuotaStorageKey(user?.uid));
       return normalizeUsageQuota(saved ? JSON.parse(saved) : null);
     } catch {
       return normalizeUsageQuota(null);
@@ -128,7 +132,7 @@ export function useTradingState(){
   const [isWalletModalOpen, setIsWalletModalOpen] = useState<boolean>(false);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(() => {
     try {
-      const saved = localStorage.getItem('groww_paper_wallet_txs_v1');
+      const saved = localStorage.getItem(getWalletTxsStorageKey(user?.uid));
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -141,23 +145,9 @@ export function useTradingState(){
   const [orders, setOrders] = useState<Order[]>([]);
 
   // Watchlists
-  const [watchlists, setWatchlists] = useState<Watchlist[]>([
-    {
-      id: 'default',
-      name: 'My Watchlist',
-      symbols: ['RELIANCE', 'TCS', 'HDFCBANK', 'TATAMOTORS', 'ZOMATO', 'INFY'],
-    },
-    {
-      id: 'nifty-giants',
-      name: 'NIFTY Giants',
-      symbols: ['RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'BHARTIARTL', 'SBIN'],
-    },
-    {
-      id: 'high-growth',
-      name: 'High Beta / Tech',
-      symbols: ['ZOMATO', 'JIOFIN', 'TATAMOTORS', 'INFY', 'WIPRO', 'ADANIENT'],
-    },
-  ]);
+  const [watchlists, setWatchlists] = useState<Watchlist[]>(() =>
+    DEFAULT_WATCHLISTS.map((w) => ({ ...w, symbols: [...w.symbols] }))
+  );
   const [activeWatchlistId, setActiveWatchlistId] = useState<string>('default');
 
   // Modals & Navigation

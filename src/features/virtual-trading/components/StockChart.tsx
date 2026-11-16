@@ -83,6 +83,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
   const is1D = timeframe === '1D';
   const isLive = marketStatus.isOpen;
   const validPrice = stock.price > 0;
+  const areaGradId = `growwArea-${stock.symbol.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
   // Measure container width so SVG renders at crisp 1:1 pixel ratio
   useLayoutEffect(() => {
@@ -391,7 +392,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
             onPointerLeave={() => setHoverIdx(null)}
           >
             <defs>
-              <linearGradient id={`growwArea-${stock.symbol}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={areaGradId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={lineColor} stopOpacity={isTerminalMode ? 0.14 : 0.08} />
                 <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </linearGradient>
@@ -472,7 +473,7 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
             {/* Main Series: Line vs Candlesticks */}
             {chartType === 'line' ? (
               <>
-                <path d={areaPath} fill={`url(#growwArea-${stock.symbol})`} />
+                <path d={areaPath} fill={`url(#${areaGradId})`} />
                 <path
                   d={linePath}
                   fill="none"

@@ -8,14 +8,48 @@ import {
 } from '../../../lib/subscription';
 import type { UserProfile } from '../../../types/market';
 import {
+  applyPortfolioSnapshot,
+  createDefaultPortfolioSnapshot,
+  extractPortfolioFromRemote,
+  loadScopedPortfolioFromStorage,
+} from '../utils/portfolioSync';
+import {
   fetchUserProfileFromFirestore,
   resolveActiveTier,
 } from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'setUser' | 'setBalance' | 'setInitialBalance' | 'setUsageQuota' | 'user'>;
 
-export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsageQuota, user }: Options) {
-  // Listen to Firebase Auth state and sync with Firestore profile
+type Options = Pick<
+  TradingState,
+  | 'setUser'
+  | 'setBalance'
+  | 'setInitialBalance'
+  | 'setHoldings'
+  | 'setIntradayPositions'
+  | 'setOrders'
+  | 'setExecutedOrderKeys'
+  | 'setWatchlists'
+  | 'setWalletTransactions'
+  | 'setUsageQuota'
+  | 'user'
+  | 'isDarkMode'
+>;
+
+export function useAccountSync({
+  setUser,
+  setBalance,
+  setInitialBalance,
+  setHoldings,
+  setIntradayPositions,
+  setOrders,
+  setExecutedOrderKeys,
+  setWatchlists,
+  setWalletTransactions,
+  setUsageQuota,
+  user,
+  isDarkMode,
+}: Options) {
+  // Listen to Firebase Auth state and sync with Firestore profile & portfolio
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
@@ -25,14 +59,28 @@ export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsag
             const activeTier = resolveActiveTier(data);
             const tierMax = SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
             const restoredBalance =
-              typeof data.balance === 'number' ? Math.min(tierMax, data.balance) : undefined;
+              typeof data.balance === 'number'
+                ? Math.min(tierMax, data.balance)
+                : SUBSCRIPTION_PLANS[activeTier].defaultStartingCash;
+            const restoredInitial =
+              typeof data.initialBalance === 'number'
+                ? Math.min(tierMax, data.initialBalance)
+                : restoredBalance;
+
+            const remotePortfolio = extractPortfolioFromRemote(data, tierMax);
+            const localPortfolio = loadScopedPortfolioFromStorage(fbUser.uid);
+            const resolvedPortfolio =
+              remotePortfolio || localPortfolio || createDefaultPortfolioSnapshot(restoredBalance);
+            resolvedPortfolio.balance = restoredBalance;
+            resolvedPortfolio.initialBalance = restoredInitial;
+
             const restoredProfile: UserProfile = {
               uid: fbUser.uid,
               name: data.name || fbUser.displayName || 'Google Trader',
               email: data.email || fbUser.email || '',
               authProvider: (data.authProvider as UserProfile['authProvider']) || 'google',
               avatar: data.avatar || fbUser.photoURL || undefined,
-              initialCash: data.initialBalance || 100000,
+              initialCash: restoredInitial,
               createdAt: data.createdAt || Date.now(),
               subscriptionTier: activeTier,
               subscriptionBillingCycle: (data.subscriptionBillingCycle as BillingCycle) || 'free',
@@ -42,16 +90,26 @@ export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsag
               razorpayPaymentId: data.razorpayPaymentId || undefined,
               razorpayOrderId: data.razorpayOrderId || undefined,
             };
+
+            applyPortfolioSnapshot(
+              {
+                setBalance,
+                setInitialBalance,
+                setHoldings,
+                setIntradayPositions,
+                setOrders,
+                setExecutedOrderKeys,
+                setWatchlists,
+                setWalletTransactions,
+              },
+              resolvedPortfolio,
+              fbUser.uid,
+              isDarkMode
+            );
             setUser(restoredProfile);
             try {
               localStorage.setItem('mypaper_user_v2', JSON.stringify(restoredProfile));
             } catch {}
-            if (typeof restoredBalance === 'number') {
-              setBalance(restoredBalance);
-            }
-            if (typeof data.initialBalance === 'number') {
-              setInitialBalance(Math.min(tierMax, data.initialBalance));
-            }
             if (data.usage) {
               setUsageQuota(normalizeUsageQuota(data.usage));
             }
@@ -89,7 +147,8 @@ export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsag
               return {
                 ...prev,
                 subscriptionTier: data.subscriptionTier as SubscriptionTier,
-                subscriptionBillingCycle: (data.subscriptionBillingCycle as BillingCycle) || prev.subscriptionBillingCycle,
+                subscriptionBillingCycle:
+                  (data.subscriptionBillingCycle as BillingCycle) || prev.subscriptionBillingCycle,
                 subscriptionStatus: data.subscriptionStatus || 'active',
                 subscriptionUpdatedAt: data.subscriptionUpdatedAt || prev.subscriptionUpdatedAt,
                 subscriptionExpiresAt: data.subscriptionExpiresAt ?? prev.subscriptionExpiresAt,
@@ -108,5 +167,4 @@ export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsag
       if (unsub) unsub();
     };
   }, [user?.uid]);
-
 }

@@ -123,14 +123,28 @@ export function useMarketQuotes(setStocks: Dispatch<SetStateAction<Stock[]>>, se
       return () => clearInterval(statusTimer);
     }
 
-    // Only when market is live (09:15 AM - 03:30 PM IST Mon-Fri), refresh real base quotes every 30 seconds
+    // Only when market is live (09:15 AM - 03:30 PM IST Mon-Fri), refresh real base quotes every 5 seconds
     const liveInterval = setInterval(() => {
-      refreshLiveMarketData();
-    }, 30000);
+      if (typeof document === 'undefined' || !document.hidden) {
+        refreshLiveMarketData();
+      }
+    }, 5000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        refreshLiveMarketData();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
 
     return () => {
       clearInterval(statusTimer);
       clearInterval(liveInterval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
     };
   }, [refreshLiveMarketData, marketStatus.isOpen]);
 

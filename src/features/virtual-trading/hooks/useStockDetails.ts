@@ -38,23 +38,20 @@ export function useStockDetails() {
   const inWatchlist = isStockInWatchlist(stock.symbol);
   const brandBg = BRAND_COLORS[stock.symbol] || '#E31837';
 
-  // Ensure live price is refreshed for this stock without losing fundamentals/about
+  // Refresh live quote on mount and every 5 seconds while market is open
   useEffect(() => {
-    fetch(`/api/stocks/${stock.symbol}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && data.stock && data.stock.price > 0) {
-          setSelectedStock({
-            ...stock,
-            ...data.stock,
-            fundamentals: data.stock.fundamentals || stock.fundamentals,
-            about: data.stock.about || stock.about,
-          });
-        }
-      })
-      .catch(() => {});
+    setSelectedStock(stock);
+    if (!marketStatus.isOpen) return;
+
+    const timer = window.setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        setSelectedStock(stock);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stock.symbol]);
+  }, [stock.symbol, marketStatus.isOpen]);
 
   // Dynamic SEO Page Title for active stock
   useEffect(() => {

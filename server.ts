@@ -25,11 +25,12 @@ app.use(express.json());
 
 // In-memory cache to prevent Yahoo Finance rate limits
 const cache: { [key: string]: { data: any; timestamp: number } } = {};
-const CACHE_TTL_MS = 25000; // 25 seconds cache
+const CACHE_TTL_MS = 25000; // 25 seconds cache for charts
+const QUOTE_CACHE_TTL_MS = 4000; // 4 seconds cache for live quotes
 
-function getCached(key: string) {
+function getCached(key: string, ttlMs: number = CACHE_TTL_MS) {
   const item = cache[key];
-  if (item && Date.now() - item.timestamp < CACHE_TTL_MS) {
+  if (item && Date.now() - item.timestamp < ttlMs) {
     return item.data;
   }
   return null;
@@ -747,14 +748,19 @@ function buildDeterministicQuoteChart(symbol: string, timeframe: string, quote: 
 }
 
 // Helper: fetch single symbol chart data with timeout and graceful 404 handling
-async function fetchYahooChart(yahooSymbol: string, range = '1d', interval = '5m') {
+async function fetchYahooChart(
+  yahooSymbol: string,
+  range = '1d',
+  interval = '5m',
+  ttlMs: number = CACHE_TTL_MS
+) {
   let target = yahooSymbol;
   if (target === 'ZOMATO.NS' || target === 'ZOMATO') {
     target = 'SWIGGY.NS';
   }
 
   const cacheKey = `chart_${target}_${range}_${interval}`;
-  const cached = getCached(cacheKey);
+  const cached = getCached(cacheKey, ttlMs);
   if (cached) return cached;
 
   const controller = new AbortController();
@@ -800,7 +806,7 @@ app.get('/api/market/indices', async (_req: Request, res: Response) => {
   const now = Date.now();
   const marketStatus = getIndianMarketStatus(now);
   try {
-    const cached = getCached('all_indices');
+    const cached = getCached('all_indices', QUOTE_CACHE_TTL_MS);
     if (cached) {
       const annotated = cached.map((idx: any) => annotateIndexWithFreshness(idx, now));
       return res.json({
@@ -815,7 +821,7 @@ app.get('/api/market/indices', async (_req: Request, res: Response) => {
 
     const promises = Object.entries(INDICES_MAP).map(async ([symbol, { yahoo, name }]) => {
       try {
-        const result = await fetchYahooChart(yahoo, '1d', '15m');
+        const result = await fetchYahooChart(yahoo, '1d', '15m', QUOTE_CACHE_TTL_MS);
         if (result && result.meta) {
           const meta = result.meta;
           const regularMarketPrice = meta.regularMarketPrice || meta.chartPreviousClose || 0;
@@ -882,7 +888,7 @@ app.get('/api/stocks', async (_req: Request, res: Response) => {
   const now = Date.now();
   const marketStatus = getIndianMarketStatus(now);
   try {
-    const cached = getCached('all_stocks');
+    const cached = getCached('all_stocks', QUOTE_CACHE_TTL_MS);
     if (cached) {
       const annotated = cached.map((s: any) => annotateQuoteWithFreshness(s, now, true));
       return res.json({
@@ -899,7 +905,7 @@ app.get('/api/stocks', async (_req: Request, res: Response) => {
     const promises = symbols.map(async (sym) => {
       const yahooSymbol = SYMBOL_MAP[sym];
       try {
-        const result = await fetchYahooChart(yahooSymbol, '1d', '5m');
+        const result = await fetchYahooChart(yahooSymbol, '1d', '5m', QUOTE_CACHE_TTL_MS);
         if (result && result.meta) {
           const meta = result.meta;
           const price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
@@ -982,13 +988,17 @@ app.get('/api/stocks', async (_req: Request, res: Response) => {
 
 // 3. GET /api/stocks/:symbol - Single stock real-time quote
 app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
-  const symbol = req.params.symbol.toUpperCase();
-  const yahooSymbol = SYMBOL_MAP[symbol] || (symbol.includes('.') ? symbol : `${symbol}.NS`);
+  const symbol = decodeURIComponent(req.params.symbol).toUpperCase();
+  const indexInfo = INDICES_MAP[symbol];
+  const yahooSymbol =
+    SYMBOL_MAP[symbol] ||
+    indexInfo?.yahoo ||
+    (symbol.includes('.') ? symbol : `${symbol}.NS`);
   const now = Date.now();
   const marketStatus = getIndianMarketStatus(now);
 
   try {
-    const result = await fetchYahooChart(yahooSymbol, '1d', '5m');
+    const result = await fetchYahooChart(yahooSymbol, '1d', '5m', QUOTE_CACHE_TTL_MS);
     if (result && result.meta) {
       const meta = result.meta;
       const price = meta.regularMarketPrice || meta.chartPreviousClose || 0;
@@ -1011,9 +1021,9 @@ app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
       const stockData = annotateQuoteWithFreshness(
         {
           symbol,
-          name: meta.longName || meta.shortName || (FALLBACK_STOCKS[symbol]?.name || symbol),
-          sector: 'Equities',
-          exchange: 'NSE',
+          name: indexInfo?.name || meta.longName || meta.shortName || (FALLBACK_STOCKS[symbol]?.name || symbol),
+          sector: indexInfo ? 'Index' : 'Equities',
+          exchange: symbol === 'SENSEX' ? 'BSE' : 'NSE',
           price: Number(price.toFixed(2)),
           previousClose: Number(prevClose.toFixed(2)),
           change,
@@ -1054,8 +1064,31 @@ app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
     // Continue to verified last-available quote fallback
   }
 
-  // Graceful fallback to last-available verified stock quote
-  const fallback = lastKnownQuoteMap[symbol] || FALLBACK_STOCKS[symbol];
+  // Graceful fallback to last-available verified stock or index quote
+  const indexFallback = indexInfo ? lastKnownIndicesMap[symbol] || FALLBACK_INDICES[symbol] : null;
+  const fallback =
+    lastKnownQuoteMap[symbol] ||
+    FALLBACK_STOCKS[symbol] ||
+    (indexFallback
+      ? {
+          symbol,
+          name: indexFallback.name || symbol,
+          sector: 'Index',
+          exchange: symbol === 'SENSEX' ? 'BSE' : 'NSE',
+          price: indexFallback.value,
+          previousClose: Number((indexFallback.value - indexFallback.change).toFixed(2)),
+          change: indexFallback.change,
+          changePercent: indexFallback.changePercent,
+          open: indexFallback.value,
+          high: indexFallback.value,
+          low: indexFallback.value,
+          close: indexFallback.value,
+          volume: 0,
+          week52High: Number((indexFallback.value * 1.15).toFixed(2)),
+          week52Low: Number((indexFallback.value * 0.85).toFixed(2)),
+          sparkline: indexFallback.sparkline || [indexFallback.value],
+        }
+      : null);
   if (fallback) {
     return res.json({
       success: true,
@@ -1069,9 +1102,10 @@ app.get('/api/stocks/:symbol', async (req: Request, res: Response) => {
 
 // 4. GET /api/stocks/:symbol/chart - Real OHLC Historical Candles from market provider or cached quote
 app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
-  const symbol = req.params.symbol.toUpperCase();
+  const symbol = decodeURIComponent(req.params.symbol).toUpperCase();
   const timeframe = (req.query.timeframe as string) || '1D';
-  const yahooSymbol = SYMBOL_MAP[symbol] || `${symbol}.NS`;
+  const indexInfo = INDICES_MAP[symbol];
+  const yahooSymbol = SYMBOL_MAP[symbol] || indexInfo?.yahoo || `${symbol}.NS`;
   const chartKey = `${symbol}_${timeframe}`;
 
   let range = '1d';
@@ -1189,7 +1223,18 @@ app.get('/api/stocks/:symbol/chart', async (req: Request, res: Response) => {
     // Fallback to cached chart or deterministic last-available quote series
   }
 
-  const fallbackQuote = lastKnownQuoteMap[symbol] || FALLBACK_STOCKS[symbol];
+  const indexFallback = INDICES_MAP[symbol]
+    ? lastKnownIndicesMap[symbol] || FALLBACK_INDICES[symbol]
+    : null;
+  const fallbackQuote =
+    lastKnownQuoteMap[symbol] ||
+    FALLBACK_STOCKS[symbol] ||
+    (indexFallback
+      ? {
+          price: indexFallback.value,
+          previousClose: Number((indexFallback.value - indexFallback.change).toFixed(2)),
+        }
+      : null);
   if (!fallbackQuote) {
     return res.status(404).json({
       success: false,

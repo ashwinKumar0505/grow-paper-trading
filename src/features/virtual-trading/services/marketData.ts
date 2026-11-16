@@ -3,7 +3,7 @@ import type { ChartPoint,IndexData,QuoteFreshness,Stock,Timeframe } from '../../
   // Fetch real chart data for given symbol & timeframe
 export async function fetchRealChart(symbol: string, timeframe: Timeframe): Promise<ChartPoint[] | null> {
     try {
-      const res = await fetch(`/api/stocks/${symbol}/chart?timeframe=${timeframe}`);
+      const res = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/chart?timeframe=${encodeURIComponent(timeframe)}`);
       if (!res.ok) return null;
       const data = await res.json();
       if (data.success && Array.isArray(data.points) && data.points.length > 0) {

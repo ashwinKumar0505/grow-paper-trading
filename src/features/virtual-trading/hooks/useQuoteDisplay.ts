@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'setStocks' | 'stocks' | 'selectedStock' | 'setSelectedStockState'> & Pick<TradingContextType, 'marketStatus'>;
+type Options = Pick<TradingState, 'setStocks' | 'stocks' | 'indices' | 'selectedStock' | 'setSelectedStockState'> & Pick<TradingContextType, 'marketStatus'>;
 
-export function useQuoteDisplay({ marketStatus, setStocks, stocks, selectedStock, setSelectedStockState }: Options) {
+export function useQuoteDisplay({ marketStatus, setStocks, stocks, indices, selectedStock, setSelectedStockState }: Options) {
   // Clear tick flash animations after 800ms or when market is closed (no artificial price generation)
   useEffect(() => {
     if (!marketStatus.isOpen) {
@@ -30,12 +30,28 @@ export function useQuoteDisplay({ marketStatus, setStocks, stocks, selectedStock
     return () => clearTimeout(flashClearTimer);
   }, [stocks, marketStatus.isOpen]);
 
-  // Sync selectedStock with updated stock list
+  // Sync selectedStock with updated stock list or live indices
   useEffect(() => {
+    if (selectedStock.sector === 'Index') {
+      const idx = indices.find((i) => i.symbol.toUpperCase() === selectedStock.symbol.toUpperCase());
+      if (idx && idx.value !== selectedStock.price) {
+        setSelectedStockState((prev) => ({
+          ...prev,
+          price: idx.value,
+          close: idx.value,
+          change: idx.change,
+          changePercent: idx.changePercent,
+          previousClose: Number((idx.value - idx.change).toFixed(2)),
+          sparkline: idx.sparkline?.length ? idx.sparkline : prev.sparkline,
+        }));
+      }
+      return;
+    }
+
     const current = stocks.find((s) => s.symbol === selectedStock.symbol);
     if (current && (current.price !== selectedStock.price || current.tickDirection !== selectedStock.tickDirection || current.freshness !== selectedStock.freshness)) {
       setSelectedStockState(current);
     }
-  }, [stocks, selectedStock.symbol, selectedStock.price, selectedStock.tickDirection, selectedStock.freshness]);
+  }, [stocks, indices, selectedStock.symbol, selectedStock.sector, selectedStock.price, selectedStock.tickDirection, selectedStock.freshness]);
 
 }

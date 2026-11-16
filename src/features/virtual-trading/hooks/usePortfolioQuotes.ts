@@ -27,9 +27,12 @@ export function usePortfolioQuotes(holdings: Holding[], intradayPositions: Intra
       } finally { running = false; }
     };
     void refresh();
-    // Retry missing quotes even outside market hours; a failed request is not
-    // evidence that an owned instrument is invalid.
-    const timer = setInterval(() => void refresh(), 30000);
+    // Retry missing quotes even outside market hours; refresh every 10s
+    const timer = setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        void refresh();
+      }
+    }, 10000);
     return () => { controller.abort(); clearInterval(timer); };
   }, [portfolioSymbolsKey]);
 

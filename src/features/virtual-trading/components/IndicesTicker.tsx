@@ -9,6 +9,7 @@ export const IndicesTicker: React.FC = () => {
     refreshLiveMarketData,
     marketStatus,
     marketDataFreshness,
+    selectStockBySymbol,
   } = useTrading();
 
   const freshnessBadge = (() => {
@@ -78,11 +79,14 @@ export const IndicesTicker: React.FC = () => {
           {indices.map((idx) => {
             const isPositive = idx.change >= 0;
             return (
-              <div
+              <button
                 key={idx.symbol}
-                className="flex items-center gap-2 group cursor-default select-none"
+                type="button"
+                onClick={() => void selectStockBySymbol(idx.symbol)}
+                title={`View ${idx.symbol} chart`}
+                className="flex items-center gap-2 group cursor-pointer select-none px-2 py-1 -my-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#232732] transition-colors"
               >
-                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                <span className="font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#00D09C] transition-colors">
                   {idx.symbol}
                 </span>
                 <span className="font-mono tabular-nums font-bold text-gray-900 dark:text-white">
@@ -100,7 +104,7 @@ export const IndicesTicker: React.FC = () => {
                   {idx.change.toFixed(2)} ({isPositive ? '+' : ''}
                   {idx.changePercent.toFixed(2)}%)
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>

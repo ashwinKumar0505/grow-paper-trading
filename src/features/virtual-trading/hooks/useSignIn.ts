@@ -7,6 +7,13 @@ import {
 } from '../../../lib/subscription';
 import { UserProfile } from '../../../types/market';
 import {
+  applyPortfolioSnapshot,
+  buildRemotePortfolioPayload,
+  createDefaultPortfolioSnapshot,
+  extractPortfolioFromRemote,
+  loadScopedPortfolioFromStorage,
+} from '../utils/portfolioSync';
+import {
   buildEmailUid,
   fetchUserProfileFromFirestore,
   normalizeEmail,
@@ -17,21 +24,39 @@ import type { TradingState } from './useTradingState';
 
 type Options = Pick<
   TradingState,
-  'balance' | 'setUser' | 'setBalance' | 'setInitialBalance' | 'setUsageQuota' | 'setIsAuthModalOpen' | 'setShowLandingPage'
+  | 'setUser'
+  | 'setBalance'
+  | 'setInitialBalance'
+  | 'setHoldings'
+  | 'setIntradayPositions'
+  | 'setOrders'
+  | 'setExecutedOrderKeys'
+  | 'setWatchlists'
+  | 'setWalletTransactions'
+  | 'setUsageQuota'
+  | 'setIsAuthModalOpen'
+  | 'setShowLandingPage'
+  | 'isDarkMode'
 > &
   Pick<TradingContextType, 'addToast'>;
 
 export function useSignIn({
-  balance,
   setUser,
   setBalance,
   setInitialBalance,
+  setHoldings,
+  setIntradayPositions,
+  setOrders,
+  setExecutedOrderKeys,
+  setWatchlists,
+  setWalletTransactions,
   setUsageQuota,
   setIsAuthModalOpen,
   setShowLandingPage,
+  isDarkMode,
   addToast,
 }: Options) {
-  // Sign In Existing User with Firebase (awaits Firestore so paid plans are restored immediately)
+  // Sign In Existing User with Firebase (awaits Firestore so paid plans & holdings are restored immediately)
   const signInUser = async (data: {
     uid?: string;
     email: string;
@@ -43,7 +68,12 @@ export function useSignIn({
     let existingProfile: UserProfile | null = null;
     try {
       const saved = localStorage.getItem('mypaper_user_v2') || localStorage.getItem('groww_paper_user_v1');
-      if (saved) existingProfile = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved) as UserProfile;
+        if (parsed.email && normalizeEmail(parsed.email) === normalizedEmail) {
+          existingProfile = parsed;
+        }
+      }
     } catch {}
 
     const effectiveUid = data.uid || existingProfile?.uid || buildEmailUid(normalizedEmail);
@@ -53,17 +83,32 @@ export function useSignIn({
       ? resolveActiveTier(remote)
       : existingProfile?.subscriptionTier || 'free';
     const tierMaxCash = SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
+    const defaultCash = SUBSCRIPTION_PLANS[activeTier].defaultStartingCash;
     const userName = data.name || remote?.name || existingProfile?.name || normalizedEmail.split('@')[0];
     const userPhone = remote?.phone || existingProfile?.phone;
+
+    const remotePortfolio = extractPortfolioFromRemote(remote, tierMaxCash);
+    const localPortfolio = loadScopedPortfolioFromStorage(effectiveUid);
+    const resolvedPortfolio =
+      remotePortfolio ||
+      localPortfolio ||
+      createDefaultPortfolioSnapshot(
+        typeof remote?.balance === 'number'
+          ? Math.min(tierMaxCash, remote.balance)
+          : defaultCash
+      );
 
     const restoredBalance =
       typeof remote?.balance === 'number'
         ? Math.min(tierMaxCash, remote.balance)
-        : Math.min(tierMaxCash, existingProfile?.initialCash || balance || tierMaxCash);
+        : Math.min(tierMaxCash, resolvedPortfolio.balance);
     const restoredInitialCash =
       typeof remote?.initialBalance === 'number'
         ? Math.min(tierMaxCash, remote.initialBalance)
-        : restoredBalance;
+        : Math.min(tierMaxCash, resolvedPortfolio.initialBalance);
+
+    resolvedPortfolio.balance = restoredBalance;
+    resolvedPortfolio.initialBalance = restoredInitialCash;
 
     const profile: UserProfile = {
       uid: effectiveUid,
@@ -86,12 +131,23 @@ export function useSignIn({
       subscriptionUpiMandateId: remote?.subscriptionUpiMandateId || existingProfile?.subscriptionUpiMandateId,
     };
 
+    applyPortfolioSnapshot(
+      {
+        setBalance,
+        setInitialBalance,
+        setHoldings,
+        setIntradayPositions,
+        setOrders,
+        setExecutedOrderKeys,
+        setWatchlists,
+        setWalletTransactions,
+      },
+      resolvedPortfolio,
+      effectiveUid,
+      isDarkMode
+    );
     setUser(profile);
-    setBalance(restoredBalance);
-    setInitialBalance(restoredInitialCash);
-    if (remote?.usage) {
-      setUsageQuota(normalizeUsageQuota(remote.usage));
-    }
+    setUsageQuota(normalizeUsageQuota(remote?.usage ?? null));
 
     try {
       localStorage.setItem('mypaper_user_v2', JSON.stringify(profile));
@@ -108,9 +164,13 @@ export function useSignIn({
       subscriptionStatus: profile.subscriptionStatus,
       subscriptionUpdatedAt: profile.subscriptionUpdatedAt,
       subscriptionExpiresAt: profile.subscriptionExpiresAt,
-      balance: restoredBalance,
-      initialBalance: restoredInitialCash,
-      updatedAt: Date.now(),
+      ...(!remotePortfolio && localPortfolio
+        ? buildRemotePortfolioPayload(resolvedPortfolio)
+        : {
+            balance: restoredBalance,
+            initialBalance: restoredInitialCash,
+            updatedAt: Date.now(),
+          }),
     }).catch((e) => console.warn('Firebase sync warning:', e));
 
     setIsAuthModalOpen(false);
