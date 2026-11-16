@@ -16,36 +16,36 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
             </h2>
           </div>
           <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
-            Scan Nifty 500 stocks for actionable technical setups, practice risk-free orders on the Nifty Lens virtual desk, and master chart patterns through interactive lessons and quizzes.
+            Practice risk-free orders on the Nifty Lens virtual desk, scan Nifty 500 stocks for actionable technical setups, and master chart patterns through interactive lessons and quizzes.
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* App 1: Stock Screener & Stock Analysis */}
+          {/* App 1: Paper Trading Desk */}
           <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-[#1d3a2d] bg-gradient-to-br from-[#0f2a1f] via-[#123124] to-[#0c1d16] p-6 text-white sm:p-8 shadow-lg">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#00D09C] text-[#04261c]">
-                  <Radar className="h-6 w-6" />
+                  <ChartCandlestick className="h-6 w-6" />
                 </div>
                 <span className="rounded-full border border-[#00D09C]/30 bg-[#00D09C]/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#00D09C]">
-                  01 · Stock Screener
+                  01 · Paper Trading
                 </span>
               </div>
 
               <h3 className="mt-6 text-2xl font-extrabold text-white">
-                Quantitative Stock Screener
+                Realistic NSE Paper Trading
               </h3>
               <p className="mt-3 text-sm leading-6 text-[#9ab0a5]">
-                Screen Nifty 500 equities using rule-based quantitative insights, historical backtested strategies, and technical chart analysis to discover Swing & Intraday technical setups.
+                Execute simulated Delivery (CNC) and 5x Intraday (MIS) trades with real NSE quotes, realistic statutory charges, and up to ₹10,00,000 virtual capital.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-[#d6e6de]">
                 {[
-                  'Quantitative Stock Analysis',
-                  'Backtested Pattern Screener',
-                  '15-Min Intraday Setups',
-                  'Technical Pivot, Resistance & Risk Levels',
+                  'Up to ₹10L Virtual Cash',
+                  'Delivery & 5x Intraday MIS',
+                  'Interactive Live Charts',
+                  'Realistic Brokerage & Taxes',
                 ].map((label) => (
                   <span key={label} className="rounded-lg border border-[#1d3a2d] bg-[#12281f] px-3 py-1.5 font-medium">
                     {label}
@@ -55,49 +55,44 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
             </div>
 
             <div className="mt-7 pt-5 border-t border-[#1d3a2d] space-y-3">
-              <AppLink
-                href="/screener"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00D09C] px-5 py-3 text-sm font-extrabold text-[#04261c] hover:bg-[#00b386] transition-colors"
+              <button
+                onClick={onStartTrading}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00D09C] px-5 py-3 text-sm font-extrabold text-[#04261c] hover:bg-[#00b386] transition-colors cursor-pointer"
               >
-                <span>Open Stock Screener</span>
+                <span>Launch Paper Trading</span>
                 <ArrowRight className="h-4 w-4" />
-              </AppLink>
-              <div className="flex items-center justify-between text-xs font-semibold text-[#9ab0a5] px-1">
-                <AppLink href="/screener/intraday" className="hover:text-[#00D09C] inline-flex items-center gap-1">
-                  <Zap className="h-3.5 w-3.5 text-[#00D09C]" /> Intraday Scanner
-                </AppLink>
-                <AppLink href="/screener/analysis" className="hover:text-[#00D09C] inline-flex items-center gap-1">
-                  <Search className="h-3.5 w-3.5 text-[#00D09C]" /> Stock Analysis
-                </AppLink>
-              </div>
+              </button>
+              <p className="text-center text-xs text-[#9ab0a5]">
+                Includes Market & Limit orders, AMO, and 3:20 PM Intraday square-off
+              </p>
             </div>
           </div>
 
-          {/* App 2: Paper Trading Desk */}
+          {/* App 2: Stock Screener & Stock Analysis */}
           <div className="flex flex-col justify-between rounded-3xl border border-emerald-900/15 bg-[#F6F9F7] p-6 dark:border-[#20332a] dark:bg-[#111c17] sm:p-8 shadow-sm">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#00B386]/15 text-[#00B386] dark:bg-[#00D09C]/15 dark:text-[#00D09C]">
-                  <ChartCandlestick className="h-6 w-6" />
+                  <Radar className="h-6 w-6" />
                 </div>
                 <span className="rounded-full border border-[#00B386]/30 bg-[#00B386]/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-[#008f6b] dark:text-[#00D09C]">
-                  02 · Paper Trading
+                  02 · Stock Screener
                 </span>
               </div>
 
               <h3 className="mt-6 text-2xl font-extrabold text-slate-900 dark:text-white">
-                Realistic NSE Paper Trading
+                Quantitative Stock Screener
               </h3>
               <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
-                Execute simulated Delivery (CNC) and 5x Intraday (MIS) trades with real NSE quotes, realistic statutory charges, and up to ₹10,00,000 virtual capital.
+                Screen Nifty 500 equities using rule-based quantitative insights, historical backtested strategies, and technical chart analysis to discover Swing & Intraday technical setups.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-700 dark:text-[#d6e6de]">
                 {[
-                  'Up to ₹10L Virtual Cash',
-                  'Delivery & 5x Intraday MIS',
-                  'Interactive Live Charts',
-                  'Realistic Brokerage & Taxes',
+                  'Quantitative Stock Analysis',
+                  'Backtested Pattern Screener',
+                  '15-Min Intraday Setups',
+                  'Technical Pivot, Resistance & Risk Levels',
                 ].map((label) => (
                   <span
                     key={label}
@@ -110,16 +105,21 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
             </div>
 
             <div className="mt-7 pt-5 border-t border-emerald-900/10 dark:border-[#20332a] space-y-3">
-              <button
-                onClick={onStartTrading}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00B386] hover:bg-[#009a73] dark:bg-[#00D09C] dark:hover:bg-[#00b386] px-5 py-3 text-sm font-extrabold text-white dark:text-[#04261c] transition-colors cursor-pointer"
+              <AppLink
+                href="/screener"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#00B386] hover:bg-[#009a73] dark:bg-[#00D09C] dark:hover:bg-[#00b386] px-5 py-3 text-sm font-extrabold text-white dark:text-[#04261c] transition-colors"
               >
-                <span>Launch Paper Trading</span>
+                <span>Open Stock Screener</span>
                 <ArrowRight className="h-4 w-4" />
-              </button>
-              <p className="text-center text-xs text-slate-500 dark:text-[#7f9c8e]">
-                Includes Market & Limit orders, AMO, and 3:20 PM Intraday square-off
-              </p>
+              </AppLink>
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-[#9ab0a5] px-1">
+                <AppLink href="/screener/intraday" className="hover:text-[#00B386] dark:hover:text-[#00D09C] inline-flex items-center gap-1">
+                  <Zap className="h-3.5 w-3.5 text-[#00B386] dark:text-[#00D09C]" /> Intraday Scanner
+                </AppLink>
+                <AppLink href="/screener/analysis" className="hover:text-[#00B386] dark:hover:text-[#00D09C] inline-flex items-center gap-1">
+                  <Search className="h-3.5 w-3.5 text-[#00B386] dark:text-[#00D09C]" /> Stock Analysis
+                </AppLink>
+              </div>
             </div>
           </div>
 

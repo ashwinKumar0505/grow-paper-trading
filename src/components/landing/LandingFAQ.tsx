@@ -16,7 +16,7 @@ return (
               Frequently Asked Questions
             </h2>
             <p className="text-xs sm:text-sm text-[#5B7066] dark:text-[#9AB0A5]">
-              Everything you need to know about Nifty Lens AI Stock Screener, Virtual Trading, and Pattern Learning.
+              Everything you need to know about Nifty Lens AI Stock Screener, Paper Trading, and Pattern Learning.
             </p>
           </div>
 

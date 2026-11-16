@@ -49,7 +49,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">1. Information We Collect</h2>
             <p>
-              We collect only the information necessary to operate your account and sync your virtual trading workspace:
+              We collect only the information necessary to operate your account and sync your paper trading workspace:
             </p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Account Details:</strong> Name, email address, and authentication identifiers provided when signing in via Firebase Authentication.</li>

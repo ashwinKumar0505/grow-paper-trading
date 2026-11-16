@@ -249,7 +249,7 @@ export interface PricingFaqItem {
 
 export const PRICING_FAQS: PricingFaqItem[] = [
   {
-    q: 'How does virtual trading work on Nifty Lens?',
+    q: 'How does paper trading work on Nifty Lens?',
     a: 'You place simulated buy and sell orders on NSE stocks using virtual capital. No real money is invested, and simulated profits or losses cannot be withdrawn. The order types and products available depend on your plan.',
   },
   {

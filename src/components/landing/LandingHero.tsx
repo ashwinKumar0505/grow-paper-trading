@@ -17,27 +17,28 @@ return (
           <div className="w-full lg:w-[45%] space-y-6 text-left">
             <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-[#00B386]/30 bg-[#00B386]/10 dark:border-[#00D09C]/30 dark:bg-[#00D09C]/10 px-3.5 py-1.5 text-xs font-extrabold text-[#008F6B] dark:text-[#00D09C]">
               <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
+              <span>Paper Trading</span>
+              <span>·</span>
               <span>AI Stock Screener</span>
               <span>·</span>
               <span>Backtested Strategies</span>
               <span>·</span>
-              <span>Virtual Trading</span>
-              <span>·</span>
               <span>Interactive Learning</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black text-[#15241D] dark:text-white tracking-tight leading-[1.08]">
-              Backtested Quantitative Screeners.{' '}
-              <span className="text-[#00B386] dark:text-[#00D09C]">
-                Chart Analysis &amp; Virtual Practice.
+            <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black  text-[#00B386] dark:text-[#00D09C]  tracking-tight leading-[1.08]">
+              Real time Paper Trading.{' '}
+              <span className="text-[#15241D] dark:text-white">
+                Backtested Screeners &amp; Chart Analysis.
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed max-w-2xl">
-              Discover high-potential Indian stocks with <strong>AI-powered insights</strong>,{' '}
+              Practice intraday and delivery trades risk-free with{' '}
+              <strong>virtual capital and live NSE quotes</strong>. Discover high-potential Indian
+              stocks with <strong>AI-powered insights</strong>,{' '}
               <strong>advanced chart analysis</strong>, and{' '}
-              <strong>multiple backtested trading strategies</strong>. Practice with virtual money and
-              master trading through interactive learning.
+              <strong>backtested trading strategies</strong>.
             </p>
 
             {/* Primary 3-App Action Buttons */}
@@ -73,20 +74,20 @@ return (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
-                  <Radar className="w-4 h-4 shrink-0" />
-                  <span>1. Stock Screener &amp; Backtests</span>
+                  <ChartCandlestick className="w-4 h-4 shrink-0" />
+                  <span>1. Paper Trading</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Backtested swing &amp; intraday strategies, chart analysis &amp; AI insights.
+                  Practice intraday &amp; swing trades risk-free with virtual capital.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
-                  <ChartCandlestick className="w-4 h-4 shrink-0" />
-                  <span>2. Virtual Trading</span>
+                  <Radar className="w-4 h-4 shrink-0" />
+                  <span>2. Stock Screener &amp; Backtests</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Practice intraday &amp; swing trades risk-free with virtual capital.
+                  Backtested swing &amp; intraday strategies, chart analysis &amp; AI insights.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
@@ -105,7 +106,7 @@ return (
           <div className="w-full lg:w-[55%] flex items-center justify-center">
             <FloatingIllustration
               src="/images/landing/hero-trading.png"
-              alt="Nifty Lens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Virtual Trading portfolio, and Interactive Learning"
+              alt="Nifty Lens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Paper Trading portfolio, and Interactive Learning"
               loading="eager"
               fetchPriority="high"
               glowVariant="emerald-blue"

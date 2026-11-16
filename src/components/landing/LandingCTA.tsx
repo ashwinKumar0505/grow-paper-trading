@@ -17,7 +17,7 @@ return (
                 Ready to scan stocks, practice trades, and master charts?
               </h3>
               <p className="text-xs sm:text-sm text-[#9AB0A5] leading-relaxed">
-                Start with the AI-Powered Nifty 500 Stock Screener, practice risk-free on the Virtual Trading Desk, or explore 28+ setups in the Chart Pattern Library.
+                Start with the AI-Powered Nifty 500 Stock Screener, practice risk-free on the Paper Trading Desk, or explore 28+ setups in the Chart Pattern Library.
               </p>
             </div>
 
@@ -36,7 +36,7 @@ return (
                 className="px-6 py-3.5 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/15 border border-white/20 text-white transition-all inline-flex items-center gap-2 cursor-pointer"
               >
                 <ChartCandlestick className="w-4 h-4 text-[#00D09C]" />
-                <span>Launch Virtual Trading</span>
+                <span>Launch Paper Trading</span>
               </button>
               <AppLink
                 href="/learn"

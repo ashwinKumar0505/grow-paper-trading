@@ -17,11 +17,11 @@ return (
       >
         <div className="w-full max-w-[1880px] mx-auto space-y-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            {/* Left on Desktop: Floating 3D Virtual Trading Illustration */}
+            {/* Left on Desktop: Floating 3D Paper Trading Illustration */}
             <div className="lg:col-span-6 order-2 lg:order-1">
               <FloatingIllustration
                 src="/images/landing/virtual-trading.png"
-                alt="Nifty Lens Virtual Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
+                alt="Nifty Lens Paper Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
                 loading="lazy"
                 glowVariant="emerald"
                 delayMs={400}
@@ -34,7 +34,7 @@ return (
             <div className="lg:col-span-6 space-y-6 text-left order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
                 <ChartCandlestick className="w-3.5 h-3.5" />
-                <span>Virtual Trading Desk · Risk-Free Practice</span>
+                <span>Paper Trading Desk · Risk-Free Practice</span>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
@@ -97,7 +97,7 @@ return (
                   onClick={handleGetStarted}
                   className="px-6 py-3.5 rounded-xl font-extrabold text-sm text-[#04261C] bg-[#00D09C] hover:bg-[#00B386] shadow-sm transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Open Virtual Trading Desk</span>
+                  <span>Open Paper Trading Desk</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <span className="text-xs text-[#5B7066] dark:text-[#9AB0A5]">
@@ -112,7 +112,7 @@ return (
             <div className="flex flex-wrap items-center gap-6">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#5B7066] dark:text-[#9AB0A5]">
-                  Virtual Trading Sandbox
+                  Paper Trading Sandbox
                 </span>
                 <div className="font-mono tabular-nums text-xl sm:text-2xl font-black text-[#15241D] dark:text-white mt-0.5">
                   ₹1,00,000 – ₹10,00,000

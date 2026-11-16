@@ -83,7 +83,7 @@ export default function Sidebar({ marketStatus, open, onClose }) {
               <ChartCandlestick size={18} />
             </span>
             <span className="sb-link-text">
-              <span>Virtual trading</span>
+              <span>Paper trading</span>
               <small>Practice with ₹10L paper cash</small>
             </span>
           </AppLink>

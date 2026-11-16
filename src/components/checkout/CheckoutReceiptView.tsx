@@ -40,7 +40,7 @@ export const CheckoutReceiptView: React.FC<CheckoutReceiptViewProps> = ({
         </h3>
         <p className="text-xs text-[#9AB0A5]">
           {isTopUp
-            ? '₹1,00,000 virtual trading capital has been added to your paper wallet.'
+            ? '₹1,00,000 paper trading capital has been added to your paper wallet.'
             : 'Your plan features and virtual capital limits are active immediately.'}
         </p>
       </div>

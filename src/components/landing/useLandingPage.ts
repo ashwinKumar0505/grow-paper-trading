@@ -46,7 +46,7 @@ export function useLandingPage() {
   const faqs = [
     {
       q: 'What are the 3 tools included inside Nifty Lens?',
-      a: 'Nifty Lens brings together three connected tools in one place: (1) AI-Powered Stock Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 using chart analysis and backtested strategies, (2) Virtual Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹10,00,000 in virtual capital, and (3) Interactive Learning & Guess the Chart to master 28+ candlestick patterns and replay market movements.',
+      a: 'Nifty Lens brings together three connected tools in one place: (1) Paper Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹10,00,000 in virtual capital, (2) AI-Powered Stock Screener & Stock Analysis to find bullish Swing and Intraday stocks across Nifty 500 using chart analysis and backtested strategies, and (3) Interactive Learning & Guess the Chart to master 28+ candlestick patterns and replay market movements.',
     },
     {
       q: 'How does the AI-Powered Stock Screener evaluate stocks?',
@@ -57,7 +57,7 @@ export function useLandingPage() {
       a: 'Type any Nifty 500 stock (like Reliance, TCS, or HDFC Bank) to see a confidence-based verdict (BUY, WAIT, or AVOID), chart structure with support/resistance levels, company revenue & profit, historical strategy backtests (2-year on Beginner, up to 5-year on Advanced), and an AI insights layer.',
     },
     {
-      q: 'How does the Virtual Trading Desk work?',
+      q: 'How does the Paper Trading Desk work?',
       a: 'Practice risk-free with ₹1,00,000 (scalable up to ₹10,00,000) in virtual capital. Place Delivery (CNC) or 5x leveraged Intraday (MIS) Market and Limit orders on real NSE stock prices, see realistic brokerage and statutory tax breakdowns, and track your live portfolio performance without risking real money.',
     },
     {

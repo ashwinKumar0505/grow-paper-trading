@@ -55,7 +55,7 @@ export default function TradingWorkspace() {
               Nifty Lens
             </button>
             <span>·</span>
-            <span>Stock Screener, Virtual Trading & Chart Pattern Lab</span>
+            <span>Stock Screener, Paper Trading & Chart Pattern Lab</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] font-medium">
             <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">

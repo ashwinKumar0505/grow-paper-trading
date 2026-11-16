@@ -19,7 +19,7 @@ export const AuthGateIllustration: React.FC = () => {
         viewBox="0 0 360 230"
         className="w-full h-auto rounded-xl bg-[#091510] border border-[#1D3A2D] p-3"
         role="img"
-        aria-label="Nifty Lens Screener, Virtual Trading and Chart Analysis Illustration"
+        aria-label="Nifty Lens Screener, Paper Trading and Chart Analysis Illustration"
       >
         <defs>
           <linearGradient id="authAreaGrad" x1="0" y1="0" x2="0" y2="1">

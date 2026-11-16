@@ -24,7 +24,7 @@ return (
                 Stock Analysis
               </AppLink>
               <AppLink href="/trade" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
-                Virtual Trading
+                Paper Trading
               </AppLink>
               <AppLink href="/learn" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
                 Learn Patterns
@@ -45,7 +45,7 @@ return (
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-emerald-900/10 dark:border-[#20332A] text-[11px]">
-            <div>© {new Date().getFullYear()} Nifty Lens. NSE Stock Screener, Virtual Trading &amp; Chart Pattern Studio.</div>
+            <div>© {new Date().getFullYear()} Nifty Lens. NSE Stock Screener, Paper Trading &amp; Chart Pattern Studio.</div>
             <div className="flex flex-wrap items-center justify-center gap-4 font-semibold">
               <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
                 Terms of Service

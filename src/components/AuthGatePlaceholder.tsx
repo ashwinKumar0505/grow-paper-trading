@@ -24,8 +24,8 @@ const FEATURE_COPY = {
       'Unlock our Nifty 500 Swing & Intraday Screener powered by historical backtested patterns, multi-indicator chart analysis, and technical pivot, resistance, and risk-level projections.',
   },
   trade: {
-    eyebrow: 'NIFTYLENS VIRTUAL TRADING PLATFORM',
-    title: 'Sign in to access the Virtual Trading Desk',
+    eyebrow: 'NIFTYLENS PAPER TRADING PLATFORM',
+    title: 'Sign in to access the Paper Trading Desk',
     description:
       'Practice your technical strategies risk-free with up to ₹10,00,000 in virtual capital, Delivery (CNC) and 5x Intraday (MIS) orders, and live NSE session charts.',
   },
@@ -78,7 +78,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
               <div className="rounded-2xl border border-[#E2EAE6] dark:border-[#20332A] bg-[#F6F9F7] dark:bg-[#16241E] p-3.5 space-y-1">
                 <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
                   <ChartCandlestick className="w-4 h-4 shrink-0" />
-                  <span>Virtual Trading</span>
+                  <span>Paper Trading</span>
                 </div>
                 <p className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5] leading-snug">
                   Up to ₹10L virtual cash for Delivery & 5x Intraday practice.

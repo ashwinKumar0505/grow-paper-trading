@@ -120,7 +120,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             className="w-full px-3 py-2 text-xs font-semibold text-[#15241D] dark:text-[#E9F2EE] hover:bg-[#EEF5F1] dark:hover:bg-[#16241E] rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
           >
             <ChartCandlestick className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
-            <span>Virtual Trading Desk</span>
+            <span>Paper Trading Desk</span>
           </button>
 
           <button
