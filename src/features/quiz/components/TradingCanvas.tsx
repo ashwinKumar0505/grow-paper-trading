@@ -16,6 +16,7 @@ interface TradingCanvasProps {
   chartType?: ChartType;
   onToggleChartType?: (type: ChartType) => void;
   hideChartTypeToggle?: boolean;
+  readOnly?: boolean;
 }
 
 export const TradingCanvas: React.FC<TradingCanvasProps> = ({
@@ -31,6 +32,7 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
   chartType: externalChartType,
   onToggleChartType,
   hideChartTypeToggle = false,
+  readOnly = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,6 +95,7 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
 
   // Wheel zoom handler on the canvas element
   useEffect(() => {
+    if (readOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -111,7 +114,7 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
     return () => {
       canvas.removeEventListener('wheel', handleWheel);
     };
-  }, []);
+  }, [readOnly]);
 
   // Main rendering loop
   const render = useCallback(() => {
@@ -941,41 +944,43 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
           )}
 
           {/* Zoom & Pan Controls */}
-          <div className="flex items-center gap-0.5 bg-[#121824]/95 p-1 rounded-lg border border-slate-800 shadow-md backdrop-blur-md">
-            <button
-              onClick={handleZoomIn}
-              title="Zoom In (+ or scroll wheel up)"
-              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <span
-              className="text-[11px] font-mono text-slate-300 px-1 font-semibold min-w-[34px] text-center"
-              title="Current Zoom Level"
-            >
-              {zoomLevel.toFixed(1)}x
-            </span>
-            <button
-              onClick={handleZoomOut}
-              title="Zoom Out (- or scroll wheel down)"
-              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <div className="w-px h-3.5 bg-slate-800 mx-0.5" />
-            <button
-              onClick={handleResetZoom}
-              title="Reset Zoom & Pan View (or double-click chart)"
-              className={`p-1.5 rounded transition-colors cursor-pointer flex items-center gap-1 text-[11px] ${
-                isPannedOrZoomed
-                  ? 'text-blue-400 hover:text-blue-300 bg-blue-950/60 border border-blue-800/60 font-semibold'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
-              }`}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center gap-0.5 bg-[#121824]/95 p-1 rounded-lg border border-slate-800 shadow-md backdrop-blur-md">
+              <button
+                onClick={handleZoomIn}
+                title="Zoom In (+ or scroll wheel up)"
+                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <span
+                className="text-[11px] font-mono text-slate-300 px-1 font-semibold min-w-[34px] text-center"
+                title="Current Zoom Level"
+              >
+                {zoomLevel.toFixed(1)}x
+              </span>
+              <button
+                onClick={handleZoomOut}
+                title="Zoom Out (- or scroll wheel down)"
+                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <div className="w-px h-3.5 bg-slate-800 mx-0.5" />
+              <button
+                onClick={handleResetZoom}
+                title="Reset Zoom & Pan View (or double-click chart)"
+                className={`p-1.5 rounded transition-colors cursor-pointer flex items-center gap-1 text-[11px] ${
+                  isPannedOrZoomed
+                    ? 'text-blue-400 hover:text-blue-300 bg-blue-950/60 border border-blue-800/60 font-semibold'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+                }`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -983,21 +988,21 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
       <div
         ref={containerRef}
         className={`w-full flex-1 relative select-none ${
-          isDraggingState ? 'cursor-grabbing' : 'cursor-grab'
+          readOnly ? 'cursor-default' : isDraggingState ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       >
         <canvas
           ref={canvasRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-          onDoubleClick={handleDoubleClick}
-          className="absolute inset-0 block w-full h-full touch-none"
+          onPointerDown={readOnly ? undefined : handlePointerDown}
+          onPointerMove={readOnly ? undefined : handlePointerMove}
+          onPointerUp={readOnly ? undefined : handlePointerUp}
+          onPointerCancel={readOnly ? undefined : handlePointerCancel}
+          onDoubleClick={readOnly ? undefined : handleDoubleClick}
+          className={`absolute inset-0 block w-full h-full ${readOnly ? 'pointer-events-none' : 'touch-none'}`}
         />
 
         {/* Floating Pan/Recenter Badge when panned or zoomed */}
-        {isPannedOrZoomed && (
+        {!readOnly && isPannedOrZoomed && (
           <button
             onClick={handleResetZoom}
             title="Click to center chart back to normal view"

@@ -1,5 +1,6 @@
 import { useCallback,type RefObject } from 'react';
 import type { TradeDirection,TradeRecord } from '../types/trading';
+import { evaluateQuizPrediction } from '../utils/evaluatePrediction';
 import { sound } from '../utils/sound';
 import type { QuizState } from './useQuizState';
 
@@ -43,16 +44,13 @@ export function useQuizTrade(options: Options) {
           revealTimer.current = null;
           setIsRevealing(false);
 
-          // Calculate price shift
-          const finalExitPrice = scenario.candles[scenario.candles.length - 1].close;
-          const rawPriceChangePct = ((finalExitPrice - currentEntryPrice) / currentEntryPrice) * 100;
-
-          // Win condition: did direction match market movement?
-          const isWin = direction === 'BUY' ? rawPriceChangePct > 0 : rawPriceChangePct < 0;
-
-          // Virtual cash calculations (for Tournament mode)
-          const tradePnlPct = direction === 'BUY' ? rawPriceChangePct : -rawPriceChangePct;
-          const tradePnl = size * (tradePnlPct / 100);
+          const {
+            exitPrice: finalExitPrice,
+            rawPriceChangePct,
+            tradePnlPct,
+            tradePnl,
+            isWin,
+          } = evaluateQuizPrediction(scenario, direction, size);
 
           // Sound & Confetti
           if (isWin) {

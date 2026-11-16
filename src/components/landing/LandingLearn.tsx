@@ -1,12 +1,24 @@
+import { lazy, Suspense } from 'react';
 import {
-ArrowRight,
-Award,
-BookOpen,
-GraduationCap,
-PlayCircle
+  Award,
+  BookOpen,
+  GraduationCap,
+  PlayCircle,
 } from 'lucide-react';
 import { AppLink } from '../../lib/navigation';
 import { FloatingIllustration } from '../FloatingIllustration';
+
+const LandingChallengePreview = lazy(() =>
+  import('./LandingChallengePreview').then((m) => ({ default: m.LandingChallengePreview }))
+);
+
+function ChallengePreviewFallback() {
+  return (
+    <div className="rounded-3xl border border-[#1D3A2D] bg-[#0C1D16] p-6 sm:p-8 shadow-xl">
+      <div className="h-[420px] w-full animate-pulse rounded-2xl bg-[#11241C]" />
+    </div>
+  );
+}
 export function LandingLearn() {
 return (
 <section
@@ -109,56 +121,10 @@ return (
             </div>
           </div>
 
-          {/* Preserved Interactive Pattern Lesson Breakdown Strip */}
-          <div className="rounded-3xl border border-[#1D3A2D] bg-[#0C1D16] text-white p-6 sm:p-8 shadow-xl space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1D3A2D]">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="rounded-full bg-[#00D09C]/15 border border-[#00D09C]/30 px-3 py-1 text-xs font-bold text-[#00D09C]">
-                  Sample Pattern Lesson · Double Bottom (W-Pattern)
-                </span>
-                <span className="rounded-full bg-[#00D09C]/20 px-2.5 py-1 text-xs font-bold text-[#00D09C]">
-                  Bullish Reversal
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <AppLink
-                  href="/learn"
-                  className="text-xs font-extrabold text-[#00D09C] hover:underline flex items-center gap-1"
-                >
-                  <span>Open Pattern Library</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </AppLink>
-                <AppLink
-                  href="/quiz"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#00D09C] px-3.5 py-1.5 text-xs font-extrabold text-[#04261C] hover:bg-[#00B386]"
-                >
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>Guess the Chart</span>
-                </AppLink>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                <span className="font-bold text-[#00D09C] block mb-1">Entry Rule</span>
-                <span className="text-[#D6E6DE]">
-                  Enter when price breaks decisively above the middle peak (neckline) with rising volume.
-                </span>
-              </div>
-              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                <span className="font-bold text-[#F0614A] block mb-1">Stop-Loss</span>
-                <span className="text-[#D6E6DE]">
-                  Place stop-loss just below the twin bottom support floor to manage downside risk.
-                </span>
-              </div>
-              <div className="rounded-xl border border-[#1D3A2D] bg-[#12281F] p-3.5">
-                <span className="font-bold text-[#5CB8FF] block mb-1">Profit Target</span>
-                <span className="text-[#D6E6DE]">
-                  Project the height of the W pattern upward from the neckline breakout level.
-                </span>
-              </div>
-            </div>
-          </div>
+          {/* Interactive Guess the Chart Challenge Preview */}
+          <Suspense fallback={<ChallengePreviewFallback />}>
+            <LandingChallengePreview />
+          </Suspense>
         </div>
       </section>
 );
