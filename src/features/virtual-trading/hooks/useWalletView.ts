@@ -29,10 +29,10 @@ export function useWalletView() {
   const tierLabel =
     subscriptionTier === 'advanced' ? '50L' : subscriptionTier === 'beginner' ? '10L' : '1L';
 
-  // Include BOTH Available Cash AND Locked Margin (Intraday 5x + MTF 5.00x + open order margin)
-  // so cancelling an order or closing a position after top-up can never push cash beyond the tier cap.
+  // Include Available Cash, Locked Margin, and Holdings value so total capital stays within the tier cap.
   const lockedMargin = round2(portfolioSummary.lockedMargin || 0);
-  const committedCapital = round2(balance + lockedMargin);
+  const holdingsValue = round2(portfolioSummary.currentValue || 0);
+  const committedCapital = round2(balance + lockedMargin + holdingsValue);
   const maxAllowedToAdd = Math.max(0, round2(tierMaxLimit - committedCapital));
   const isWalletFull = committedCapital >= tierMaxLimit - 0.01;
   const capacityPercent = Math.min(100, Math.round((committedCapital / tierMaxLimit) * 100));
@@ -68,7 +68,7 @@ export function useWalletView() {
     if (!isNaN(parsed) && parsed > 0) {
       currentRequestedAmount = round2(parsed);
       if (currentRequestedAmount > maxAllowedToAdd) {
-        customError = `Exceeds available headroom of ₹${maxAllowedToAdd.toLocaleString('en-IN')} (${tierLabel} cap includes ₹${lockedMargin.toLocaleString('en-IN')} locked margin).`;
+        customError = `You can add up to ₹${maxAllowedToAdd.toLocaleString('en-IN')} under your ${tierLabel} plan limit.`;
       }
     }
   } else {

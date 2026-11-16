@@ -76,14 +76,14 @@ export interface TradingContextType {
     authProvider?: 'google' | 'email';
     avatar?: string;
     initialCash: number;
-  }) => void;
+  }) => Promise<void>;
   signInUser: (data: {
     uid?: string;
     email: string;
     name?: string;
     authProvider?: 'google' | 'email';
     avatar?: string;
-  }) => boolean;
+  }) => Promise<boolean>;
   logOutUser: () => void;
 
   // Wallet / Cash & Add Money

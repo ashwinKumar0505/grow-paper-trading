@@ -27,22 +27,22 @@ export function WalletCapital({ balance, setIsWalletModalOpen, portfolioSummary,
               </div>
             </div>
 
-            {/* Cap Progress Bar (Available Cash + Locked Margin) */}
-            <div className="pt-3 border-t border-[#1E2F28] space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
+            {/* Cap Progress Bar (Cash + Margin + Holdings) */}
+            <div className="pt-3 border-t border-[#1E2F28] space-y-2">
+              <div className="flex items-center justify-between text-xs gap-2">
                 <span className="text-[#9AB0A5]">
-                  Allocated Capital (Cash + Margin):{' '}
+                  Total Capital Used:{' '}
                   <strong className="text-white font-mono">
                     ₹{committedCapital.toLocaleString('en-IN')}
                   </strong>{' '}
                   / {formatINR(tierMaxLimit)}
                 </span>
-                <span className="font-mono tabular-nums font-semibold text-[#00D09C]">
+                <span className="font-mono tabular-nums font-semibold text-[#00D09C] shrink-0">
                   {isFreeTier
                     ? '₹50 / +1L Top-Up'
                     : maxAllowedToAdd > 0
-                    ? `₹${maxAllowedToAdd.toLocaleString('en-IN')} headroom`
-                    : `${tierLabel} Cap Reached`}
+                    ? `₹${maxAllowedToAdd.toLocaleString('en-IN')} left to add`
+                    : `${tierLabel} Limit Reached`}
                 </span>
               </div>
 
@@ -59,8 +59,8 @@ export function WalletCapital({ balance, setIsWalletModalOpen, portfolioSummary,
                 <div className="flex items-center justify-between pt-1 text-[11px]">
                   <span className="text-[#9AB0A5]">
                     {subscriptionTier === 'free'
-                      ? 'Need ₹10L or ₹50L capital with free top-ups?'
-                      : 'Need ₹50,00,000 (50L) capital? Pay only the upgrade difference.'}
+                      ? 'Want ₹10L or ₹50L capital?'
+                      : 'Want up to ₹50L capital?'}
                   </span>
                   <button
                     type="button"
@@ -68,14 +68,14 @@ export function WalletCapital({ balance, setIsWalletModalOpen, portfolioSummary,
                       setIsWalletModalOpen(false);
                       openUpgradeModal({
                         requiredTier: subscriptionTier === 'free' ? 'beginner' : 'advanced',
-                        featureName: 'Higher Paper Trading Capital & Unlimited Resets',
+                        featureName: 'Higher Paper Trading Capital',
                         featureDescription:
-                          'Upgrade to Beginner for ₹10,00,000 (10L) or Advanced for ₹50,00,000 (50L) with automatic monthly resets and unlimited free top-ups.',
+                          'Upgrade to Beginner for ₹10,00,000 (10L) or Advanced for ₹50,00,000 (50L) with free top-ups.',
                       });
                     }}
                     className="font-semibold text-[#00D09C] hover:underline cursor-pointer shrink-0 ml-2"
                   >
-                    {subscriptionTier === 'beginner' ? 'Get Advanced →' : 'Upgrade Plan →'}
+                    {subscriptionTier === 'beginner' ? 'Upgrade to Advanced →' : 'Upgrade Plan →'}
                   </button>
                 </div>
               )}

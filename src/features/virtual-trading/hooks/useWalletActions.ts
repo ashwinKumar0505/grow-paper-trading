@@ -33,13 +33,14 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
 
     const planMax = planConfig.maxWalletLimit; // ₹10,00,000 for Beginner, ₹50,00,000 for Advanced
     const cash = engineRef.current.balance;
+    const holdingsValue = engineRef.current.holdings.reduce((s, h) => s + (h.totalInvested || 0), 0);
     const mtfMargin = engineRef.current.holdings.reduce((s, h) => s + (h.mtfMarginBlocked || 0), 0);
     const posMargin = engineRef.current.positions.reduce((s, p) => s + (p.marginBlocked || 0), 0);
     const orderReserved = engineRef.current.orders.reduce(
       (s, o) => s + ((o.status === 'PENDING' || o.status === 'SCHEDULED') && o.blockedAmount ? o.blockedAmount : 0),
       0
     );
-    const committedCapital = round2(cash + mtfMargin + posMargin + orderReserved);
+    const committedCapital = round2(cash + holdingsValue + mtfMargin + posMargin + orderReserved);
     const allowedAdd = Math.max(0, round2(planMax - committedCapital));
 
     if (allowedAdd <= 0) {
@@ -63,7 +64,7 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
     if (amount > allowedAdd) {
       addToast(
         'Plan Capital Limit Exceeded',
-        `Including ₹${round2(mtfMargin + posMargin + orderReserved).toLocaleString('en-IN')} in locked margin, you can top up at most ₹${allowedAdd.toLocaleString('en-IN')} to stay within your ₹${planMax.toLocaleString('en-IN')} limit.`,
+        `You can add at most ₹${allowedAdd.toLocaleString('en-IN')} to stay within your ₹${planMax.toLocaleString('en-IN')} limit.`,
         'error'
       );
       return false;
@@ -71,6 +72,7 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
 
     const newBalance = Number((cash + amount).toFixed(2));
     commitEngine({ balance: newBalance });
+    setInitialBalance((prev) => round2(prev + amount));
     const tx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
       type: 'DEPOSIT',

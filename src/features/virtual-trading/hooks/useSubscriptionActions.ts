@@ -10,9 +10,11 @@ import {
 UserProfile,
 WalletTransaction
 } from '../../../types/market';
+import { OrderBookState } from '../../../utils/orderEngine';
 import {
-OrderBookState
-} from '../../../utils/orderEngine';
+  normalizeEmail,
+  persistUserProfileToFirestore,
+} from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
 const round2 = (n: number) => Math.round(n * 100) / 100;
 type Options = Pick<TradingState, 'user' | 'balance' | 'setUser' | 'setInitialBalance' | 'setWalletTransactions' | 'initialBalance'> & Pick<TradingContextType, 'addToast'> & { commitEngine: (patch: Partial<OrderBookState>) => void; engineRef: RefObject<OrderBookState> };
@@ -76,7 +78,12 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
     };
 
     setUser(updatedProfile);
-    commitEngine({ balance: newBalance });
+    const shouldClearOldOrders =
+      tier !== 'free' &&
+      newBalance > balance &&
+      engineRef.current.holdings.length === 0 &&
+      engineRef.current.positions.length === 0;
+    commitEngine(shouldClearOldOrders ? { balance: newBalance, orders: [] } : { balance: newBalance });
     setInitialBalance(newBalance);
 
     try {
@@ -97,30 +104,27 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
       setWalletTransactions((prev) => [upgradeTx, ...prev]);
     }
 
-    // Persist User + Subscription Mapping in Firebase Firestore
+    // Persist User + Subscription Mapping in Firebase Firestore (both users/{uid} & users_by_email/{email})
     try {
-      const userDocRef = doc(db, 'users', effectiveUid);
-      await setDoc(
-        userDocRef,
-        {
-          userId: effectiveUid,
-          name: updatedProfile.name,
-          email: updatedProfile.email,
-          authProvider: updatedProfile.authProvider,
-          avatar: updatedProfile.avatar || '',
-          balance: newBalance,
-          initialBalance: newBalance,
-          subscriptionTier: tier,
-          subscriptionBillingCycle: effectiveCycle,
-          subscriptionStatus: 'active',
-          subscriptionUpdatedAt: now,
-          subscriptionExpiresAt: expiresAt,
-          razorpayPaymentId: paymentId || '',
-          razorpayOrderId: orderId || '',
-          updatedAt: now,
-        },
-        { merge: true }
-      );
+      await persistUserProfileToFirestore(effectiveUid, updatedProfile.email, {
+        userId: effectiveUid,
+        name: updatedProfile.name,
+        email: normalizeEmail(updatedProfile.email),
+        authProvider: updatedProfile.authProvider,
+        avatar: updatedProfile.avatar || '',
+        balance: newBalance,
+        initialBalance: newBalance,
+        subscriptionTier: tier,
+        subscriptionBillingCycle: effectiveCycle,
+        subscriptionStatus: 'active',
+        subscriptionUpdatedAt: now,
+        subscriptionExpiresAt: expiresAt,
+        razorpayPaymentId: paymentId || '',
+        razorpayOrderId: orderId || '',
+        subscriptionAutoPay: updatedProfile.subscriptionAutoPay ?? false,
+        subscriptionUpiMandateId: updatedProfile.subscriptionUpiMandateId || '',
+        updatedAt: now,
+      });
 
       const subId = paymentId || `sub_${tier}_${effectiveUid}_${now}`;
       const subPayload = {
@@ -166,7 +170,7 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
     const currentCash = engineRef.current.balance;
     const newBalance = round2(currentCash + topUpAmount);
     commitEngine({ balance: newBalance });
-    setInitialBalance((prev) => Math.max(prev, newBalance));
+    setInitialBalance((prev) => round2(prev + topUpAmount));
 
     const topUpTx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),

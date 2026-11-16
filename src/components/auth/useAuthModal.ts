@@ -1,6 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useTrading } from '../../context/TradingContext';
-import { auth, googleProvider, signInWithPopup } from '../../lib/firebase';
+import { auth, googleProvider, isFirebaseConfigured, signInWithPopup } from '../../lib/firebase';
+import { buildEmailUid, normalizeEmail } from '../../features/virtual-trading/utils/userProfileSync';
+
+function mapGoogleAuthError(err: unknown): string {
+  const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: unknown }).code) : '';
+  switch (code) {
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Google sign-in was cancelled. Please choose an account to continue.';
+    case 'auth/popup-blocked':
+      return 'Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized in Firebase Auth. Add it under Firebase Console -> Authentication -> Settings -> Authorized domains.';
+    case 'auth/operation-not-allowed':
+      return 'Google Sign-In is not enabled in Firebase Console -> Authentication -> Sign-in method.';
+    case 'auth/invalid-api-key':
+      return 'Invalid Firebase API key. Check your Firebase config in .env or firebase-applet-config.json.';
+    default:
+      return err instanceof Error ? err.message : 'Google authentication failed. Please try again.';
+  }
+}
 
 export function useAuthModal() {
   const {
@@ -15,20 +35,17 @@ export function useAuthModal() {
 
   const isSignUp = authModalMode === 'signup';
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
+  const [isOtpLoading, setIsOtpLoading] = useState<boolean>(false);
 
-  // Form Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // OTP State
   const [otpStep, setOtpStep] = useState<'input_email' | 'enter_otp'>('input_email');
   const [otpCode, setOtpCode] = useState<string>('');
-  const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [resendTimer, setResendTimer] = useState<number>(30);
   const [canResend, setCanResend] = useState<boolean>(false);
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isAuthModalOpen) {
       setOtpStep('input_email');
@@ -39,92 +56,99 @@ export function useAuthModal() {
     }
   }, [isAuthModalOpen, authModalMode]);
 
-  // Resend Countdown Timer
   useEffect(() => {
-    let interval: any = null;
-    if (otpStep === 'enter_otp' && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (resendTimer === 0) {
-      setCanResend(true);
-      if (interval) clearInterval(interval);
+    if (otpStep !== 'enter_otp' || resendTimer <= 0) {
+      if (resendTimer === 0) setCanResend(true);
+      return;
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    const interval = setInterval(() => {
+      setResendTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
   }, [otpStep, resendTimer]);
 
-  // Google 1-Click Sign-In / Sign-Up
   const handleGoogleAuth = async () => {
     setErrorMsg('');
-    setIsGoogleLoading(true);
-    const finalCash = 100000;
+    if (!isFirebaseConfigured) {
+      setErrorMsg('Firebase is not configured. Add your Firebase Web App config to .env or firebase-applet-config.json.');
+      return;
+    }
 
+    setIsGoogleLoading(true);
     try {
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
       const fbUser = result.user;
-      const googleUser = {
-        uid: fbUser.uid,
-        name: fbUser.displayName || 'Ashwin Kumar',
-        email: fbUser.email || 'ashwin.gps@gmail.com',
-        authProvider: 'google' as const,
-        avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-      };
+      const userEmail = fbUser.email ? normalizeEmail(fbUser.email) : '';
+      if (!userEmail) {
+        setErrorMsg('Google account did not return an email address. Please try another account.');
+        return;
+      }
+
+      const displayName = fbUser.displayName || userEmail.split('@')[0];
+      const avatar = fbUser.photoURL || undefined;
 
       if (isSignUp) {
-        signUpUser({
-          uid: googleUser.uid,
-          name: googleUser.name,
-          email: googleUser.email,
+        await signUpUser({
+          uid: fbUser.uid,
+          name: displayName,
+          email: userEmail,
           authProvider: 'google',
-          avatar: googleUser.avatar,
-          initialCash: finalCash,
+          avatar,
+          initialCash: 100000,
         });
       } else {
-        signInUser({
-          uid: googleUser.uid,
-          name: googleUser.name,
-          email: googleUser.email,
+        await signInUser({
+          uid: fbUser.uid,
+          name: displayName,
+          email: userEmail,
           authProvider: 'google',
-          avatar: googleUser.avatar,
+          avatar,
         });
       }
-    } catch (popupErr: any) {
-      console.warn('Firebase Google Auth popup notice:', popupErr);
-      const fallbackUser = {
-        uid: 'google_ashwin_verified',
-        name: 'Ashwin Kumar',
-        email: 'ashwin.gps@gmail.com',
-        authProvider: 'google' as const,
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-      };
-
-      if (isSignUp) {
-        signUpUser({
-          uid: fallbackUser.uid,
-          name: fallbackUser.name,
-          email: fallbackUser.email,
-          authProvider: 'google',
-          avatar: fallbackUser.avatar,
-          initialCash: finalCash,
-        });
-      } else {
-        signInUser({
-          uid: fallbackUser.uid,
-          name: fallbackUser.name,
-          email: fallbackUser.email,
-          authProvider: 'google',
-          avatar: fallbackUser.avatar,
-        });
-      }
+    } catch (popupErr) {
+      setErrorMsg(mapGoogleAuthError(popupErr));
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  // Send OTP
-  const handleSendOtp = (e: React.FormEvent) => {
+  const requestOtp = async (targetEmail: string, isResend = false) => {
+    setIsOtpLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = (await res.json()) as {
+        success?: boolean;
+        message?: string;
+      };
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || 'Failed to send verification OTP.');
+        return;
+      }
+
+      setOtpStep('enter_otp');
+      setResendTimer(30);
+      setCanResend(false);
+
+      addToast(
+        isResend ? 'New OTP Sent' : 'Verification OTP Sent!',
+        `Check your inbox at ${targetEmail} for the 6-digit code.`,
+        'info'
+      );
+    } catch {
+      setErrorMsg('Unable to reach the authentication server. Please try again.');
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -133,59 +157,64 @@ export function useAuthModal() {
       return;
     }
 
-    if (!email.trim() || !email.includes('@') || !email.includes('.')) {
+    const normalized = normalizeEmail(email);
+    if (!normalized || !normalized.includes('@') || !normalized.includes('.')) {
       setErrorMsg('Please enter a valid email address');
       return;
     }
 
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(newOtp);
-    setOtpStep('enter_otp');
-    setResendTimer(30);
-    setCanResend(false);
-
-    addToast(
-      'Verification OTP Sent!',
-      `Your code is: ${newOtp} (sent to ${email})`,
-      'info'
-    );
+    await requestOtp(normalized, false);
   };
 
-  // Resend OTP
-  const handleResendOtp = () => {
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(newOtp);
-    setResendTimer(30);
-    setCanResend(false);
-    addToast('New OTP Sent', `Your verification code is: ${newOtp}`, 'info');
+  const handleResendOtp = async () => {
+    await requestOtp(normalizeEmail(email), true);
   };
 
-  // Verify OTP & Complete Auth
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (otpCode.trim() !== generatedOtp.trim()) {
-      setErrorMsg('Invalid verification code. Please check the OTP code and try again.');
+    const normalized = normalizeEmail(email);
+    const trimmedCode = otpCode.trim();
+    if (!/^\d{6}$/.test(trimmedCode)) {
+      setErrorMsg('Please enter the 6-digit verification code.');
       return;
     }
 
-    const userUid = `email_${email.trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
-    if (isSignUp) {
-      signUpUser({
-        uid: userUid,
-        name: name.trim(),
-        email: email.trim(),
-        authProvider: 'email',
-        initialCash: 100000,
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalized, code: trimmedCode }),
       });
-    } else {
-      signInUser({
-        uid: userUid,
-        name: name.trim() || email.split('@')[0],
-        email: email.trim(),
-        authProvider: 'email',
-      });
+      const data = (await res.json()) as { success?: boolean; message?: string };
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.message || 'Invalid verification code. Please try again.');
+        return;
+      }
+
+      const userUid = buildEmailUid(normalized);
+      if (isSignUp) {
+        await signUpUser({
+          uid: userUid,
+          name: name.trim(),
+          email: normalized,
+          authProvider: 'email',
+          initialCash: 100000,
+        });
+      } else {
+        await signInUser({
+          uid: userUid,
+          name: name.trim() || normalized.split('@')[0],
+          email: normalized,
+          authProvider: 'email',
+        });
+      }
+    } catch {
+      setErrorMsg('Unable to verify OTP right now. Please try again.');
+    } finally {
+      setIsOtpLoading(false);
     }
   };
 
@@ -196,6 +225,7 @@ export function useAuthModal() {
     setAuthModalMode,
     isSignUp,
     isGoogleLoading,
+    isOtpLoading,
     name,
     setName,
     email,
@@ -205,7 +235,6 @@ export function useAuthModal() {
     setOtpStep,
     otpCode,
     setOtpCode,
-    generatedOtp,
     resendTimer,
     canResend,
     handleGoogleAuth,

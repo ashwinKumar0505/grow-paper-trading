@@ -19,15 +19,29 @@ import {
 } from 'firebase/firestore';
 import firebaseConfigData from '../../firebase-applet-config.json';
 
+const env = import.meta.env;
+const usingEnvConfig = Boolean(env.VITE_FIREBASE_PROJECT_ID && env.VITE_FIREBASE_API_KEY);
+
 const firebaseConfig = {
-  apiKey: firebaseConfigData.apiKey,
-  authDomain: firebaseConfigData.authDomain,
-  projectId: firebaseConfigData.projectId,
-  storageBucket: firebaseConfigData.storageBucket,
-  messagingSenderId: firebaseConfigData.messagingSenderId,
-  appId: firebaseConfigData.appId,
-  measurementId: firebaseConfigData.measurementId,
+  apiKey: env.VITE_FIREBASE_API_KEY || firebaseConfigData.apiKey,
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigData.authDomain,
+  projectId: env.VITE_FIREBASE_PROJECT_ID || firebaseConfigData.projectId,
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData.storageBucket,
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigData.messagingSenderId,
+  appId: env.VITE_FIREBASE_APP_ID || firebaseConfigData.appId,
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigData.measurementId,
 };
+
+const firestoreDatabaseId = usingEnvConfig
+  ? env.VITE_FIREBASE_DATABASE_ID || ''
+  : firebaseConfigData.firestoreDatabaseId || '';
+
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
+);
 
 let app: FirebaseApp;
 if (!getApps().length) {
@@ -42,9 +56,9 @@ googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
 
-// Configure Firestore with custom database ID if provided
-export const db: Firestore = firebaseConfigData.firestoreDatabaseId
-  ? getFirestore(app, firebaseConfigData.firestoreDatabaseId)
+// Configure Firestore with custom database ID only when explicitly provided
+export const db: Firestore = firestoreDatabaseId
+  ? getFirestore(app, firestoreDatabaseId)
   : getFirestore(app);
 
 export {

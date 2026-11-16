@@ -11,9 +11,9 @@ interface AuthEmailOtpFormProps {
   setOtpStep: (step: 'input_email' | 'enter_otp') => void;
   otpCode: string;
   setOtpCode: (code: string) => void;
-  generatedOtp: string;
   resendTimer: number;
   canResend: boolean;
+  isLoading?: boolean;
   onSendOtp: (e: React.FormEvent) => void;
   onResendOtp: () => void;
   onVerifyOtp: (e: React.FormEvent) => void;
@@ -29,9 +29,9 @@ export const AuthEmailOtpForm: React.FC<AuthEmailOtpFormProps> = ({
   setOtpStep,
   otpCode,
   setOtpCode,
-  generatedOtp,
   resendTimer,
   canResend,
+  isLoading = false,
   onSendOtp,
   onResendOtp,
   onVerifyOtp,
@@ -77,9 +77,10 @@ export const AuthEmailOtpForm: React.FC<AuthEmailOtpFormProps> = ({
 
         <button
           type="submit"
-          className="w-full py-3 bg-[#00D09C] hover:bg-[#00c090] text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] mt-2"
+          disabled={isLoading}
+          className="w-full py-3 bg-[#00D09C] hover:bg-[#00c090] disabled:opacity-60 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] mt-2"
         >
-          <span>Get 6-Digit OTP</span>
+          <span>{isLoading ? 'Sending OTP...' : 'Get 6-Digit OTP'}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>
@@ -89,21 +90,12 @@ export const AuthEmailOtpForm: React.FC<AuthEmailOtpFormProps> = ({
   return (
     <form onSubmit={onVerifyOtp} className="space-y-4 animate-fade-in">
       <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-[#00D09C]/30 rounded-xl">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-emerald-800 dark:text-[#00D09C] flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Your OTP Code:</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setOtpCode(generatedOtp)}
-            className="text-[11px] font-extrabold text-[#00D09C] hover:underline cursor-pointer bg-white dark:bg-[#1E2433] px-2 py-0.5 rounded shadow-xs"
-          >
-            Auto-fill ({generatedOtp})
-          </button>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-[#00D09C]">
+          <KeyRound className="w-3.5 h-3.5" />
+          <span>OTP Sent to Email</span>
         </div>
         <div className="text-[11px] text-gray-600 dark:text-gray-300 mt-1">
-          Sent to <span className="font-semibold text-gray-900 dark:text-white">{email}</span>
+          Check your inbox at <span className="font-semibold text-gray-900 dark:text-white">{email}</span>
         </div>
       </div>
 
@@ -148,10 +140,11 @@ export const AuthEmailOtpForm: React.FC<AuthEmailOtpFormProps> = ({
 
       <button
         type="submit"
-        className="w-full py-3 bg-[#00D09C] hover:bg-[#00c090] text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+        disabled={isLoading}
+        className="w-full py-3 bg-[#00D09C] hover:bg-[#00c090] disabled:opacity-60 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
       >
         <CheckCircle2 className="w-4 h-4" />
-        <span>Verify & Get Started</span>
+        <span>{isLoading ? 'Verifying...' : 'Verify & Get Started'}</span>
       </button>
     </form>
   );

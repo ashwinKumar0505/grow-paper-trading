@@ -12,6 +12,7 @@ export const AuthModal: React.FC = () => {
     setAuthModalMode,
     isSignUp,
     isGoogleLoading,
+    isOtpLoading,
     name,
     setName,
     email,
@@ -21,7 +22,6 @@ export const AuthModal: React.FC = () => {
     setOtpStep,
     otpCode,
     setOtpCode,
-    generatedOtp,
     resendTimer,
     canResend,
     handleGoogleAuth,
@@ -124,9 +124,9 @@ export const AuthModal: React.FC = () => {
             setOtpStep={setOtpStep}
             otpCode={otpCode}
             setOtpCode={setOtpCode}
-            generatedOtp={generatedOtp}
             resendTimer={resendTimer}
             canResend={canResend}
+            isLoading={isOtpLoading}
             onSendOtp={handleSendOtp}
             onResendOtp={handleResendOtp}
             onVerifyOtp={handleVerifyOtp}

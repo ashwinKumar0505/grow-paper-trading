@@ -12,6 +12,11 @@ service cloud.firestore {
       }
     }
 
+    // Email-indexed profile & subscription lookup so users retain their plan across Email OTP and Google Sign-In
+    match /users_by_email/{emailKey} {
+      allow read, write: if request.auth != null || emailKey.size() > 0;
+    }
+
     // Top-level subscriptions collection mapping users to Razorpay payment & subscription records
     match /subscriptions/{subscriptionId} {
       allow read, write: if request.auth != null || resource == null || request.resource != null;

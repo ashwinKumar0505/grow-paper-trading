@@ -1,117 +1,123 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import { db,doc,getDoc,setDoc } from '../../../lib/firebase';
 import {
-BillingCycle,
-SUBSCRIPTION_PLANS,
-SubscriptionTier
+  BillingCycle,
+  normalizeUsageQuota,
+  SUBSCRIPTION_PLANS,
+  SubscriptionTier,
 } from '../../../lib/subscription';
+import { UserProfile } from '../../../types/market';
 import {
-UserProfile
-} from '../../../types/market';
+  buildEmailUid,
+  fetchUserProfileFromFirestore,
+  normalizeEmail,
+  persistUserProfileToFirestore,
+  resolveActiveTier,
+} from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'balance' | 'setUser' | 'setBalance' | 'setIsAuthModalOpen' | 'setShowLandingPage'> & Pick<TradingContextType, 'addToast'>;
 
-export function useSignIn({ balance, setUser, setBalance, setIsAuthModalOpen, setShowLandingPage, addToast }: Options) {
-  // Sign In Existing User with Firebase
-  const signInUser = (data: {
+type Options = Pick<
+  TradingState,
+  'balance' | 'setUser' | 'setBalance' | 'setInitialBalance' | 'setUsageQuota' | 'setIsAuthModalOpen' | 'setShowLandingPage'
+> &
+  Pick<TradingContextType, 'addToast'>;
+
+export function useSignIn({
+  balance,
+  setUser,
+  setBalance,
+  setInitialBalance,
+  setUsageQuota,
+  setIsAuthModalOpen,
+  setShowLandingPage,
+  addToast,
+}: Options) {
+  // Sign In Existing User with Firebase (awaits Firestore so paid plans are restored immediately)
+  const signInUser = async (data: {
     uid?: string;
     email: string;
     name?: string;
     authProvider?: 'google' | 'email';
     avatar?: string;
-  }): boolean => {
+  }): Promise<boolean> => {
+    const normalizedEmail = normalizeEmail(data.email);
     let existingProfile: UserProfile | null = null;
     try {
       const saved = localStorage.getItem('mypaper_user_v2') || localStorage.getItem('groww_paper_user_v1');
       if (saved) existingProfile = JSON.parse(saved);
     } catch {}
 
-    const effectiveUid = data.uid || existingProfile?.uid || `user_${data.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    const userName = data.name || existingProfile?.name || data.email.split('@')[0];
-    const userPhone = existingProfile?.phone;
-    const savedTier: SubscriptionTier = existingProfile?.subscriptionTier || 'free';
-    const tierMaxCash = SUBSCRIPTION_PLANS[savedTier].maxWalletLimit;
-    const userCash = Math.min(tierMaxCash, existingProfile?.initialCash || balance || tierMaxCash);
+    const effectiveUid = data.uid || existingProfile?.uid || buildEmailUid(normalizedEmail);
+    const remote = await fetchUserProfileFromFirestore(effectiveUid, normalizedEmail);
+
+    const activeTier: SubscriptionTier = remote
+      ? resolveActiveTier(remote)
+      : existingProfile?.subscriptionTier || 'free';
+    const tierMaxCash = SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
+    const userName = data.name || remote?.name || existingProfile?.name || normalizedEmail.split('@')[0];
+    const userPhone = remote?.phone || existingProfile?.phone;
+
+    const restoredBalance =
+      typeof remote?.balance === 'number'
+        ? Math.min(tierMaxCash, remote.balance)
+        : Math.min(tierMaxCash, existingProfile?.initialCash || balance || tierMaxCash);
+    const restoredInitialCash =
+      typeof remote?.initialBalance === 'number'
+        ? Math.min(tierMaxCash, remote.initialBalance)
+        : restoredBalance;
 
     const profile: UserProfile = {
       uid: effectiveUid,
       name: userName,
-      email: data.email,
+      email: normalizedEmail,
       phone: userPhone,
-      authProvider: data.authProvider || 'email',
-      avatar: data.avatar || existingProfile?.avatar,
-      initialCash: userCash,
-      createdAt: existingProfile?.createdAt || Date.now(),
-      subscriptionTier: savedTier,
-      subscriptionBillingCycle: existingProfile?.subscriptionBillingCycle || 'free',
-      subscriptionStatus: existingProfile?.subscriptionStatus || 'active',
-      subscriptionUpdatedAt: existingProfile?.subscriptionUpdatedAt || Date.now(),
-      subscriptionExpiresAt: existingProfile?.subscriptionExpiresAt || null,
-      razorpayPaymentId: existingProfile?.razorpayPaymentId,
-      razorpayOrderId: existingProfile?.razorpayOrderId,
+      authProvider: data.authProvider || remote?.authProvider || 'email',
+      avatar: data.avatar || remote?.avatar || existingProfile?.avatar,
+      initialCash: restoredInitialCash,
+      createdAt: remote?.createdAt || existingProfile?.createdAt || Date.now(),
+      subscriptionTier: activeTier,
+      subscriptionBillingCycle:
+        (remote?.subscriptionBillingCycle as BillingCycle) || existingProfile?.subscriptionBillingCycle || 'free',
+      subscriptionStatus: remote?.subscriptionStatus || existingProfile?.subscriptionStatus || 'active',
+      subscriptionUpdatedAt: remote?.subscriptionUpdatedAt || existingProfile?.subscriptionUpdatedAt || Date.now(),
+      subscriptionExpiresAt: remote?.subscriptionExpiresAt ?? existingProfile?.subscriptionExpiresAt ?? null,
+      razorpayPaymentId: remote?.razorpayPaymentId || existingProfile?.razorpayPaymentId,
+      razorpayOrderId: remote?.razorpayOrderId || existingProfile?.razorpayOrderId,
+      subscriptionAutoPay: remote?.subscriptionAutoPay ?? existingProfile?.subscriptionAutoPay,
+      subscriptionUpiMandateId: remote?.subscriptionUpiMandateId || existingProfile?.subscriptionUpiMandateId,
     };
 
     setUser(profile);
-    if (balance > tierMaxCash) {
-      setBalance(tierMaxCash);
+    setBalance(restoredBalance);
+    setInitialBalance(restoredInitialCash);
+    if (remote?.usage) {
+      setUsageQuota(normalizeUsageQuota(remote.usage));
     }
+
     try {
       localStorage.setItem('mypaper_user_v2', JSON.stringify(profile));
     } catch {}
 
-    // Fetch latest subscription mapping from Firestore if available, and update last login
-    try {
-      const userDocRef = doc(db, 'users', effectiveUid);
-      getDoc(userDocRef)
-        .then((snap) => {
-          if (snap.exists()) {
-            const remote = snap.data();
-            const remoteTier = (remote.subscriptionTier as SubscriptionTier) || savedTier;
-            const mergedProfile: UserProfile = {
-              ...profile,
-              subscriptionTier: remoteTier,
-              subscriptionBillingCycle: (remote.subscriptionBillingCycle as BillingCycle) || profile.subscriptionBillingCycle,
-              subscriptionStatus: remote.subscriptionStatus || 'active',
-              subscriptionUpdatedAt: remote.subscriptionUpdatedAt || profile.subscriptionUpdatedAt,
-              subscriptionExpiresAt: remote.subscriptionExpiresAt ?? profile.subscriptionExpiresAt,
-              razorpayPaymentId: remote.razorpayPaymentId || profile.razorpayPaymentId,
-              razorpayOrderId: remote.razorpayOrderId || profile.razorpayOrderId,
-            };
-            setUser(mergedProfile);
-            localStorage.setItem('mypaper_user_v2', JSON.stringify(mergedProfile));
-            if (typeof remote.balance === 'number') {
-              setBalance(Math.min(SUBSCRIPTION_PLANS[remoteTier].maxWalletLimit, remote.balance));
-            }
-          } else {
-            setDoc(
-              userDocRef,
-              {
-                userId: effectiveUid,
-                name: userName,
-                email: data.email,
-                authProvider: data.authProvider || 'email',
-                avatar: profile.avatar || '',
-                subscriptionTier: savedTier,
-                subscriptionBillingCycle: profile.subscriptionBillingCycle || 'free',
-                subscriptionStatus: 'active',
-                balance: userCash,
-                initialBalance: userCash,
-                updatedAt: Date.now(),
-              },
-              { merge: true }
-            ).catch(() => {});
-          }
-        })
-        .catch(() => {});
-    } catch (e) {
-      console.warn('Firebase sync warning:', e);
-    }
+    persistUserProfileToFirestore(effectiveUid, normalizedEmail, {
+      userId: effectiveUid,
+      name: userName,
+      email: normalizedEmail,
+      authProvider: profile.authProvider,
+      avatar: profile.avatar || '',
+      subscriptionTier: profile.subscriptionTier,
+      subscriptionBillingCycle: profile.subscriptionBillingCycle,
+      subscriptionStatus: profile.subscriptionStatus,
+      subscriptionUpdatedAt: profile.subscriptionUpdatedAt,
+      subscriptionExpiresAt: profile.subscriptionExpiresAt,
+      balance: restoredBalance,
+      initialBalance: restoredInitialCash,
+      updatedAt: Date.now(),
+    }).catch((e) => console.warn('Firebase sync warning:', e));
 
     setIsAuthModalOpen(false);
     setShowLandingPage(false);
     addToast(
       `Welcome back, ${userName}!`,
-      `Signed in (${SUBSCRIPTION_PLANS[savedTier].name}). Ready to trade.`,
+      `Signed in (${SUBSCRIPTION_PLANS[activeTier].name}). Ready to trade.`,
       'success'
     );
     return true;

@@ -45,7 +45,7 @@ export const WalletPresetAmounts: React.FC<WalletPresetAmountsProps> = ({
               {preset.label}
             </div>
             <div className="text-[10px] text-[#9AB0A5] mt-0.5">
-              {exceedsLimit ? `Exceeds ${tierLabel} headroom` : preset.sub}
+              {exceedsLimit ? `Over ${tierLabel} limit` : preset.sub}
             </div>
           </button>
         );
@@ -69,7 +69,7 @@ export const WalletPresetAmounts: React.FC<WalletPresetAmountsProps> = ({
             +₹{maxAllowedToAdd.toLocaleString('en-IN')}
           </div>
           <div className="text-[10px] text-[#9AB0A5] mt-0.5">
-            Fill to {tierLabel} Cap
+            Max allowed
           </div>
         </button>
       )}

@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -1407,6 +1408,122 @@ app.post('/api/payments/verify', async (req: Request, res: Response) => {
       message: err?.message || 'Payment verification failed',
     });
   }
+});
+
+// 7b. Email OTP Authentication Endpoints (/api/auth/send-otp & /api/auth/verify-otp)
+interface OtpEntry {
+  code: string;
+  expiresAt: number;
+  attempts: number;
+}
+const emailOtpStore = new Map<string, OtpEntry>();
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+app.post('/api/auth/send-otp', async (req: Request, res: Response) => {
+  try {
+    const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
+    const email = rawEmail.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    }
+
+    const code = crypto.randomInt(100000, 1000000).toString();
+    emailOtpStore.set(email, {
+      code,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      attempts: 0,
+    });
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.OTP_FROM_EMAIL || 'NiftyLens <onboarding@resend.dev>';
+
+    if (!resendApiKey) {
+      return res.status(503).json({
+        success: false,
+        message: 'Email OTP delivery is not configured yet. Add RESEND_API_KEY to .env and restart the server.',
+      });
+    }
+
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [email],
+        subject: 'Your NiftyLens verification code',
+        html: `<div style="font-family:sans-serif;padding:16px"><h2>NiftyLens Verification</h2><p>Your 6-digit OTP code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>This code expires in 10 minutes.</p></div>`,
+      }),
+    });
+    if (!emailRes.ok) {
+      const errText = await emailRes.text().catch(() => '');
+      return res.status(502).json({
+        success: false,
+        message: `Failed to deliver OTP email (${emailRes.status}). ${errText || 'Check RESEND_API_KEY configuration.'}`,
+      });
+    }
+    return res.json({
+      success: true,
+      delivery: 'email',
+      message: `Verification OTP sent to ${email}.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Unable to send OTP.',
+    });
+  }
+});
+
+app.post('/api/auth/verify-otp', (req: Request, res: Response) => {
+  const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
+  const rawCode = typeof req.body?.code === 'string' ? req.body.code : '';
+  const email = rawEmail.trim().toLowerCase();
+  const code = rawCode.trim();
+
+  if (!EMAIL_REGEX.test(email) || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please enter a valid 6-digit verification code.',
+    });
+  }
+
+  const entry = emailOtpStore.get(email);
+  if (!entry) {
+    return res.status(400).json({
+      success: false,
+      message: 'No active OTP found for this email. Please request a new code.',
+    });
+  }
+
+  if (Date.now() > entry.expiresAt) {
+    emailOtpStore.delete(email);
+    return res.status(400).json({
+      success: false,
+      message: 'Verification code has expired. Please request a new OTP.',
+    });
+  }
+
+  if (entry.attempts >= 5) {
+    emailOtpStore.delete(email);
+    return res.status(429).json({
+      success: false,
+      message: 'Too many invalid attempts. Please request a new OTP.',
+    });
+  }
+
+  if (entry.code !== code) {
+    entry.attempts += 1;
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid verification code. Please check the OTP code and try again.',
+    });
+  }
+
+  emailOtpStore.delete(email);
+  return res.json({ success: true, email });
 });
 
 // 8. Backend Paper Trading & Scheduled Orders (AMO) API + Background Processor

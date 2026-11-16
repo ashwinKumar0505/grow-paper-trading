@@ -1,25 +1,32 @@
 import { useEffect } from 'react';
-import { auth,db,doc,getDoc,onAuthStateChanged,onSnapshot } from '../../../lib/firebase';
+import { auth, db, doc, onAuthStateChanged, onSnapshot } from '../../../lib/firebase';
 import {
-BillingCycle,
-normalizeUsageQuota,
-SubscriptionTier
+  BillingCycle,
+  normalizeUsageQuota,
+  SUBSCRIPTION_PLANS,
+  SubscriptionTier,
 } from '../../../lib/subscription';
 import type { UserProfile } from '../../../types/market';
+import {
+  fetchUserProfileFromFirestore,
+  resolveActiveTier,
+} from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'setUser' | 'setBalance' | 'setUsageQuota' | 'user'>;
+type Options = Pick<TradingState, 'setUser' | 'setBalance' | 'setInitialBalance' | 'setUsageQuota' | 'user'>;
 
-export function useAccountSync({ setUser, setBalance, setUsageQuota, user }: Options) {
+export function useAccountSync({ setUser, setBalance, setInitialBalance, setUsageQuota, user }: Options) {
   // Listen to Firebase Auth state and sync with Firestore profile
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         try {
-          const userDocRef = doc(db, 'users', fbUser.uid);
-          const snap = await getDoc(userDocRef);
-          if (snap.exists()) {
-            const data = snap.data();
-            setUser({
+          const data = await fetchUserProfileFromFirestore(fbUser.uid, fbUser.email || undefined);
+          if (data) {
+            const activeTier = resolveActiveTier(data);
+            const tierMax = SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
+            const restoredBalance =
+              typeof data.balance === 'number' ? Math.min(tierMax, data.balance) : undefined;
+            const restoredProfile: UserProfile = {
               uid: fbUser.uid,
               name: data.name || fbUser.displayName || 'Google Trader',
               email: data.email || fbUser.email || '',
@@ -27,16 +34,23 @@ export function useAccountSync({ setUser, setBalance, setUsageQuota, user }: Opt
               avatar: data.avatar || fbUser.photoURL || undefined,
               initialCash: data.initialBalance || 100000,
               createdAt: data.createdAt || Date.now(),
-              subscriptionTier: (data.subscriptionTier as SubscriptionTier) || 'free',
+              subscriptionTier: activeTier,
               subscriptionBillingCycle: (data.subscriptionBillingCycle as BillingCycle) || 'free',
               subscriptionStatus: data.subscriptionStatus || 'active',
               subscriptionUpdatedAt: data.subscriptionUpdatedAt || Date.now(),
               subscriptionExpiresAt: data.subscriptionExpiresAt || null,
               razorpayPaymentId: data.razorpayPaymentId || undefined,
               razorpayOrderId: data.razorpayOrderId || undefined,
-            });
-            if (typeof data.balance === 'number') {
-              setBalance(data.balance);
+            };
+            setUser(restoredProfile);
+            try {
+              localStorage.setItem('mypaper_user_v2', JSON.stringify(restoredProfile));
+            } catch {}
+            if (typeof restoredBalance === 'number') {
+              setBalance(restoredBalance);
+            }
+            if (typeof data.initialBalance === 'number') {
+              setInitialBalance(Math.min(tierMax, data.initialBalance));
             }
             if (data.usage) {
               setUsageQuota(normalizeUsageQuota(data.usage));
