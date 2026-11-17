@@ -39,28 +39,6 @@ export const StockDetailView: React.FC = () => {
         <div className={`${isIndex ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-6 min-w-0`}>
           <StockQuoteCard {...model} />
           {!isIndex && <StockPositionBanner {...model} />}
-          {/* 3. Groww "Create Stock SIP" Card */}
-          {!isIndex && (
-            <div
-              onClick={() => openOrderModal(stock, 'BUY', 'DELIVERY', 1)}
-              className="bg-white dark:bg-[#1A1D24] rounded-2xl border border-gray-200 dark:border-[#282C37] px-5 py-4 shadow-xs flex items-center justify-between gap-4 cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-[#232732] flex items-center justify-center text-gray-600 dark:text-gray-300">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-gray-900 dark:text-white">
-                    Create Stock SIP
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Automate your investments in this Stock
-                  </div>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </div>
-          )}
 
           <StockPerformance {...model} />
           {!isIndex && <StockDepth {...model} />}
