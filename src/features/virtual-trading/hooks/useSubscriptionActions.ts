@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { cancelRazorpaySubscription } from '../../../components/checkout/razorpayApi';
 import { db,doc,setDoc } from '../../../lib/firebase';
 import {
 BillingCycle,
@@ -46,6 +47,7 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
     const expiresAt = tier === 'free' ? null : now + durationMs;
     const paymentId = razorpayPaymentId || (tier === 'free' ? undefined : `pay_demo_${now}`);
     const orderId = razorpayOrderId || (tier === 'free' ? undefined : `order_demo_${now}`);
+    const subscriptionId = orderId?.startsWith('sub_') ? orderId : undefined;
 
     const currentUser = user || {
       uid: `user_demo_${now}`,
@@ -73,6 +75,7 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
       subscriptionExpiresAt: expiresAt,
       razorpayPaymentId: paymentId,
       razorpayOrderId: orderId,
+      razorpaySubscriptionId: subscriptionId,
       subscriptionAutoPay: tier === 'free' ? false : (subscriptionAutoPay ?? true),
       subscriptionUpiMandateId: subscriptionUpiMandateId || undefined,
     };
@@ -121,6 +124,7 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
         subscriptionExpiresAt: expiresAt,
         razorpayPaymentId: paymentId || '',
         razorpayOrderId: orderId || '',
+        razorpaySubscriptionId: subscriptionId || '',
         subscriptionAutoPay: updatedProfile.subscriptionAutoPay ?? false,
         subscriptionUpiMandateId: updatedProfile.subscriptionUpiMandateId || '',
         updatedAt: now,
@@ -204,5 +208,99 @@ export function useSubscriptionActions({ user, balance, setUser, commitEngine, s
     );
   };
 
-  return { upgradeSubscription, creditFreeWalletTopUp };
+  const cancelSubscription = async (): Promise<{
+    success: boolean;
+    expiresAt?: number;
+    message?: string;
+  }> => {
+    if (!user) return { success: false, message: 'No active user session.' };
+
+    const subscriptionId =
+      user.razorpaySubscriptionId ||
+      (user.razorpayOrderId?.startsWith('sub_') ? user.razorpayOrderId : undefined);
+
+    let razorpayEndMs: number | undefined;
+    if (subscriptionId) {
+      try {
+        const res = await cancelRazorpaySubscription(subscriptionId);
+        if (!res.success) {
+          const msg = res.message || 'Could not cancel Razorpay subscription. Please try again.';
+          addToast('Cancellation Failed', msg, 'error');
+          return { success: false, message: msg };
+        }
+        razorpayEndMs = res.currentEndMs || res.endedAtMs;
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : 'Unable to reach payment server. Please try again.';
+        addToast('Cancellation Failed', msg, 'error');
+        return { success: false, message: msg };
+      }
+    }
+
+    const now = Date.now();
+    const cycleMs =
+      user.subscriptionBillingCycle === 'yearly'
+        ? 365 * 24 * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000;
+    const effectiveExpiresAt =
+      razorpayEndMs ||
+      user.subscriptionExpiresAt ||
+      (user.subscriptionUpdatedAt ? user.subscriptionUpdatedAt + cycleMs : now + cycleMs);
+
+    // Keep current paid tier active until effectiveExpiresAt; only disable auto-renewal
+    const updatedProfile: UserProfile = {
+      ...user,
+      subscriptionStatus: 'cancelled',
+      subscriptionAutoPay: false,
+      subscriptionExpiresAt: effectiveExpiresAt,
+      subscriptionUpdatedAt: now,
+    };
+    setUser(updatedProfile);
+
+    try {
+      localStorage.setItem('mypaper_user_v2', JSON.stringify(updatedProfile));
+      localStorage.setItem('groww_paper_user_v1', JSON.stringify(updatedProfile));
+    } catch {}
+
+    const effectiveUid = user.uid || `user_${user.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    try {
+      await persistUserProfileToFirestore(effectiveUid, updatedProfile.email, {
+        subscriptionStatus: 'cancelled',
+        subscriptionAutoPay: false,
+        subscriptionExpiresAt: effectiveExpiresAt,
+        subscriptionUpdatedAt: now,
+        updatedAt: now,
+      });
+      if (user.razorpayPaymentId) {
+        const cancelMeta = {
+          status: 'cancelled',
+          cancelledAt: now,
+          expiresAt: effectiveExpiresAt,
+          autoPayEnabled: false,
+        };
+        await setDoc(doc(db, 'subscriptions', user.razorpayPaymentId), cancelMeta, { merge: true });
+        await setDoc(
+          doc(db, 'users', effectiveUid, 'subscriptions', user.razorpayPaymentId),
+          cancelMeta,
+          { merge: true }
+        );
+      }
+    } catch (e) {
+      console.warn('Firestore cancellation sync notice:', e);
+    }
+
+    const lastDateStr = new Date(effectiveExpiresAt).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    addToast(
+      'Subscription Cancelled',
+      `Auto-renewal is off. Your plan stays active until ${lastDateStr}, then moves to Free Starter.`,
+      'info'
+    );
+    return { success: true, expiresAt: effectiveExpiresAt };
+  };
+
+  return { upgradeSubscription, creditFreeWalletTopUp, cancelSubscription };
 }

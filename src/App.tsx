@@ -22,6 +22,8 @@ function AppContent() {
       ? 'Paper Trading Desk | Nifty Lens'
       : pathname === '/pricing'
       ? 'Pricing & Membership Packages | Nifty Lens'
+      : pathname === '/profile'
+      ? 'My Profile | Nifty Lens'
       : pathname === '/terms'
       ? 'Terms of Service | Nifty Lens'
       : pathname === '/privacy'

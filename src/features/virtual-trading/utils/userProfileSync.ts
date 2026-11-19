@@ -31,6 +31,7 @@ export interface RemoteUserRecord {
   subscriptionExpiresAt?: number | null;
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
+  razorpaySubscriptionId?: string;
   subscriptionAutoPay?: boolean;
   subscriptionUpiMandateId?: string;
   usage?: unknown;

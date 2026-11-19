@@ -14,6 +14,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   collection,
   onSnapshot,
 } from 'firebase/firestore';
@@ -68,6 +69,7 @@ export {
   doc,
   setDoc,
   getDoc,
+  getDocs,
   collection,
   onSnapshot,
 };

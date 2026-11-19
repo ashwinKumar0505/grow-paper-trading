@@ -3,6 +3,7 @@ import { AuthGatePlaceholder } from '../components/AuthGatePlaceholder';
 import { LoadingState } from '../components/common/LoadingState';
 import { LegalPage,type LegalPageKind } from '../components/LegalPages';
 import { PricingPage } from '../components/PricingPage';
+import { ProfilePage } from '../components/ProfilePage';
 import { useTrading } from '../context/TradingContext';
 import TradingWorkspace from '../features/virtual-trading/components/TradingWorkspace';
 import { AppLink,usePathname } from '../lib/navigation';
@@ -17,6 +18,14 @@ export const WorkspaceContent: React.FC = () => {
   // 0. Pricing & Subscription Packages Page (/pricing) is open to everyone
   if (pathname === '/pricing') {
     return <PricingPage />;
+  }
+
+  // 0a. My Profile Page (/profile) requires login
+  if (pathname === '/profile') {
+    if (!user) {
+      return <AuthGatePlaceholder feature="profile" />;
+    }
+    return <ProfilePage />;
   }
 
   // 0b. Legal & Compliance Pages are public

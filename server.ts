@@ -21,7 +21,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  })
+);
 
 // In-memory cache to prevent Yahoo Finance rate limits
 const cache: { [key: string]: { data: any; timestamp: number } } = {};
@@ -1308,7 +1314,56 @@ app.get('/api/search', async (req: Request, res: Response) => {
   res.json({ success: true, results: localMatches });
 });
 
-// 6. POST /api/payments/create-order - Create Payment Order (Supports Live/Test Keys, Differential Upgrades & UPI AutoPay)
+const razorpayPlanCache = new Map<string, string>();
+
+async function getOrCreateRazorpayPlan(
+  authHeader: string,
+  tier: 'beginner' | 'advanced',
+  billingCycle: 'monthly' | 'yearly',
+  amountInPaise: number
+): Promise<string> {
+  const cacheKey = `${tier}_${billingCycle}_${amountInPaise}`;
+  const cached = razorpayPlanCache.get(cacheKey);
+  if (cached) return cached;
+
+  const envPlanKey = `RAZORPAY_PLAN_${tier.toUpperCase()}_${billingCycle.toUpperCase()}`;
+  const configuredPlanId = process.env[envPlanKey];
+  if (configuredPlanId) {
+    razorpayPlanCache.set(cacheKey, configuredPlanId);
+    return configuredPlanId;
+  }
+
+  const planLabel = tier === 'advanced' ? 'Advanced Pro' : 'Beginner';
+  const cycleLabel = billingCycle === 'yearly' ? 'Yearly' : 'Monthly';
+  const planRes = await fetch('https://api.razorpay.com/v1/plans', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${authHeader}`,
+    },
+    body: JSON.stringify({
+      period: billingCycle,
+      interval: 1,
+      item: {
+        name: `Nifty Lens ${planLabel} (${cycleLabel})`,
+        amount: amountInPaise,
+        currency: 'INR',
+        description: `Nifty Lens ${planLabel} ${cycleLabel} recurring subscription`,
+      },
+    }),
+  });
+
+  if (!planRes.ok) {
+    const errBody = await planRes.text();
+    throw new Error(`Razorpay plan creation failed (${planRes.status}): ${errBody}`);
+  }
+
+  const planData = await planRes.json();
+  razorpayPlanCache.set(cacheKey, planData.id);
+  return planData.id;
+}
+
+// 6. POST /api/payments/create-order - Create Razorpay Subscription (plans) or Order (top-up / differential upgrade)
 app.post('/api/payments/create-order', async (req: Request, res: Response) => {
   try {
     const { tier, billingCycle, currentTier, enableAutoPay, upiId, userId, email, name } = req.body || {};
@@ -1339,52 +1394,127 @@ app.post('/api/payments/create-order', async (req: Request, res: Response) => {
       ? `umn_${Math.random().toString(36).substring(2, 10)}@okaxis`
       : undefined;
 
-    // If real Razorpay test/live credentials are provided in .env, create an order via Razorpay API
+    // If real Razorpay test/live credentials are provided in .env, create a Subscription or Order via Razorpay API
     if (keyId && keySecret && !keyId.includes('NiftyLensDemoKey')) {
-      try {
-        const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
-        const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+      const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+      const useSubscriptionApi = validTier !== 'topup_1l';
+
+      if (useSubscriptionApi) {
+        const planAmountInPaise = fullPriceINR * 100;
+        const planId = await getOrCreateRazorpayPlan(authHeader, validTier, validCycle, planAmountInPaise);
+        const cycleDurationSec = validCycle === 'yearly' ? 365 * 24 * 60 * 60 : 30 * 24 * 60 * 60;
+        const subscriptionPayload: Record<string, unknown> = {
+          plan_id: planId,
+          total_count: validCycle === 'yearly' ? 10 : 120,
+          quantity: 1,
+          customer_notify: 1,
+          notes: {
+            tier: validTier,
+            billingCycle: validCycle,
+            userId: userId || 'guest',
+            email: email || '',
+            name: name || '',
+          },
+        };
+
+        if (isBeginnerToAdvanced) {
+          subscriptionPayload.start_at = Math.floor(Date.now() / 1000) + cycleDurationSec;
+          subscriptionPayload.addons = [
+            {
+              item: {
+                name: `Upgrade to Advanced (${validCycle}) — Differential`,
+                amount: amountInPaise,
+                currency: 'INR',
+              },
+            },
+          ];
+        }
+
+        const subRes = await fetch('https://api.razorpay.com/v1/subscriptions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Basic ${authHeader}`,
           },
-          body: JSON.stringify({
-            amount: amountInPaise,
-            currency: 'INR',
-            receipt,
-            notes: {
-              tier: validTier,
-              billingCycle: validCycle,
-              userId: userId || 'guest',
-              email: email || '',
-              name: name || '',
-            },
-          }),
+          body: JSON.stringify(subscriptionPayload),
         });
-        if (rzpRes.ok) {
-          const orderData = await rzpRes.json();
-          return res.json({
-            success: true,
-            mode: 'razorpay_api',
-            keyId,
-            orderId: orderData.id,
-            amount: orderData.amount,
-            amountInINR,
-            fullPriceINR,
-            creditAppliedINR,
-            autoPayEnabled,
-            upiMandateId,
-            upiId: upiId || undefined,
-            currency: orderData.currency || 'INR',
-            tier: validTier,
-            billingCycle: validCycle,
-            receipt,
+        if (!subRes.ok) {
+          const errBody = await subRes.text();
+          console.error('Razorpay subscription creation failed:', subRes.status, errBody);
+          return res.status(502).json({
+            success: false,
+            message: 'Unable to create Razorpay subscription. Please check Razorpay credentials or try again.',
           });
         }
-      } catch (e) {
-        console.warn('Razorpay API fallback to demo order:', e);
+        const subData = await subRes.json();
+        return res.json({
+          success: true,
+          mode: 'razorpay_api',
+          paymentType: 'subscription',
+          keyId,
+          subscriptionId: subData.id,
+          planId,
+          orderId: subData.id,
+          amount: amountInPaise,
+          amountInINR,
+          fullPriceINR,
+          creditAppliedINR,
+          autoPayEnabled: true,
+          upiMandateId,
+          upiId: upiId || undefined,
+          currency: 'INR',
+          tier: validTier,
+          billingCycle: validCycle,
+          receipt,
+        });
       }
+
+      const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${authHeader}`,
+        },
+        body: JSON.stringify({
+          amount: amountInPaise,
+          currency: 'INR',
+          receipt,
+          notes: {
+            tier: validTier,
+            billingCycle: validCycle,
+            userId: userId || 'guest',
+            email: email || '',
+            name: name || '',
+          },
+        }),
+      });
+      if (!rzpRes.ok) {
+        const errBody = await rzpRes.text();
+        console.error('Razorpay order creation failed:', rzpRes.status, errBody);
+        return res.status(502).json({
+          success: false,
+          message: 'Unable to create Razorpay order. Please check Razorpay credentials or try again.',
+        });
+      }
+      const orderData = await rzpRes.json();
+      return res.json({
+        success: true,
+        mode: 'razorpay_api',
+        paymentType: 'order',
+        keyId,
+        orderId: orderData.id,
+        amount: orderData.amount,
+        amountInINR,
+        fullPriceINR,
+        creditAppliedINR,
+        autoPayEnabled,
+        upiMandateId,
+        upiId: upiId || undefined,
+        currency: orderData.currency || 'INR',
+        tier: validTier,
+        billingCycle: validCycle,
+        receipt,
+      });
     }
 
     // Demo Mode Order (for instant sandbox/demo checkout)
@@ -1414,17 +1544,71 @@ app.post('/api/payments/create-order', async (req: Request, res: Response) => {
   }
 });
 
-// 7. POST /api/payments/verify - Verify Razorpay Payment & Issue Subscription Activation
+// 7. POST /api/payments/verify - Verify Razorpay Order or Subscription Payment & Issue Activation
 app.post('/api/payments/verify', async (req: Request, res: Response) => {
   try {
     const {
       razorpay_order_id,
+      razorpay_subscription_id,
       razorpay_payment_id,
       razorpay_signature,
       tier,
       billingCycle,
       userId,
     } = req.body || {};
+
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+    const isDemoOrder =
+      typeof razorpay_order_id === 'string' && razorpay_order_id.startsWith('order_demo_');
+
+    if (!isDemoOrder) {
+      if (!keySecret) {
+        return res.status(500).json({
+          success: false,
+          verified: false,
+          message: 'Razorpay secret is not configured on the server.',
+        });
+      }
+
+      const isSubscription = typeof razorpay_subscription_id === 'string' && Boolean(razorpay_subscription_id);
+      const hasOrderId = typeof razorpay_order_id === 'string' && Boolean(razorpay_order_id);
+
+      if (
+        (!isSubscription && !hasOrderId) ||
+        typeof razorpay_payment_id !== 'string' ||
+        typeof razorpay_signature !== 'string' ||
+        !razorpay_payment_id ||
+        !razorpay_signature
+      ) {
+        return res.status(400).json({
+          success: false,
+          verified: false,
+          message: 'Missing Razorpay payment verification parameters.',
+        });
+      }
+
+      const signaturePayload = isSubscription
+        ? `${razorpay_payment_id}|${razorpay_subscription_id}`
+        : `${razorpay_order_id}|${razorpay_payment_id}`;
+
+      const expectedSignature = crypto
+        .createHmac('sha256', keySecret)
+        .update(signaturePayload)
+        .digest('hex');
+
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+      const actualBuf = Buffer.from(razorpay_signature, 'utf8');
+      const isSignatureValid =
+        expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf);
+
+      if (!isSignatureValid) {
+        return res.status(400).json({
+          success: false,
+          verified: false,
+          message: 'Invalid Razorpay payment signature.',
+        });
+      }
+    }
 
     const validTier = tier === 'topup_1l' ? 'topup_1l' : tier === 'advanced' ? 'advanced' : 'beginner';
     const validCycle = billingCycle === 'yearly' ? 'yearly' : 'monthly';
@@ -1440,7 +1624,8 @@ app.post('/api/payments/verify', async (req: Request, res: Response) => {
         tier: validTier,
         billingCycle: validCycle,
         status: 'active',
-        razorpayOrderId: razorpay_order_id || `order_demo_${now}`,
+        razorpayOrderId: razorpay_order_id || razorpay_subscription_id || `order_demo_${now}`,
+        razorpaySubscriptionId: razorpay_subscription_id || undefined,
         razorpayPaymentId: razorpay_payment_id || `pay_demo_${now}`,
         razorpaySignature: razorpay_signature || 'demo_verified_signature',
         activatedAt: now,
@@ -1451,6 +1636,246 @@ app.post('/api/payments/verify', async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: err?.message || 'Payment verification failed',
+    });
+  }
+});
+
+// 7a. POST /api/payments/webhook - Razorpay Subscription & Payment Lifecycle Webhook
+app.post('/api/payments/webhook', (req: Request, res: Response) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+    const signature = req.headers['x-razorpay-signature'];
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+
+    if (webhookSecret) {
+      if (typeof signature !== 'string' || !rawBody) {
+        return res.status(400).json({ success: false, message: 'Missing webhook signature' });
+      }
+      const expected = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'utf8');
+      const actualBuf = Buffer.from(signature, 'utf8');
+      if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
+        return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
+      }
+    }
+
+    const event = req.body?.event as string | undefined;
+    const subEntity = req.body?.payload?.subscription?.entity;
+    const payEntity = req.body?.payload?.payment?.entity;
+
+    if (event) {
+      console.log(
+        `[Razorpay Webhook] ${event}`,
+        subEntity?.id || payEntity?.id || '',
+        subEntity?.status || payEntity?.status || ''
+      );
+    }
+
+    return res.json({ received: true, event: event || 'unknown' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err?.message || 'Webhook processing error' });
+  }
+});
+
+// 7b. POST /api/payments/subscription-status - Fetch live Razorpay subscription cycle & end date
+app.post('/api/payments/subscription-status', async (req: Request, res: Response) => {
+  try {
+    const subscriptionId =
+      typeof req.body?.subscriptionId === 'string' ? req.body.subscriptionId.trim() : '';
+    const keyId = process.env.RAZORPAY_KEY_ID || '';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+
+    if (
+      keyId &&
+      keySecret &&
+      !keyId.includes('NiftyLensDemoKey') &&
+      subscriptionId.startsWith('sub_')
+    ) {
+      const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+      const rzpRes = await fetch(
+        `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+        {
+          headers: { Authorization: `Basic ${authHeader}` },
+        }
+      );
+      if (rzpRes.ok) {
+        const subData = await rzpRes.json();
+        return res.json({
+          success: true,
+          mode: 'razorpay_api',
+          subscriptionId,
+          status: subData.status,
+          currentStartMs: subData.current_start ? subData.current_start * 1000 : null,
+          currentEndMs: subData.current_end ? subData.current_end * 1000 : null,
+          chargeAtMs: subData.charge_at ? subData.charge_at * 1000 : null,
+          endedAtMs: subData.ended_at ? subData.ended_at * 1000 : null,
+        });
+      }
+    }
+
+    return res.json({ success: true, mode: 'local' });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Unable to fetch subscription status',
+    });
+  }
+});
+
+// 7c. POST /api/payments/cancel-subscription - Cancel a Razorpay Subscription at cycle end
+app.post('/api/payments/cancel-subscription', async (req: Request, res: Response) => {
+  try {
+    const subscriptionId =
+      typeof req.body?.subscriptionId === 'string' ? req.body.subscriptionId.trim() : '';
+    const keyId = process.env.RAZORPAY_KEY_ID || '';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+
+    if (
+      keyId &&
+      keySecret &&
+      !keyId.includes('NiftyLensDemoKey') &&
+      subscriptionId.startsWith('sub_')
+    ) {
+      const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+      const rzpRes = await fetch(
+        `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Basic ${authHeader}`,
+          },
+          body: JSON.stringify({ cancel_at_cycle_end: 1 }),
+        }
+      );
+
+      let subData: Record<string, any> | null = null;
+      if (!rzpRes.ok) {
+        const errBody = await rzpRes.text();
+        const alreadyCancelled = errBody.toLowerCase().includes('already cancelled');
+        if (!alreadyCancelled) {
+          console.error('Razorpay subscription cancellation failed:', rzpRes.status, errBody);
+          return res.status(502).json({
+            success: false,
+            message: 'Unable to cancel Razorpay subscription right now. Please try again.',
+          });
+        }
+        const fetchRes = await fetch(
+          `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+          { headers: { Authorization: `Basic ${authHeader}` } }
+        );
+        if (fetchRes.ok) subData = await fetchRes.json();
+      } else {
+        subData = await rzpRes.json();
+      }
+
+      return res.json({
+        success: true,
+        cancelled: true,
+        mode: 'razorpay_api',
+        subscriptionId,
+        status: subData?.status || 'cancelled',
+        currentEndMs: subData?.current_end ? subData.current_end * 1000 : undefined,
+        endedAtMs: subData?.ended_at ? subData.ended_at * 1000 : undefined,
+      });
+    }
+
+    return res.json({
+      success: true,
+      cancelled: true,
+      mode: 'local',
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err?.message || 'Subscription cancellation failed',
+    });
+  }
+});
+
+// 7d. POST /api/payments/billing-history - Fetch Razorpay invoices/payment receipt details
+app.post('/api/payments/billing-history', async (req: Request, res: Response) => {
+  try {
+    const subscriptionId =
+      typeof req.body?.subscriptionId === 'string' ? req.body.subscriptionId.trim() : '';
+    const paymentId =
+      typeof req.body?.paymentId === 'string' ? req.body.paymentId.trim() : '';
+
+    const keyId = process.env.RAZORPAY_KEY_ID || '';
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || '';
+
+    if (!keyId || !keySecret || keyId.includes('NiftyLensDemoKey')) {
+      return res.json({ success: true, mode: 'local', items: [] });
+    }
+
+    const authHeader = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    const items: Array<{
+      id: string;
+      paymentId: string | null;
+      subscriptionId: string | null;
+      amountINR: number;
+      currency: string;
+      status: string;
+      createdAt: number;
+      receiptUrl: string | null;
+      description: string | null;
+    }> = [];
+
+    if (subscriptionId.startsWith('sub_')) {
+      const invRes = await fetch(
+        `https://api.razorpay.com/v1/invoices?subscription_id=${encodeURIComponent(subscriptionId)}`,
+        { headers: { Authorization: `Basic ${authHeader}` } }
+      );
+      if (invRes.ok) {
+        const invData = await invRes.json();
+        const list = Array.isArray(invData?.items) ? invData.items : [];
+        for (const inv of list) {
+          items.push({
+            id: inv.id || inv.payment_id || subscriptionId,
+            paymentId: inv.payment_id || null,
+            subscriptionId: inv.subscription_id || subscriptionId,
+            amountINR: typeof inv.amount_paid === 'number' && inv.amount_paid > 0
+              ? inv.amount_paid / 100
+              : typeof inv.amount === 'number'
+              ? inv.amount / 100
+              : 0,
+            currency: inv.currency || 'INR',
+            status: inv.status || 'issued',
+            createdAt: typeof inv.created_at === 'number' ? inv.created_at * 1000 : Date.now(),
+            receiptUrl: inv.short_url || null,
+            description: inv.description || null,
+          });
+        }
+      }
+    }
+
+    if (items.length === 0 && paymentId.startsWith('pay_') && !paymentId.startsWith('pay_demo_')) {
+      const payRes = await fetch(
+        `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`,
+        { headers: { Authorization: `Basic ${authHeader}` } }
+      );
+      if (payRes.ok) {
+        const pay = await payRes.json();
+        items.push({
+          id: pay.id,
+          paymentId: pay.id,
+          subscriptionId: subscriptionId || null,
+          amountINR: typeof pay.amount === 'number' ? pay.amount / 100 : 0,
+          currency: pay.currency || 'INR',
+          status: pay.status || 'captured',
+          createdAt: typeof pay.created_at === 'number' ? pay.created_at * 1000 : Date.now(),
+          receiptUrl: null,
+          description: pay.description || null,
+        });
+      }
+    }
+
+    return res.json({ success: true, mode: 'razorpay_api', items });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      items: [],
+      message: err?.message || 'Unable to fetch billing history',
     });
   }
 });

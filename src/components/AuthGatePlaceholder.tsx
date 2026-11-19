@@ -13,7 +13,7 @@ import {
 import { AuthGateIllustration } from './auth/AuthGateIllustration';
 
 interface AuthGatePlaceholderProps {
-  feature?: 'screener' | 'trade' | 'quiz';
+  feature?: 'screener' | 'trade' | 'quiz' | 'profile';
 }
 
 const FEATURE_COPY = {
@@ -34,6 +34,12 @@ const FEATURE_COPY = {
     title: 'Sign in to play Guess the Chart Quiz',
     description:
       'Test your pattern-reading instincts across Unlimited Practice, 3-Life Survival, and 10-Round Challenge modes while tracking your accuracy and streaks.',
+  },
+  profile: {
+    eyebrow: 'NIFTYLENS ACCOUNT & SUBSCRIPTION',
+    title: 'Sign in to view your Profile & Subscription',
+    description:
+      'Manage your Nifty Lens membership, view billing & renewal details, and check your virtual capital limits.',
   },
 };
 

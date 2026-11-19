@@ -149,6 +149,7 @@ export interface TradingContextType {
     subscriptionUpiMandateId?: string;
   }) => Promise<void>;
   creditFreeWalletTopUp: (paymentId?: string, orderId?: string) => Promise<void>;
+  cancelSubscription: () => Promise<{ success: boolean; expiresAt?: number; message?: string }>;
   upgradeModalState: {
     isOpen: boolean;
     requiredTier: SubscriptionTier;

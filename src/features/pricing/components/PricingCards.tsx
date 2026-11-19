@@ -55,6 +55,9 @@ export const PricingCards: React.FC<PricingCardsProps> = ({
     const cycle = user.subscriptionBillingCycle === 'yearly' ? 'Yearly' : 'Monthly';
     const expiresAt = user.subscriptionExpiresAt;
     if (!expiresAt) return `${cycle} plan`;
+    if (user.subscriptionStatus === 'cancelled') {
+      return `${cycle} plan cancelled · active until ${dateFmt.format(expiresAt)}`;
+    }
     return state === 'renew'
       ? `${cycle} plan ended ${dateFmt.format(expiresAt)}`
       : `${cycle} plan · valid until ${dateFmt.format(expiresAt)}`;
@@ -64,12 +67,16 @@ export const PricingCards: React.FC<PricingCardsProps> = ({
     <section aria-label="Plans" className="space-y-6">
       <div className="grid grid-cols-1 gap-6 pt-3 md:grid-cols-2 lg:pt-6 lg:grid-cols-3 lg:gap-5 lg:items-stretch">
         {PLAN_ORDER.map((tier) => {
-          const state = getPlanCtaState({
+          const baseState = getPlanCtaState({
             cardTier: tier,
             isLoggedIn: Boolean(user),
             userTier: subscriptionTier,
             expiresAt: user?.subscriptionExpiresAt,
           });
+          const state: PlanCtaState =
+            baseState === 'active' && user?.subscriptionStatus === 'cancelled' && tier !== 'free'
+              ? 'renew'
+              : baseState;
           const quote =
             tier !== 'free' && user
               ? getUpgradeAmountQuote({

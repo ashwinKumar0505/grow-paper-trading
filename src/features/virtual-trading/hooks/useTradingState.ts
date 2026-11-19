@@ -52,8 +52,16 @@ export function useTradingState(){
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
 
-  // Subscription & Usage Quota State
-  const subscriptionTier: SubscriptionTier = user?.subscriptionTier || 'free';
+  // Subscription & Usage Quota State (keep paid tier active until subscriptionExpiresAt passes)
+  const isPaidExpired = Boolean(
+    user?.subscriptionTier &&
+      user.subscriptionTier !== 'free' &&
+      user.subscriptionExpiresAt &&
+      user.subscriptionExpiresAt < Date.now()
+  );
+  const subscriptionTier: SubscriptionTier = isPaidExpired
+    ? 'free'
+    : user?.subscriptionTier || 'free';
   const planConfig: SubscriptionPlanConfig = SUBSCRIPTION_PLANS[subscriptionTier] || SUBSCRIPTION_PLANS.free;
 
   const [usageQuota, setUsageQuota] = useState<UserUsageQuota>(() => {

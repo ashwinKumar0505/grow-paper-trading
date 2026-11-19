@@ -213,6 +213,7 @@ export interface UserProfile {
   subscriptionUpiMandateId?: string;
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
+  razorpaySubscriptionId?: string;
 }
 
 export interface WalletTransaction {

@@ -13,7 +13,6 @@ export const UserProfileMenu: React.FC = () => {
     openUpgradeModal,
     logOutUser,
     setIsWalletModalOpen,
-    setShowLandingPage,
   } = useTrading();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -104,11 +103,9 @@ export const UserProfileMenu: React.FC = () => {
           planConfig={planConfig}
           subscriptionTier={subscriptionTier}
           tierBadgeClass={tierBadgeClass}
-          balance={balance}
           onClose={() => setIsOpen(false)}
           onOpenWallet={() => setIsWalletModalOpen(true)}
           onLogOut={logOutUser}
-          onShowLanding={() => setShowLandingPage(true)}
         />
       )}
     </div>

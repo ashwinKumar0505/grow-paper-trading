@@ -15,6 +15,7 @@ import {
 } from '../utils/portfolioSync';
 import {
   fetchUserProfileFromFirestore,
+  persistUserProfileToFirestore,
   resolveActiveTier,
 } from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
@@ -89,6 +90,7 @@ export function useAccountSync({
               subscriptionExpiresAt: data.subscriptionExpiresAt || null,
               razorpayPaymentId: data.razorpayPaymentId || undefined,
               razorpayOrderId: data.razorpayOrderId || undefined,
+              razorpaySubscriptionId: data.razorpaySubscriptionId || undefined,
             };
 
             applyPortfolioSnapshot(
@@ -140,7 +142,10 @@ export function useAccountSync({
               if (
                 prev.subscriptionTier === data.subscriptionTier &&
                 prev.subscriptionBillingCycle === data.subscriptionBillingCycle &&
-                prev.razorpayPaymentId === data.razorpayPaymentId
+                prev.subscriptionStatus === (data.subscriptionStatus || 'active') &&
+                prev.subscriptionExpiresAt === (data.subscriptionExpiresAt ?? prev.subscriptionExpiresAt) &&
+                prev.razorpayPaymentId === data.razorpayPaymentId &&
+                prev.razorpaySubscriptionId === data.razorpaySubscriptionId
               ) {
                 return prev;
               }
@@ -154,6 +159,7 @@ export function useAccountSync({
                 subscriptionExpiresAt: data.subscriptionExpiresAt ?? prev.subscriptionExpiresAt,
                 razorpayPaymentId: data.razorpayPaymentId || prev.razorpayPaymentId,
                 razorpayOrderId: data.razorpayOrderId || prev.razorpayOrderId,
+                razorpaySubscriptionId: data.razorpaySubscriptionId || prev.razorpaySubscriptionId,
               };
             });
           }
@@ -167,4 +173,44 @@ export function useAccountSync({
       if (unsub) unsub();
     };
   }, [user?.uid]);
+
+  // Automatically downgrade expired (cancelled or unpaid) subscriptions to the Free plan
+  useEffect(() => {
+    if (
+      !user ||
+      !user.subscriptionTier ||
+      user.subscriptionTier === 'free' ||
+      !user.subscriptionExpiresAt ||
+      user.subscriptionExpiresAt >= Date.now()
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    const expiredProfile: UserProfile = {
+      ...user,
+      subscriptionTier: 'free',
+      subscriptionBillingCycle: 'free',
+      subscriptionStatus: 'expired',
+      subscriptionAutoPay: false,
+      subscriptionUpdatedAt: now,
+    };
+    setUser(expiredProfile);
+
+    try {
+      localStorage.setItem('mypaper_user_v2', JSON.stringify(expiredProfile));
+      localStorage.setItem('groww_paper_user_v1', JSON.stringify(expiredProfile));
+    } catch {}
+
+    if (user.uid) {
+      persistUserProfileToFirestore(user.uid, user.email, {
+        subscriptionTier: 'free',
+        subscriptionBillingCycle: 'free',
+        subscriptionStatus: 'expired',
+        subscriptionAutoPay: false,
+        subscriptionUpdatedAt: now,
+        updatedAt: now,
+      }).catch(() => {});
+    }
+  }, [user, setUser]);
 }

@@ -1,15 +1,11 @@
 import React from 'react';
+import { Loader2, Lock, X } from 'lucide-react';
 import { useTrading } from '../context/TradingContext';
 import { formatINR } from '../utils/pricing';
-import {
-  Loader2,
-  Lock,
-  ShieldCheck,
-  X,
-} from 'lucide-react';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
 import { CheckoutReceiptView } from './checkout/CheckoutReceiptView';
 import { CheckoutOrderSummary } from './checkout/CheckoutOrderSummary';
-import { CheckoutPaymentMethods } from './checkout/CheckoutPaymentMethods';
 import { useRazorpayCheckout } from './checkout/useRazorpayCheckout';
 
 export const RazorpayCheckoutModal: React.FC = () => {
@@ -20,69 +16,66 @@ export const RazorpayCheckoutModal: React.FC = () => {
     plan,
     billingCycle,
     setBillingCycle,
-    paymentMethod,
-    setPaymentMethod,
-    selectedUpiApp,
-    handleSelectUpiApp,
-    upiId,
-    setUpiId,
-    isUpiVerified,
-    setIsUpiVerified,
-    enableAutoPay,
-    setEnableAutoPay,
-    selectedBank,
-    setSelectedBank,
     orderInfo,
     isCreatingOrder,
     isProcessing,
+    checkoutError,
     paymentSuccess,
     upgradeQuote,
     amountINR,
-    nextRenewalDate,
-    handleCompletePayment,
+    handleStartPayment,
     closeRazorpayCheckout,
   } = useRazorpayCheckout();
 
   if (!isOpen) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Nifty Lens Secure Checkout"
-    >
-      <div className="fixed inset-0" onClick={() => !isProcessing && closeRazorpayCheckout()} />
+  const renewalPeriod = billingCycle === 'yearly' ? 'year' : 'month';
 
-      <div className="relative w-full max-w-lg rounded-2xl overflow-hidden bg-[#0B1310] border border-[#1E2F28] shadow-2xl z-10 text-left max-h-[92vh] flex flex-col">
+  return (
+    <Dialog
+      open={isOpen}
+      modal={false}
+      onOpenChange={(open) => {
+        if (!open && !isProcessing) closeRazorpayCheckout();
+      }}
+    >
+      <div
+        className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs animate-fade-in"
+        onClick={() => !isProcessing && closeRazorpayCheckout()}
+      />
+
+      <DialogContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl overflow-hidden bg-[#0B1310] border border-[#1E2F28] shadow-2xl text-left max-h-[92vh] flex flex-col focus:outline-none"
+      >
         {/* Header */}
-        <div className="bg-[#111C17]/80 text-white px-6 py-4 flex items-center justify-between border-b border-[#1E2F28] shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00D09C] text-[#06241B] font-extrabold text-sm flex items-center justify-center">
-              NL
+        <div className="px-6 py-4 flex items-center justify-between border-b border-[#1E2F28] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#082219] border border-[#1E2F28] flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 40 40" fill="none" className="w-5 h-5" aria-hidden="true">
+                <circle cx="17.5" cy="17.5" r="10.5" stroke="#10B981" strokeWidth="2.8" />
+                <path d="M25.5 25.5L32.5 32.5" stroke="#10B981" strokeWidth="3.5" strokeLinecap="round" />
+                <rect x="12.5" y="16" width="2.6" height="5" rx="0.8" fill="#10B981" />
+                <rect x="16.5" y="13.5" width="2.6" height="6.5" rx="0.8" fill="#10B981" />
+                <rect x="20.5" y="11" width="2.6" height="8" rx="0.8" fill="#10B981" />
+              </svg>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight">Nifty Lens Checkout</span>
-                <span className="rounded-full bg-[#00D09C]/15 border border-[#00D09C]/30 px-2 py-0.5 text-[10px] font-semibold text-[#00D09C]">
-                  Instant Activation
-                </span>
-              </div>
-              <div className="text-[11px] text-[#9AB0A5] flex items-center gap-1.5 mt-0.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#00D09C]" />
-                <span>Razorpay Secure · Order {orderInfo?.orderId || 'ready'}</span>
-              </div>
-            </div>
+            <DialogTitle className="font-bold text-lg text-white tracking-tight">
+              {isTopUp ? 'Complete Wallet Top-Up' : 'Complete Your Subscription'}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Review your subscription summary and continue to Razorpay to complete payment.
+            </DialogDescription>
           </div>
 
           <button
             type="button"
             onClick={closeRazorpayCheckout}
             disabled={isProcessing}
-            className="p-1.5 rounded-lg text-[#9AB0A5] hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#9AB0A5] hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Close checkout"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -95,7 +88,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
               onClose={closeRazorpayCheckout}
             />
           ) : (
-            <form onSubmit={handleCompletePayment} className="p-6 space-y-5">
+            <form onSubmit={handleStartPayment} className="p-6 space-y-5">
               <CheckoutOrderSummary
                 isTopUp={isTopUp}
                 plan={plan}
@@ -107,7 +100,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
 
               {!user && (
                 <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3.5 text-xs text-amber-200 flex items-center justify-between gap-3">
-                  <span>Sign in or create a free account to link this subscription to your profile.</span>
+                  <span>Sign in or create a free account to link this upgrade.</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -116,66 +109,62 @@ export const RazorpayCheckoutModal: React.FC = () => {
                     }}
                     className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-400 text-[#06241B] font-bold cursor-pointer"
                   >
-                    Sign Up Free
+                    Sign Up
                   </button>
                 </div>
               )}
 
-              <CheckoutPaymentMethods
-                paymentMethod={paymentMethod}
-                setPaymentMethod={setPaymentMethod}
-                selectedUpiApp={selectedUpiApp}
-                onSelectUpiApp={handleSelectUpiApp}
-                upiId={upiId}
-                setUpiId={setUpiId}
-                isUpiVerified={isUpiVerified}
-                setIsUpiVerified={setIsUpiVerified}
-                isTopUp={isTopUp}
-                enableAutoPay={enableAutoPay}
-                setEnableAutoPay={setEnableAutoPay}
-                billingCycle={billingCycle}
-                nextRenewalDate={nextRenewalDate}
-                upgradeQuote={upgradeQuote}
-                selectedBank={selectedBank}
-                setSelectedBank={setSelectedBank}
-              />
+              {checkoutError && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+                  {checkoutError}
+                </div>
+              )}
 
-              <button
-                type="submit"
-                disabled={isProcessing || isCreatingOrder}
-                className="w-full py-3.5 px-5 rounded-xl bg-[#00D09C] hover:bg-[#00B386] text-[#06241B] font-semibold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>
-                      {!isTopUp && paymentMethod === 'upi' && enableAutoPay
-                        ? 'Approving UPI AutoPay Mandate & Activating…'
-                        : 'Processing Payment & Activating…'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-4 h-4" />
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  disabled={isProcessing || isCreatingOrder || !orderInfo}
+                  className="w-full h-12 rounded-xl bg-[#10B981] hover:bg-[#059669] dark:bg-[#10B981] dark:hover:bg-[#059669] text-[#042218] font-semibold text-base transition-colors cursor-pointer"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Opening Razorpay…</span>
+                    </>
+                  ) : isCreatingOrder ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Preparing Checkout…</span>
+                    </>
+                  ) : (
                     <span>
                       {isTopUp
-                        ? 'Pay ₹50 & Credit +₹1,00,000 Now'
-                        : !isTopUp && paymentMethod === 'upi' && enableAutoPay
-                        ? `Approve AutoPay & Pay ${formatINR(amountINR)}`
-                        : `Pay ${formatINR(amountINR)} & Activate ${plan.name}`}
+                        ? `Continue to Pay ${formatINR(amountINR)}`
+                        : `Subscribe & Pay ${formatINR(amountINR)}`}
                     </span>
-                  </>
-                )}
-              </button>
+                  )}
+                </Button>
 
-              <div className="flex items-center justify-between text-[11px] text-[#6B8578]">
-                <span>256-Bit SSL Encrypted Checkout</span>
-                <span>Instant Account Activation</span>
+                <div className="text-center space-y-1.5 pt-1">
+                  <p className="text-xs text-[#9AB0A5] flex items-center justify-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-[#10B981]" />
+                    <span>Secure payment powered by Razorpay</span>
+                  </p>
+                  {!isTopUp ? (
+                    <p className="text-xs text-[#6B8578] leading-relaxed">
+                      Recurring {billingCycle} subscription · Renews at {formatINR(upgradeQuote.fullPriceINR)}/{renewalPeriod} until cancelled. Cancel anytime. Instant upgrade after successful payment.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#6B8578]">
+                      Instant wallet credit after successful payment.
+                    </p>
+                  )}
+                </div>
               </div>
             </form>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
