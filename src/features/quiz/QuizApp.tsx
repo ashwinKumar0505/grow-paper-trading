@@ -12,7 +12,7 @@ import { TradingCanvas } from './components/TradingCanvas';
 import { useQuizSession } from './hooks/useQuizSession';
 
 export default function QuizApp() {
-  const { difficulty, gameMode, survivalState, scenario, tradeNumber, revealedOutcomeCount, isRevealing, userTrade, chosenDirection, entryPrice, positionSize, setPositionSize, indicatorSettings, isHistoryOpen, setIsHistoryOpen, isGuideOpen, setIsGuideOpen, chartType, setChartType, quizStats, tournamentState, stats, handleNextScenario, handleRestartTournament, handleRetrySurvival, handleLaunchQuiz, currentView, setCurrentView, executeTrade, handleToggleIndicator, handleResetStats } = useQuizSession();
+  const { difficulty, gameMode, survivalState, scenario, tradeNumber, revealedOutcomeCount, isRevealing, userTrade, chosenDirection, entryPrice, positionSize, setPositionSize, indicatorSettings, isHistoryOpen, setIsHistoryOpen, isGuideOpen, setIsGuideOpen, chartType, setChartType, quizStats, tournamentState, stats, handleNextScenario, handleRestartTournament, handleRetrySurvival, handleLaunchQuiz, currentView, setCurrentView, executeTrade, handleToggleIndicator, handleOpenHistory, handleResetStats } = useQuizSession();
   // 2. Separate Mode & Difficulty Selection Page
   if (currentView === 'mode-select') {
     return (
@@ -48,7 +48,7 @@ export default function QuizApp() {
         quizStats={quizStats}
         survivalState={survivalState}
         tournamentState={tournamentState}
-        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenHistory={handleOpenHistory}
         onOpenGuide={() => setIsGuideOpen(true)}
         onGoHome={() => setCurrentView('mode-select')}
         onOpenLearnCharts={() => setCurrentView('learn-charts')}

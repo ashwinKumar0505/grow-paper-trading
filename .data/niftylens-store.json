@@ -1,0 +1,504 @@
+{
+  "users": {
+    "sRHPteR060hsY2c94umd4XJsHvu1": {
+      "uid": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "email": "ashwinku50@gmail.com",
+      "name": "Ashwin kumar",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocIKSJgxQQooM3q5-QGP_icKTy-zi8ORuAhXk7JAs--pkzXz7g=s96-c",
+      "authProvider": "google",
+      "subscriptionTier": "beginner",
+      "subscriptionBillingCycle": "monthly",
+      "subscriptionStatus": "active",
+      "subscriptionUpdatedAt": 1795284299400,
+      "subscriptionExpiresAt": 1797876299400,
+      "subscriptionAutoPay": true,
+      "paidTopUpCredit": 0,
+      "usageQuota": {
+        "dateKey": "2026-11-21",
+        "analysisSearchesCount": 0,
+        "quizQuestionsCount": 0,
+        "lastPortfolioResetMonth": "2026-11",
+        "portfolioResetsThisMonth": 0,
+        "lastAutoResetMonth": "2026-11"
+      },
+      "createdAt": 1795250697093,
+      "updatedAt": 1795284857761,
+      "razorpayPaymentId": "pay_U2uxdrAqqD2U3J",
+      "razorpayOrderId": "sub_U2ux5Zlghq5RQo",
+      "razorpaySubscriptionId": "sub_U2ux5Zlghq5RQo"
+    }
+  },
+  "emailIndex": {
+    "ashwinku50@gmail.com": "sRHPteR060hsY2c94umd4XJsHvu1"
+  },
+  "otpRecords": {},
+  "revokedTokens": {},
+  "paymentIntents": {
+    "sub_U2uXhsG75lyp8L": {
+      "intentId": "sub_U2uXhsG75lyp8L",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282800172
+    },
+    "sub_U2uXxrn9l0drwK": {
+      "intentId": "sub_U2uXxrn9l0drwK",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282815673
+    },
+    "sub_U2uXzznoMLJRh4": {
+      "intentId": "sub_U2uXzznoMLJRh4",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282818021
+    },
+    "sub_U2uY0e85nnFBkU": {
+      "intentId": "sub_U2uY0e85nnFBkU",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282818623
+    },
+    "sub_U2uY4IaRhOfSHL": {
+      "intentId": "sub_U2uY4IaRhOfSHL",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282821955
+    },
+    "sub_U2uYAsp52kadgr": {
+      "intentId": "sub_U2uYAsp52kadgr",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282827945
+    },
+    "sub_U2uYAtZv12qQ7R": {
+      "intentId": "sub_U2uYAtZv12qQ7R",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282827925
+    },
+    "sub_U2uYIpVFUZx0gk": {
+      "intentId": "sub_U2uYIpVFUZx0gk",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282835185
+    },
+    "sub_U2uYIsIXF6HqKy": {
+      "intentId": "sub_U2uYIsIXF6HqKy",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795282835196
+    },
+    "sub_U2ukxx51p4cLCX": {
+      "intentId": "sub_U2ukxx51p4cLCX",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795283554316
+    },
+    "sub_U2ulMAwVr8ziWR": {
+      "intentId": "sub_U2ulMAwVr8ziWR",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795283576333
+    },
+    "sub_U2ulMHruUBlOQq": {
+      "intentId": "sub_U2ulMHruUBlOQq",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795283576330
+    },
+    "sub_U2ulTP7XU1NLGG": {
+      "intentId": "sub_U2ulTP7XU1NLGG",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795283583268
+    },
+    "sub_U2ulTOn5eIDpRc": {
+      "intentId": "sub_U2ulTOn5eIDpRc",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 289900,
+      "fullPriceINR": 2899,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795283583264
+    },
+    "sub_U2ux5Zlghq5RQo": {
+      "intentId": "sub_U2ux5Zlghq5RQo",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "verified",
+      "createdAt": 1795284235382,
+      "razorpayPaymentId": "pay_U2uxdrAqqD2U3J",
+      "verifiedAt": 1795284299400
+    },
+    "sub_U2uy59gxHV41s1": {
+      "intentId": "sub_U2uy59gxHV41s1",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "userEmail": "ashwinku50@gmail.com",
+      "tier": "beginner",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 29900,
+      "fullPriceINR": 299,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795284299507
+    }
+  },
+  "processedPayments": {
+    "pay_U2uxdrAqqD2U3J": {
+      "intentId": "sub_U2ux5Zlghq5RQo",
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "verifiedAt": 1795284299400
+    }
+  },
+  "processedWebhooks": {},
+  "billingHistory": {
+    "sRHPteR060hsY2c94umd4XJsHvu1": [
+      {
+        "id": "pay_U2uxdrAqqD2U3J",
+        "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+        "paymentId": "pay_U2uxdrAqqD2U3J",
+        "orderId": "sub_U2ux5Zlghq5RQo",
+        "subscriptionId": "sub_U2ux5Zlghq5RQo",
+        "planName": "Beginner Package",
+        "tier": "beginner",
+        "billingCycle": "monthly",
+        "amountINR": 299,
+        "currency": "INR",
+        "status": "captured",
+        "createdAt": 1795284299400,
+        "receiptUrl": null,
+        "description": "Beginner Package (monthly)"
+      }
+    ]
+  },
+  "tradingLedgers": {
+    "sRHPteR060hsY2c94umd4XJsHvu1": {
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "version": 2,
+      "balance": 1000000,
+      "initialBalance": 1000000,
+      "paidTopUpCredit": 0,
+      "holdings": [],
+      "positions": [],
+      "orders": [],
+      "executions": [],
+      "executedOrderKeys": [],
+      "walletTransactions": [
+        {
+          "id": "TX-03925988",
+          "type": "DEPOSIT",
+          "amount": 900000,
+          "description": "Beginner Package upgrade virtual capital boost (+₹9,00,000)",
+          "timestamp": 1795284299400
+        },
+        {
+          "id": "TX-6668DC63",
+          "type": "DEPOSIT",
+          "amount": 100000,
+          "description": "Initial virtual capital (Free Starter)",
+          "timestamp": 1795250697249
+        }
+      ],
+      "watchlists": [
+        {
+          "id": "default",
+          "name": "My Watchlist",
+          "symbols": [
+            "RELIANCE",
+            "TCS",
+            "HDFCBANK",
+            "TATAMOTORS",
+            "ZOMATO",
+            "INFY"
+          ]
+        }
+      ],
+      "squareOffPendingSymbols": [],
+      "lastAutoResetMonth": "2026-11",
+      "updatedAt": 1795284299400,
+      "processingLockUntil": 0,
+      "processingInstanceId": "inst_50359_095141c9"
+    }
+  },
+  "quizProgress": {
+    "sRHPteR060hsY2c94umd4XJsHvu1": {
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "quizStats": {
+        "totalQuestions": 1,
+        "correctAnswers": 1,
+        "currentStreak": 1,
+        "bestStreak": 1,
+        "recentResults": [
+          true
+        ]
+      },
+      "survivalBestStreak": 1,
+      "survivalBestScore": 0,
+      "tournamentCompletedCount": 0,
+      "tournamentBestBalance": 10000,
+      "stats": {
+        "balance": 9912.94,
+        "startingBalance": 10000,
+        "totalTrades": 5,
+        "wins": 2,
+        "losses": 3,
+        "winRate": 40,
+        "currentStreak": 1,
+        "bestStreak": 1,
+        "netProfit": -87.06,
+        "tradeHistory": [
+          {
+            "id": "trade_1795284896138",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795284893524_r5qmr",
+            "assetSymbol": "INFY",
+            "assetName": "Infosys",
+            "timeframe": "5-minute candles",
+            "patternName": "Head and Shoulders (Bearish Reversal)",
+            "patternCategory": "Reversal",
+            "direction": "SELL",
+            "entryPrice": 1640.35,
+            "exitPrice": 1505.68,
+            "priceChangePct": -8.20983326729051,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": 82.09833267290509,
+            "pnlPct": 8.20983326729051,
+            "isWin": true,
+            "timestamp": 1795284896138,
+            "explanation": "A climber reaches a first peak (left shoulder), powers up to a highest summit (the head), but on the third attempt can only reach a weaker peak (right shoulder). Buyers are exhausted, and once the neckline cracks, the bottom falls out."
+          },
+          {
+            "id": "trade_1795252597070",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795252594034_4yc8m",
+            "assetSymbol": "INFY",
+            "assetName": "Infosys",
+            "timeframe": "5-minute candles",
+            "patternName": "Falling Wedge - Continuation (Bullish)",
+            "patternCategory": "Continuation",
+            "direction": "SELL",
+            "entryPrice": 1712.83,
+            "exitPrice": 1864.58,
+            "priceChangePct": 8.85960661595138,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": -88.59606615951381,
+            "pnlPct": -8.85960661595138,
+            "isWin": false,
+            "timestamp": 1795252597070,
+            "explanation": "A strong uptrend takes a breather in a gentle, downward-sloping converging wedge. This represents orderly profit taking rather than aggressive selling. Once the pullback finishes coiling, the original uptrend powerfully resumes."
+          },
+          {
+            "id": "trade_1795252590869",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795252586836_24beb",
+            "assetSymbol": "SBIN",
+            "assetName": "State Bank of India",
+            "timeframe": "1-hour candles",
+            "patternName": "Ascending Triangle (Bilateral - Bullish Bias)",
+            "patternCategory": "Bilateral",
+            "direction": "SELL",
+            "entryPrice": 827.15,
+            "exitPrice": 901.72,
+            "priceChangePct": 9.015293477603826,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": -90.15293477603826,
+            "pnlPct": -9.015293477603826,
+            "isWin": false,
+            "timestamp": 1795252590869,
+            "explanation": "Picture a bouncing tennis ball hitting a flat ceiling. Each time it bounces back down, it lands higher and higher off the floor. Buyers are getting more and more eager until the ceiling finally cracks open and price jumps higher!"
+          },
+          {
+            "id": "trade_1795252579453",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795252576127_ackk4",
+            "assetSymbol": "LT",
+            "assetName": "Larsen & Toubro",
+            "timeframe": "15-minute candles",
+            "patternName": "Descending Triangle (Bilateral - Bearish Bias)",
+            "patternCategory": "Bilateral",
+            "direction": "BUY",
+            "entryPrice": 3309.03,
+            "exitPrice": 3088.07,
+            "priceChangePct": -6.677485547124082,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": -66.77485547124081,
+            "pnlPct": -6.677485547124082,
+            "isWin": false,
+            "timestamp": 1795252579453,
+            "explanation": "A flat horizontal support floor keeps getting hammered from above. Each bounce is weaker and reaches a lower ceiling than before. Sellers press down with heavier weight until the floor caves in."
+          },
+          {
+            "id": "trade_1795250720064",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795250706530_daubg",
+            "assetSymbol": "LT",
+            "assetName": "Larsen & Toubro",
+            "timeframe": "5-minute candles",
+            "patternName": "Double Top (Bearish Reversal)",
+            "patternCategory": "Reversal",
+            "direction": "SELL",
+            "entryPrice": 3674.34,
+            "exitPrice": 3393.75,
+            "priceChangePct": -7.636473489116416,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": 76.36473489116416,
+            "pnlPct": 7.636473489116416,
+            "isWin": true,
+            "timestamp": 1795250720065,
+            "explanation": "Price surged up to a resistance ceiling, retreated to establish a neckline support, and then pushed back up to the same ceiling. For the second time, buyers were turned away at the identical resistance. Once the neckline breaks, the \"M\" pattern triggers a steep fall."
+          }
+        ]
+      },
+      "updatedAt": 1795284896815
+    }
+  },
+  "auditLog": [
+    {
+      "id": "aud_1795250697093_m4lqx0",
+      "timestamp": 1795250697093,
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "category": "AUTH",
+      "action": "ACCOUNT_CREATED",
+      "details": {
+        "authProvider": "google"
+      }
+    },
+    {
+      "id": "aud_1795284299400_79oyl5",
+      "timestamp": 1795284299400,
+      "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
+      "category": "PAYMENT",
+      "action": "SUBSCRIPTION_VERIFIED",
+      "details": {
+        "intentId": "sub_U2ux5Zlghq5RQo",
+        "paymentId": "pay_U2uxdrAqqD2U3J",
+        "tier": "beginner",
+        "billingCycle": "monthly",
+        "amountPaise": 29900
+      }
+    }
+  ]
+}

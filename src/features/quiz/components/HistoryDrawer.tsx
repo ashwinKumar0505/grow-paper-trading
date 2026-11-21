@@ -83,10 +83,10 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
             <div className="bg-[#121824] p-3 rounded-xl border border-slate-800 flex flex-col font-mono">
               <span className="text-[11px] text-slate-500 font-sans">Net PnL</span>
               <span className={`text-base font-bold tabular-nums ${stats.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {stats.netProfit >= 0 ? '+' : ''}${stats.netProfit.toFixed(2)}
+                {stats.netProfit >= 0 ? '+' : ''}₹{stats.netProfit.toFixed(2)}
               </span>
               <span className="text-[10px] text-slate-500">
-                Bal: ${stats.balance.toFixed(0)}
+                Bal: ₹{stats.balance.toFixed(0)}
               </span>
             </div>
 
@@ -119,7 +119,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 {profitFactor}
               </span>
               <span className="text-[10px] text-slate-500">
-                Gross: ${totalGrossWin.toFixed(0)} / ${totalGrossLoss.toFixed(0)}
+                Gross: ₹{totalGrossWin.toFixed(0)} / ₹{totalGrossLoss.toFixed(0)}
               </span>
             </div>
           </div>

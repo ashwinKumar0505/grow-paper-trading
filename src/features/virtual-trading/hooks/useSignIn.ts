@@ -1,62 +1,37 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import {
-  BillingCycle,
-  normalizeUsageQuota,
-  SUBSCRIPTION_PLANS,
-  SubscriptionTier,
-} from '../../../lib/subscription';
+import { BillingCycle, normalizeUsageQuota, SUBSCRIPTION_PLANS, SubscriptionTier } from '../../../lib/subscription';
 import { UserProfile } from '../../../types/market';
+import { fetchAuthoritativeAccountProfile } from '../services/paperTradingApi';
+import { buildAuthoritativeUserProfileAndPortfolio } from '../utils/accountRestore';
 import {
-  applyPortfolioSnapshot,
-  buildRemotePortfolioPayload,
-  createDefaultPortfolioSnapshot,
-  extractPortfolioFromRemote,
-  loadScopedPortfolioFromStorage,
+  applyPortfolioSnapshot, buildRemotePortfolioPayload, computeEffectiveWalletCap,
+  createDefaultPortfolioSnapshot, extractPortfolioFromRemote, loadScopedPortfolioFromStorage,
 } from '../utils/portfolioSync';
 import {
-  buildEmailUid,
-  fetchUserProfileFromFirestore,
-  normalizeEmail,
-  persistUserProfileToFirestore,
-  resolveActiveTier,
+  buildEmailUid, fetchUserProfileFromFirestore, normalizeEmail,
+  persistUserProfileToFirestore, resolveActiveTier,
 } from '../utils/userProfileSync';
 import type { TradingState } from './useTradingState';
 
 type Options = Pick<
   TradingState,
-  | 'setUser'
-  | 'setBalance'
-  | 'setInitialBalance'
-  | 'setHoldings'
-  | 'setIntradayPositions'
-  | 'setOrders'
-  | 'setExecutedOrderKeys'
-  | 'setWatchlists'
-  | 'setWalletTransactions'
-  | 'setUsageQuota'
-  | 'setIsAuthModalOpen'
-  | 'setShowLandingPage'
-  | 'isDarkMode'
-> &
-  Pick<TradingContextType, 'addToast'>;
+  | 'setUser' | 'setBalance' | 'setInitialBalance' | 'setHoldings'
+  | 'setIntradayPositions' | 'setOrders' | 'setExecutedOrderKeys' | 'setWatchlists'
+  | 'setWalletTransactions' | 'setUsageQuota' | 'setIsAuthModalOpen'
+  | 'setShowLandingPage' | 'isDarkMode'
+> & Pick<TradingContextType, 'addToast'>;
 
 export function useSignIn({
-  setUser,
-  setBalance,
-  setInitialBalance,
-  setHoldings,
-  setIntradayPositions,
-  setOrders,
-  setExecutedOrderKeys,
-  setWatchlists,
-  setWalletTransactions,
-  setUsageQuota,
-  setIsAuthModalOpen,
-  setShowLandingPage,
-  isDarkMode,
-  addToast,
+  setUser, setBalance, setInitialBalance, setHoldings, setIntradayPositions,
+  setOrders, setExecutedOrderKeys, setWatchlists, setWalletTransactions,
+  setUsageQuota, setIsAuthModalOpen, setShowLandingPage, isDarkMode, addToast,
 }: Options) {
-  // Sign In Existing User with Firebase (awaits Firestore so paid plans & holdings are restored immediately)
+  const portfolioSetters = {
+    setBalance, setInitialBalance, setHoldings, setIntradayPositions,
+    setOrders, setExecutedOrderKeys, setWatchlists, setWalletTransactions,
+  };
+
+  // Sign In Existing User (prefers authoritative backend account/ledger, falls back to Firestore/local)
   const signInUser = async (data: {
     uid?: string;
     email: string;
@@ -65,6 +40,31 @@ export function useSignIn({
     avatar?: string;
   }): Promise<boolean> => {
     const normalizedEmail = normalizeEmail(data.email);
+    const serverAccount = await fetchAuthoritativeAccountProfile();
+    if (serverAccount) {
+      const { activeTier, profile, portfolio, usageQuota } =
+        buildAuthoritativeUserProfileAndPortfolio({
+          serverUser: serverAccount.user,
+          serverLedger: serverAccount.ledger,
+          fallbackName: data.name,
+          fallbackEmail: normalizedEmail,
+          fallbackProvider: data.authProvider,
+          fallbackAvatar: data.avatar,
+        });
+      applyPortfolioSnapshot(portfolioSetters, portfolio, profile.uid, isDarkMode);
+      setUser(profile);
+      setUsageQuota(usageQuota);
+      try { localStorage.setItem('mypaper_user_v2', JSON.stringify(profile)); } catch {}
+      setIsAuthModalOpen(false);
+      setShowLandingPage(false);
+      addToast(
+        `Welcome back, ${profile.name}!`,
+        `Signed in (${SUBSCRIPTION_PLANS[activeTier].name}). Ready to trade.`,
+        'success'
+      );
+      return true;
+    }
+
     let existingProfile: UserProfile | null = null;
     try {
       const saved = localStorage.getItem('mypaper_user_v2') || localStorage.getItem('groww_paper_user_v1');
@@ -82,20 +82,21 @@ export function useSignIn({
     const activeTier: SubscriptionTier = remote
       ? resolveActiveTier(remote)
       : existingProfile?.subscriptionTier || 'free';
-    const tierMaxCash = SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
+    const localPortfolio = loadScopedPortfolioFromStorage(effectiveUid);
+    const tierMaxCash =
+      computeEffectiveWalletCap(
+        SUBSCRIPTION_PLANS[activeTier].maxWalletLimit, remote, localPortfolio?.walletTransactions
+      ) ?? SUBSCRIPTION_PLANS[activeTier].maxWalletLimit;
     const defaultCash = SUBSCRIPTION_PLANS[activeTier].defaultStartingCash;
     const userName = data.name || remote?.name || existingProfile?.name || normalizedEmail.split('@')[0];
     const userPhone = remote?.phone || existingProfile?.phone;
 
     const remotePortfolio = extractPortfolioFromRemote(remote, tierMaxCash);
-    const localPortfolio = loadScopedPortfolioFromStorage(effectiveUid);
     const resolvedPortfolio =
       remotePortfolio ||
       localPortfolio ||
       createDefaultPortfolioSnapshot(
-        typeof remote?.balance === 'number'
-          ? Math.min(tierMaxCash, remote.balance)
-          : defaultCash
+        typeof remote?.balance === 'number' ? Math.min(tierMaxCash, remote.balance) : defaultCash
       );
 
     const restoredBalance =
@@ -129,29 +130,13 @@ export function useSignIn({
       razorpayOrderId: remote?.razorpayOrderId || existingProfile?.razorpayOrderId,
       subscriptionAutoPay: remote?.subscriptionAutoPay ?? existingProfile?.subscriptionAutoPay,
       subscriptionUpiMandateId: remote?.subscriptionUpiMandateId || existingProfile?.subscriptionUpiMandateId,
+      paidTopUpCredit: remote?.paidTopUpCredit ?? existingProfile?.paidTopUpCredit ?? 0,
     };
 
-    applyPortfolioSnapshot(
-      {
-        setBalance,
-        setInitialBalance,
-        setHoldings,
-        setIntradayPositions,
-        setOrders,
-        setExecutedOrderKeys,
-        setWatchlists,
-        setWalletTransactions,
-      },
-      resolvedPortfolio,
-      effectiveUid,
-      isDarkMode
-    );
+    applyPortfolioSnapshot(portfolioSetters, resolvedPortfolio, effectiveUid, isDarkMode);
     setUser(profile);
     setUsageQuota(normalizeUsageQuota(remote?.usage ?? null));
-
-    try {
-      localStorage.setItem('mypaper_user_v2', JSON.stringify(profile));
-    } catch {}
+    try { localStorage.setItem('mypaper_user_v2', JSON.stringify(profile)); } catch {}
 
     persistUserProfileToFirestore(effectiveUid, normalizedEmail, {
       userId: effectiveUid,
@@ -166,11 +151,7 @@ export function useSignIn({
       subscriptionExpiresAt: profile.subscriptionExpiresAt,
       ...(!remotePortfolio && localPortfolio
         ? buildRemotePortfolioPayload(resolvedPortfolio)
-        : {
-            balance: restoredBalance,
-            initialBalance: restoredInitialCash,
-            updatedAt: Date.now(),
-          }),
+        : { balance: restoredBalance, initialBalance: restoredInitialCash, updatedAt: Date.now() }),
     }).catch((e) => console.warn('Firebase sync warning:', e));
 
     setIsAuthModalOpen(false);

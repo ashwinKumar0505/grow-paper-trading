@@ -89,10 +89,10 @@ export interface TradingContextType {
   // Wallet / Cash & Add Money
   balance: number;
   initialBalance: number;
-  addMoneyToWallet: (amount: number, description?: string) => boolean;
+  addMoneyToWallet: (amount: number, description?: string) => Promise<boolean>;
   walletTransactions: WalletTransaction[];
   setPaperBalance: (amount: number) => void;
-  resetPortfolio: (startingCash?: number) => void;
+  resetPortfolio: (startingCash?: number) => Promise<void>;
   isWalletModalOpen: boolean;
   setIsWalletModalOpen: (open: boolean) => void;
 
@@ -148,7 +148,6 @@ export interface TradingContextType {
     subscriptionAutoPay?: boolean;
     subscriptionUpiMandateId?: string;
   }) => Promise<void>;
-  creditFreeWalletTopUp: (paymentId?: string, orderId?: string) => Promise<void>;
   cancelSubscription: () => Promise<{ success: boolean; expiresAt?: number; message?: string }>;
   upgradeModalState: {
     isOpen: boolean;
@@ -164,10 +163,10 @@ export interface TradingContextType {
   closeUpgradeModal: () => void;
   razorpayModalState: {
     isOpen: boolean;
-    tier: 'beginner' | 'advanced' | 'topup_1l';
+    tier: 'beginner' | 'advanced';
     billingCycle: 'monthly' | 'yearly';
   };
-  openRazorpayCheckout: (tier: 'beginner' | 'advanced' | 'topup_1l', billingCycle?: 'monthly' | 'yearly') => void;
+  openRazorpayCheckout: (tier: 'beginner' | 'advanced', billingCycle?: 'monthly' | 'yearly') => void;
   closeRazorpayCheckout: () => void;
   consumeAnalysisSearch: (symbol?: string) => boolean;
   consumeQuizQuestion: () => boolean;

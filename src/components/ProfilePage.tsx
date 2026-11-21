@@ -18,6 +18,7 @@ export const ProfilePage: React.FC = () => {
     planConfig,
     usageQuota,
     setIsWalletModalOpen,
+    openUpgradeModal,
     openRazorpayCheckout,
     cancelSubscription,
     logOutUser,
@@ -35,7 +36,12 @@ export const ProfilePage: React.FC = () => {
 
   const handleAddVirtualCash = () => {
     if (subscriptionTier === 'free') {
-      openRazorpayCheckout('topup_1l', 'monthly');
+      openUpgradeModal({
+        requiredTier: 'beginner',
+        featureName: 'Higher Paper Trading Capital & Free Refills',
+        featureDescription:
+          'Free accounts include ₹1,00,000 virtual capital with an automatic monthly reset. Upgrade to Beginner (₹10L) or Advanced (₹50L) for free virtual refills, unlimited resets, and full platform tools.',
+      });
     } else {
       setIsWalletModalOpen(true);
     }

@@ -1,14 +1,10 @@
-import { useEffect,useRef,useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
 import { useQueryParams } from '../../../lib/navigation';
-import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
+import { SUBSCRIPTION_PLANS, normalizeUsageQuota } from '../../../lib/subscription';
 import { api } from '../api/client';
+import { CACHE_KEYS, CACHE_TTL_MS, loadCachedScan, saveCachedScan } from '../utils/scanCache';
 import { RECOMMENDATION } from '../utils/terms';
-
-const POPULAR = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'LT', 'TATAMOTORS'];
-const analysisMemo = {};
-
-const toneFor = (sig) => (sig === 'BULLISH' ? 'positive' : sig === 'BEARISH' ? 'negative' : 'neutral');
 
 export function useStockAnalysis() {
   const [searchParams, setSearchParams] = useQueryParams();
@@ -27,7 +23,11 @@ export function useStockAnalysis() {
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
-  const [analysis, setAnalysis] = useState(urlSymbol ? analysisMemo[urlSymbol] || null : null);
+  const [cachedEntry, setCachedEntry] = useState(() =>
+    urlSymbol ? loadCachedScan(CACHE_KEYS.analysisPrefix + urlSymbol, CACHE_TTL_MS.analysis) : null
+  );
+  const [analysis, setAnalysis] = useState(cachedEntry?.data || null);
+  const [staleWarning, setStaleWarning] = useState(cachedEntry?.staleWarning || '');
   const [loading, setLoading] = useState(false);
   const [loadingSym, setLoadingSym] = useState('');
   const [error, setError] = useState('');
@@ -44,28 +44,53 @@ export function useStockAnalysis() {
     setShowDropdown(false);
     setQuery(clean);
     setLastAttemptSym(clean);
-    if (!consumeAnalysisSearch(clean)) {
-      return;
-    }
-    if (!forceRefresh && analysisMemo[clean]) {
-      setAnalysis(analysisMemo[clean]);
+
+    const existingCache = loadCachedScan(CACHE_KEYS.analysisPrefix + clean, CACHE_TTL_MS.analysis);
+    if (!forceRefresh && existingCache && !existingCache.isStale) {
+      setCachedEntry(existingCache);
+      setAnalysis(existingCache.data);
+      setStaleWarning('');
       setError('');
       if (urlSymbol !== clean) setSearchParams({ symbol: clean });
       return;
     }
+
+    // Check daily quota before making network call, but only deduct quota upon successful response
+    const normalizedQuota = normalizeUsageQuota(usageQuota);
+    if (normalizedQuota.analysisSearchesCount >= planConfig.analysisDailyLimit) {
+      consumeAnalysisSearch(clean);
+      return;
+    }
+
     setLoading(true);
     setLoadingSym(clean);
     setError('');
     try {
       const data = await api.getStockAnalysis(clean, forceRefresh);
-      analysisMemo[data.symbol] = data;
+      consumeAnalysisSearch(clean);
+      const saved = saveCachedScan(CACHE_KEYS.analysisPrefix + data.symbol, data, CACHE_TTL_MS.analysis);
+      setCachedEntry(saved);
       setAnalysis(data);
+      setStaleWarning('');
       setQuery(data.symbol);
       setSearchParams({ symbol: data.symbol });
     } catch (err) {
-      const msg = err.message || `We couldn’t analyse “${clean}”. Server may be down — please try again in some time.`;
+      const msg =
+        err.message ||
+        `We couldn’t analyse “${clean}”. The analytics service is currently unreachable — please retry.`;
+      if (existingCache?.data) {
+        setCachedEntry(existingCache);
+        setAnalysis(existingCache.data);
+        setStaleWarning(
+          `Live analysis service is unreachable. Showing previously fetched snapshot from ${new Date(
+            existingCache.savedAt
+          ).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`
+        );
+      } else {
+        setAnalysis(null);
+      }
       setError(msg);
-      addToast('Analysis Failed', msg, 'error');
+      addToast('Analysis Unavailable', msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -76,6 +101,7 @@ export function useStockAnalysis() {
     if (!urlSymbol) {
       setAnalysis(null);
       setQuery('');
+      setStaleWarning('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlSymbol]);
@@ -119,6 +145,7 @@ export function useStockAnalysis() {
     setQuery('');
     setAnalysis(null);
     setError('');
+    setStaleWarning('');
     setSearchParams({});
     inputRef.current?.focus();
   };
@@ -128,5 +155,36 @@ export function useStockAnalysis() {
   const isAdvanced = mode === 'advanced';
   const { beginner: B, advanced: A } = SUBSCRIPTION_PLANS;
 
-  return { selectStockBySymbol, subscriptionTier, planConfig, usageQuota, openUpgradeModal, query, setQuery, suggestions, showDropdown, setShowDropdown, activeIdx, setActiveIdx, analysis, loading, loadingSym, error, lastAttemptSym, mode, setMode, inputRef, load, onKeyDown, clear, a, rec, isAdvanced, B, A };
+  return {
+    selectStockBySymbol,
+    subscriptionTier,
+    planConfig,
+    usageQuota,
+    openUpgradeModal,
+    query,
+    setQuery,
+    suggestions,
+    showDropdown,
+    setShowDropdown,
+    activeIdx,
+    setActiveIdx,
+    analysis,
+    cachedEntry,
+    staleWarning,
+    loading,
+    loadingSym,
+    error,
+    lastAttemptSym,
+    mode,
+    setMode,
+    inputRef,
+    load,
+    onKeyDown,
+    clear,
+    a,
+    rec,
+    isAdvanced,
+    B,
+    A,
+  };
 }

@@ -1,8 +1,4 @@
-import {
-  Lock,
-  RefreshCw,
-  Sparkles,
-} from 'lucide-react';
+import { Lock, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { HeroChartIllustration } from '../components/Illustrations';
 import MarketStatusBadge from '../components/MarketStatusBadge';
@@ -18,33 +14,10 @@ import { useSwingScanner } from '../hooks/useSwingScanner';
 export default function SwingScannerPage({ marketStatus }) {
   const model = useSwingScanner();
   const {
-    planConfig,
-    scan,
-    loading,
-    loadingMode,
-    error,
-    minConfidence,
-    setMinConfidence,
-    statusFilter,
-    setStatusFilter,
-    sectorFilter,
-    setSectorFilter,
-    sortBy,
-    sortDir,
-    selectedSignal,
-    setSelectedSignal,
-    data,
-    runScan,
-    sectors,
-    counts,
-    rows,
-    onSort,
-    resetFilters,
-    visibleRows,
-    lockedCount,
-    nextTier,
-    nextPlan,
-    stats,
+    planConfig, scan, loading, loadingMode, error, minConfidence, setMinConfidence,
+    statusFilter, setStatusFilter, sectorFilter, setSectorFilter, sortBy, sortDir,
+    selectedSignal, setSelectedSignal, data, runScan, sectors, counts, rows,
+    onSort, resetFilters, visibleRows, lockedCount, nextTier, nextPlan, stats,
   } = model;
 
   return (
@@ -113,20 +86,36 @@ export default function SwingScannerPage({ marketStatus }) {
         />
       }
       alerts={
-        error ? (
-          <div className="alert alert-error sc-alert-retry">
-            <span>{error}</span>
-            <Button
-              variant="unstyled"
-              size="unstyled"
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => runScan(false)}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : null
+        <>
+          {error && (
+            <div className="alert alert-error sc-alert-retry">
+              <span>{error}</span>
+              <Button
+                variant="unstyled"
+                size="unstyled"
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => runScan(false)}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+          {model.staleWarning && !error && (
+            <div className="alert alert-info sc-alert-retry">
+              <span>{model.staleWarning}</span>
+              <Button
+                variant="unstyled"
+                size="unstyled"
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => runScan(false)}
+              >
+                Refresh Scan
+              </Button>
+            </div>
+          )}
+        </>
       }
       stats={<ScreenerStatsGrid stats={stats} loading={loading && !data} />}
       gate={
@@ -135,8 +124,8 @@ export default function SwingScannerPage({ marketStatus }) {
             requiredTier={nextTier}
             title={`Unlock ${lockedCount} More Swing Setups`}
             description={`Your ${planConfig.name} shows the top ${planConfig.swingMaxSignals} swing setups per scan. Upgrade to ${nextPlan.name} for ${
-              nextTier === 'advanced' ? 'unlimited Nifty 500 setups' : `up to ${nextPlan.swingMaxSignals} setups`
-            } and force live market refresh.`}
+              nextTier === 'advanced' ? 'all matching Nifty 500 setups' : `up to ${nextPlan.swingMaxSignals} setups`
+            } and force market data refresh.`}
             benefits={
               nextTier === 'beginner'
                 ? [
@@ -146,8 +135,8 @@ export default function SwingScannerPage({ marketStatus }) {
                   ]
                 : [
                     'Full Nifty 500 swing screener (all matching setups)',
-                    'On-demand Live Market Data Force Refresh',
-                    'Unlimited AI stock analysis & 2-year strategy backtests',
+                    'On-demand Market Data Force Refresh',
+                    'Unlimited rule-based stock analysis & 2-year strategy backtests',
                   ]
             }
           />

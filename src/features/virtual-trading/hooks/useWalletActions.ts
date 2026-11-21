@@ -1,46 +1,65 @@
 import type { RefObject } from 'react';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import { db,doc,setDoc } from '../../../lib/firebase';
+import { getCurrentMonthKey, normalizeUsageQuota, UserUsageQuota } from '../../../lib/subscription';
+import { OrderBookState } from '../../../utils/orderEngine';
 import {
-getCurrentMonthKey,
-normalizeUsageQuota,
-UserUsageQuota
-} from '../../../lib/subscription';
-import {
-WalletTransaction
-} from '../../../types/market';
-import {
-OrderBookState
-} from '../../../utils/orderEngine';
+  postAuthoritativeWalletReset,
+  postAuthoritativeWalletTopUp,
+  type ServerTradingLedgerState,
+} from '../services/paperTradingApi';
+import { computeCommittedCapitalAmount } from '../utils/portfolioRemoteAdapter';
 import type { TradingState } from './useTradingState';
-const round2 = (n: number) => Math.round(n * 100) / 100;
-type Options = Pick<TradingState, 'subscriptionTier' | 'openRazorpayCheckout' | 'planConfig' | 'openUpgradeModal' | 'setWalletTransactions' | 'user' | 'setInitialBalance' | 'setIsWalletModalOpen' | 'usageQuota' | 'setUsageQuota'> & Pick<TradingContextType, 'addToast'> & { engineRef: RefObject<OrderBookState>; commitEngine: (patch: Partial<OrderBookState>) => void };
 
-export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheckout, planConfig, engineRef, openUpgradeModal, commitEngine, setWalletTransactions, user, setInitialBalance, setIsWalletModalOpen, usageQuota, setUsageQuota }: Options) {
-  // Add Money to Wallet:
-  // - Free tier: Paid top-up of +₹1,00,000 for ₹50 (no free manual add-money)
-  // - Beginner (10L) & Advanced (50L): Unlimited free top-ups ONLY until the specified tier amount (10L or 50L)
-  const addMoneyToWallet = (amount: number, description = 'Funds added via Add Money'): boolean => {
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+type Options = Pick<
+  TradingState,
+  | 'subscriptionTier' | 'planConfig' | 'openUpgradeModal'
+  | 'setWalletTransactions' | 'user' | 'setInitialBalance' | 'setIsWalletModalOpen'
+  | 'usageQuota' | 'setUsageQuota'
+> &
+  Pick<TradingContextType, 'addToast'> & {
+    engineRef: RefObject<OrderBookState>;
+    commitEngine: (patch: Partial<OrderBookState>) => void;
+  };
+
+export function useWalletActions({
+  addToast, subscriptionTier, planConfig, engineRef,
+  openUpgradeModal, commitEngine, setWalletTransactions, user,
+  setInitialBalance, setIsWalletModalOpen, usageQuota, setUsageQuota,
+}: Options) {
+  const applyAuthoritativeLedger = (state: ServerTradingLedgerState) => {
+    commitEngine({
+      balance: state.balance,
+      holdings: state.holdings,
+      positions: state.positions,
+      orders: state.orders,
+      executedOrderKeys: state.executedOrderKeys || [],
+    });
+    if (typeof state.initialBalance === 'number') setInitialBalance(state.initialBalance);
+    if (Array.isArray(state.walletTransactions)) setWalletTransactions(state.walletTransactions);
+  };
+
+  const addMoneyToWallet = async (
+    amount: number,
+    description = 'Funds added via Add Money'
+  ): Promise<boolean> => {
     if (!Number.isFinite(amount) || amount <= 0) {
       addToast('Invalid Amount', 'Please enter a valid amount greater than zero.', 'error');
       return false;
     }
-
     if (subscriptionTier === 'free') {
-      openRazorpayCheckout('topup_1l', 'monthly');
+      openUpgradeModal({
+        requiredTier: 'beginner',
+        featureName: 'Higher Paper Trading Capital & Free Refills',
+        featureDescription:
+          'Free accounts include ₹1,00,000 virtual capital with an automatic monthly reset. Upgrade to Beginner (₹10L) or Advanced (₹50L) for free virtual refills, unlimited resets, and full platform tools.',
+      });
       return false;
     }
 
-    const planMax = planConfig.maxWalletLimit; // ₹10,00,000 for Beginner, ₹50,00,000 for Advanced
-    const cash = engineRef.current.balance;
-    const holdingsValue = engineRef.current.holdings.reduce((s, h) => s + (h.totalInvested || 0), 0);
-    const mtfMargin = engineRef.current.holdings.reduce((s, h) => s + (h.mtfMarginBlocked || 0), 0);
-    const posMargin = engineRef.current.positions.reduce((s, p) => s + (p.marginBlocked || 0), 0);
-    const orderReserved = engineRef.current.orders.reduce(
-      (s, o) => s + ((o.status === 'PENDING' || o.status === 'SCHEDULED') && o.blockedAmount ? o.blockedAmount : 0),
-      0
-    );
-    const committedCapital = round2(cash + holdingsValue + mtfMargin + posMargin + orderReserved);
+    const planMax = planConfig.maxWalletLimit + (user?.paidTopUpCredit || 0);
+    const committedCapital = computeCommittedCapitalAmount(engineRef.current);
     const allowedAdd = Math.max(0, round2(planMax - committedCapital));
 
     if (allowedAdd <= 0) {
@@ -70,29 +89,31 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
       return false;
     }
 
-    const newBalance = Number((cash + amount).toFixed(2));
+    if (user?.uid) {
+      const serverRes = await postAuthoritativeWalletTopUp({ amount, description });
+      if (!serverRes.ok || !serverRes.state) {
+        addToast('Wallet Top-Up Failed', serverRes.message || 'Unable to save top-up to server. Please try again.', 'error');
+        if (serverRes.code === 'WALLET_CAP_EXCEEDED' && serverRes.requiredTier) {
+          openUpgradeModal({ requiredTier: serverRes.requiredTier, featureName: 'Expand Virtual Capital Limit', featureDescription: serverRes.message });
+        }
+        return false;
+      }
+      applyAuthoritativeLedger(serverRes.state);
+      addToast('Money Added!', `₹${amount.toLocaleString('en-IN')} added to your paper wallet. New balance: ₹${serverRes.state.balance.toLocaleString('en-IN')}.`, 'success');
+      return true;
+    }
+
+    const newBalance = round2(engineRef.current.balance + amount);
     commitEngine({ balance: newBalance });
     setInitialBalance((prev) => round2(prev + amount));
-    const tx: WalletTransaction = {
+    setWalletTransactions((prev) => [{
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-      type: 'DEPOSIT',
-      amount,
-      description,
-      timestamp: Date.now(),
-    };
-    setWalletTransactions((prev) => [tx, ...prev]);
-    if (user?.uid) {
-      setDoc(doc(db, 'users', user.uid), { balance: newBalance, updatedAt: Date.now() }, { merge: true }).catch(() => {});
-    }
-    addToast(
-      'Money Added!',
-      `₹${amount.toLocaleString('en-IN')} added to your paper wallet. New balance: ₹${newBalance.toLocaleString('en-IN')}.`,
-      'success'
-    );
+      type: 'DEPOSIT', amount, description, timestamp: Date.now(),
+    }, ...prev]);
+    addToast('Money Added!', `₹${amount.toLocaleString('en-IN')} added to your paper wallet. New balance: ₹${newBalance.toLocaleString('en-IN')}.`, 'success');
     return true;
   };
 
-  // Set Paper Balance
   const setPaperBalance = (amount: number) => {
     if (!Number.isFinite(amount)) return;
     const planMax = planConfig.maxWalletLimit;
@@ -107,35 +128,26 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
     const clampedAmount = Math.min(planMax, Math.max(0, amount));
     commitEngine({ balance: clampedAmount });
     setInitialBalance(clampedAmount);
-    const tx: WalletTransaction = {
+    setWalletTransactions((prev) => [{
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-      type: 'DEPOSIT',
-      amount: clampedAmount,
-      description: 'Direct balance adjustment',
-      timestamp: Date.now(),
-    };
-    setWalletTransactions((prev) => [tx, ...prev]);
+      type: 'DEPOSIT', amount: clampedAmount, description: 'Direct balance adjustment', timestamp: Date.now(),
+    }, ...prev]);
     addToast('Paper Cash Updated', `Paper trading balance set to ₹${clampedAmount.toLocaleString('en-IN')}`, 'success');
   };
 
-  // Reset Portfolio:
-  // - Free tier: NO manual reset option (only automatic monthly reset of 1L + ₹50 for +1L top-up)
-  // - Beginner & Advanced: Unlimited manual resets up to their specified tier cap (10L for Beginner, 50L for Advanced)
-  const resetPortfolio = (startingCash = planConfig.defaultStartingCash) => {
+  const resetPortfolio = async (startingCash = planConfig.defaultStartingCash): Promise<void> => {
     if (!Number.isFinite(startingCash)) return;
-
     if (subscriptionTier === 'free' || !planConfig.allowUnlimitedWalletResets) {
       openUpgradeModal({
         requiredTier: 'beginner',
         featureName: 'Unlimited Manual Portfolio Resets',
         featureDescription:
-          'Free accounts include an automatic monthly reset of ₹1,00,000 and ₹50 for +₹1,00,000 top-ups, with no manual portfolio reset. Upgrade to Beginner (₹10L) or Advanced (₹50L) for unlimited manual portfolio resets.',
+          'Free accounts include an automatic monthly reset to ₹1,00,000, with no manual portfolio reset. Upgrade to Beginner (₹10L) or Advanced (₹50L) for unlimited manual portfolio resets.',
       });
       return;
     }
 
     const planMax = planConfig.maxWalletLimit;
-
     if (startingCash > planMax && subscriptionTier !== 'advanced') {
       openUpgradeModal({
         requiredTier: 'advanced',
@@ -146,31 +158,39 @@ export function useWalletActions({ addToast, subscriptionTier, openRazorpayCheck
     }
 
     const clampedCash = Math.min(planMax, Math.max(1000, startingCash));
-    commitEngine({ balance: clampedCash, holdings: [], positions: [], orders: [] });
-    setInitialBalance(clampedCash);
-    setIsWalletModalOpen(false);
     const normalized = normalizeUsageQuota(usageQuota);
     const nextQuota: UserUsageQuota = {
       ...normalized,
       lastPortfolioResetMonth: getCurrentMonthKey(),
       portfolioResetsThisMonth: normalized.portfolioResetsThisMonth + 1,
     };
-    setUsageQuota(nextQuota);
+
     if (user?.uid) {
-      setDoc(
-        doc(db, 'users', user.uid),
-        { balance: clampedCash, initialBalance: clampedCash, usage: nextQuota, updatedAt: Date.now() },
-        { merge: true }
-      ).catch(() => {});
+      const serverRes = await postAuthoritativeWalletReset({ startingCash: clampedCash });
+      if (!serverRes.ok || !serverRes.state) {
+        addToast(
+          'Portfolio Reset Failed',
+          serverRes.message || 'Unable to reset paper portfolio on server. Please try again.',
+          'error'
+        );
+        return;
+      }
+      applyAuthoritativeLedger(serverRes.state);
+      setUsageQuota(nextQuota);
+      setIsWalletModalOpen(false);
+      addToast('Portfolio Reset', serverRes.message || `Reset paper portfolio with fresh ₹${clampedCash.toLocaleString('en-IN')} cash`, 'info');
+      return;
     }
-    const resetTx: WalletTransaction = {
+
+    commitEngine({ balance: clampedCash, holdings: [], positions: [], orders: [] });
+    setInitialBalance(clampedCash);
+    setIsWalletModalOpen(false);
+    setUsageQuota(nextQuota);
+    setWalletTransactions([{
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-      type: 'DEPOSIT',
-      amount: clampedCash,
-      description: `Portfolio reset credit (${planConfig.name})`,
-      timestamp: Date.now(),
-    };
-    setWalletTransactions([resetTx]);
+      type: 'DEPOSIT', amount: clampedCash,
+      description: `Portfolio reset credit (${planConfig.name})`, timestamp: Date.now(),
+    }]);
     addToast('Portfolio Reset', `Reset paper portfolio with fresh ₹${clampedCash.toLocaleString('en-IN')} cash`, 'info');
   };
 

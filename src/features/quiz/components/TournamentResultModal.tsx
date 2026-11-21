@@ -35,7 +35,7 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
   let rankDesc = 'You gained experience! Review chart shapes in Learn Quiz and sharpen your edge.';
 
   if (roiPct >= 40) {
-    rankTitle = 'Wall Street Prodigy';
+    rankTitle = 'Dalal Street Prodigy';
     rankBadge = '🏆';
     rankColor = 'text-amber-400';
     rankDesc = 'Exceptional pattern reading and high-conviction position sizing!';
@@ -66,7 +66,7 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
           </div>
 
           <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2.5 py-0.5 rounded-full inline-block mb-1">
-            10-Round Challenge Completed
+            Single-Player 10-Round Challenge Completed
           </span>
 
           <h2 className={`text-2xl font-bold tracking-tight ${rankColor} font-sans`}>
@@ -83,16 +83,16 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
           <div className="bg-[#0B0E14] p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
             <span className="text-[10px] text-slate-500 font-sans uppercase">Final Equity</span>
             <span className="text-base font-bold text-slate-100 tabular-nums">
-              ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px] text-slate-400">Started $10,000</span>
+            <span className="text-[10px] text-slate-400">Started ₹10,000</span>
           </div>
 
           {/* Net Return / ROI */}
           <div className="bg-[#0B0E14] p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
             <span className="text-[10px] text-slate-500 font-sans uppercase">Net PnL</span>
             <span className={`text-base font-bold tabular-nums ${isProfitable ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {isProfitable ? '+' : ''}${netPnl.toFixed(2)}
+              {isProfitable ? '+' : ''}₹{netPnl.toFixed(2)}
             </span>
             <span className={`text-[10px] font-semibold ${isProfitable ? 'text-emerald-500' : 'text-rose-500'}`}>
               {isProfitable ? '+' : ''}{roiPct.toFixed(1)}% ROI
@@ -114,7 +114,7 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
           <div className="bg-[#0B0E14] p-3 rounded-xl border border-slate-800 flex flex-col justify-center">
             <span className="text-[10px] text-slate-500 font-sans uppercase">Best Move</span>
             <span className="text-base font-bold text-emerald-400 tabular-nums">
-              {bestTrade && bestTrade.pnl > 0 ? `+$${bestTrade.pnl.toFixed(0)}` : '$0'}
+              {bestTrade && bestTrade.pnl > 0 ? `+₹${bestTrade.pnl.toFixed(0)}` : '₹0'}
             </span>
             <span className="text-[10px] text-slate-400 truncate">
               {bestTrade ? bestTrade.patternName : '-'}
@@ -142,14 +142,14 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
                   <div>
                     <span className="text-slate-200 font-semibold font-sans">{trade.patternName}</span>
                     <span className="text-slate-500 text-[11px] ml-2">
-                      ({trade.direction === 'BUY' ? 'UP' : 'DOWN'} • Bet: ${trade.positionSize.toLocaleString()})
+                      ({trade.direction === 'BUY' ? 'UP' : 'DOWN'} • Bet: ₹{trade.positionSize.toLocaleString('en-IN')})
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className={`font-bold tabular-nums ${trade.isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                    {trade.pnl >= 0 ? '+' : ''}₹{trade.pnl.toFixed(2)}
                   </span>
                   {trade.isWin ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -169,7 +169,7 @@ export const TournamentResultModal: React.FC<TournamentResultModalProps> = ({
             className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all cursor-pointer font-sans"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Play Another $10k Challenge</span>
+            <span>Play Another ₹10k Challenge</span>
           </button>
 
           <button

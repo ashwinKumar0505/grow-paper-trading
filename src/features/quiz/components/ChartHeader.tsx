@@ -31,12 +31,15 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
         <span className="text-slate-600">·</span>
         <div className="flex items-center gap-1.5 font-medium">
           <span className="text-[var(--quiz-text)] font-bold tracking-tight">
-            {scenario.assetSymbol}
+            Synthetic Scenario ({scenario.assetSymbol} template)
           </span>
           <span className="text-[var(--quiz-muted)] text-[11px] hidden sm:inline">
             ({scenario.assetName})
           </span>
         </div>
+        <span className="rounded bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          Synthetic Educational Chart
+        </span>
         <span className="text-slate-600">·</span>
         <span className="bg-[var(--quiz-subtle)] text-[var(--quiz-muted)] font-mono px-1.5 py-0.5 rounded text-[11px]">
           {scenario.timeframe}

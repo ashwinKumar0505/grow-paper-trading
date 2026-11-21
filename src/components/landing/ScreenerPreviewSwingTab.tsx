@@ -12,7 +12,7 @@ export const DEMO_SWING_PICKS = [
     gainPct: '+6.9%',
     stopLoss: '₹1,298',
     rr: '2.4x',
-    reason: 'Backtested 20-day resistance breakout + AI volume confirmation',
+    reason: 'Backtested 20-day resistance breakout + volume confirmation',
   },
   {
     symbol: 'ICICIBANK',
@@ -107,7 +107,7 @@ export const ScreenerPreviewSwingTab: React.FC<ScreenerPreviewSwingTabProps> = (
                   onClick={() => navigate(`/screener/analysis?symbol=${pick.symbol}`)}
                   className="px-3 py-1.5 rounded-lg bg-[#163025] hover:bg-[#1D3D30] text-[11px] font-bold text-[#00D09C] cursor-pointer"
                 >
-                  AI Analysis
+                  Technical Analysis
                 </button>
                 <button
                   type="button"

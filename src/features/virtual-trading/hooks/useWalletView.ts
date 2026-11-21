@@ -1,9 +1,15 @@
-import React,{ useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { computeCommittedCapitalAmount } from '../utils/portfolioRemoteAdapter';
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export function useWalletView() {
   const {
     balance,
+    holdings,
+    intradayPositions,
+    orders,
     isWalletModalOpen,
     setIsWalletModalOpen,
     addMoneyToWallet,
@@ -14,7 +20,6 @@ export function useWalletView() {
     planConfig,
     subscriptionTier,
     openUpgradeModal,
-    openRazorpayCheckout,
   } = useTrading();
 
   const [activeTab, setActiveTab] = useState<'add-money' | 'history' | 'reset'>('add-money');
@@ -23,16 +28,21 @@ export function useWalletView() {
   const [isCustom, setIsCustom] = useState<boolean>(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFreeTier = subscriptionTier === 'free';
-  const tierMaxLimit = planConfig.maxWalletLimit; // 1L Free, 10L Beginner, 50L Advanced
+  const tierMaxLimit = planConfig.maxWalletLimit + (user?.paidTopUpCredit || 0);
   const tierLabel =
     subscriptionTier === 'advanced' ? '50L' : subscriptionTier === 'beginner' ? '10L' : '1L';
 
-  // Include Available Cash, Locked Margin, and Holdings value so total capital stays within the tier cap.
+  // Match authoritative backend committed capital (cash + holdings net of MTF loan + intraday margin + reserved orders).
   const lockedMargin = round2(portfolioSummary.lockedMargin || 0);
-  const holdingsValue = round2(portfolioSummary.currentValue || 0);
-  const committedCapital = round2(balance + lockedMargin + holdingsValue);
+  const committedCapital = computeCommittedCapitalAmount({
+    balance,
+    holdings,
+    positions: intradayPositions,
+    orders,
+  });
   const maxAllowedToAdd = Math.max(0, round2(tierMaxLimit - committedCapital));
   const isWalletFull = committedCapital >= tierMaxLimit - 0.01;
   const capacityPercent = Math.min(100, Math.round((committedCapital / tierMaxLimit) * 100));
@@ -42,8 +52,6 @@ export function useWalletView() {
       setSelectedAddPreset(maxAllowedToAdd);
     }
   }, [isWalletModalOpen, maxAllowedToAdd, selectedAddPreset]);
-
-  
 
   const standardPresets =
     subscriptionTier === 'advanced'
@@ -76,34 +84,51 @@ export function useWalletView() {
   }
 
   const isAddDisabled =
+    isSubmitting ||
     isWalletFull ||
     currentRequestedAmount <= 0 ||
     currentRequestedAmount > maxAllowedToAdd;
 
-  const handleAddFunds = (e: React.FormEvent) => {
+  const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isFreeTier) {
       setIsWalletModalOpen(false);
-      openRazorpayCheckout('topup_1l', 'monthly');
+      openUpgradeModal({
+        requiredTier: 'beginner',
+        featureName: 'Higher Paper Trading Capital & Free Refills',
+        featureDescription:
+          'Free accounts include ₹1,00,000 virtual capital with an automatic monthly reset. Upgrade to Beginner (₹10L) or Advanced (₹50L) for free virtual refills, unlimited resets, and full platform tools.',
+      });
       return;
     }
     if (isAddDisabled) return;
 
-    const success = addMoneyToWallet(currentRequestedAmount, 'Added via Paper Wallet Top-Up');
-    if (success) {
-      setShowSuccessMessage(
-        `₹${currentRequestedAmount.toLocaleString('en-IN')} credited to your paper wallet.`
-      );
-      setTimeout(() => {
-        setShowSuccessMessage(null);
-        setIsWalletModalOpen(false);
-      }, 1200);
+    setIsSubmitting(true);
+    try {
+      const success = await addMoneyToWallet(currentRequestedAmount, 'Added via Paper Wallet Top-Up');
+      if (success) {
+        setShowSuccessMessage(
+          `₹${currentRequestedAmount.toLocaleString('en-IN')} credited to your paper wallet.`
+        );
+        setTimeout(() => {
+          setShowSuccessMessage(null);
+          setIsWalletModalOpen(false);
+        }, 1200);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleConfirmReset = (amount = planConfig.defaultStartingCash) => {
-    resetPortfolio(amount);
-    setShowResetConfirm(false);
+  const handleConfirmReset = async (amount = planConfig.defaultStartingCash) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await resetPortfolio(amount);
+      setShowResetConfirm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetPresets =
@@ -122,6 +147,6 @@ export function useWalletView() {
         ];
 
   
- return { balance, isWalletModalOpen, setIsWalletModalOpen, walletTransactions, portfolioSummary, user, planConfig, subscriptionTier, openUpgradeModal, openRazorpayCheckout, activeTab, setActiveTab, selectedAddPreset, setSelectedAddPreset, customAmount, setCustomAmount, isCustom, setIsCustom, showSuccessMessage, showResetConfirm, setShowResetConfirm, isFreeTier, tierMaxLimit, tierLabel, lockedMargin, committedCapital, maxAllowedToAdd, isWalletFull, capacityPercent, standardPresets, currentRequestedAmount, customError, isAddDisabled, handleAddFunds, handleConfirmReset, resetPresets };
+ return { balance, isWalletModalOpen, setIsWalletModalOpen, walletTransactions, portfolioSummary, user, planConfig, subscriptionTier, openUpgradeModal, activeTab, setActiveTab, selectedAddPreset, setSelectedAddPreset, customAmount, setCustomAmount, isCustom, setIsCustom, showSuccessMessage, showResetConfirm, setShowResetConfirm, isFreeTier, tierMaxLimit, tierLabel, lockedMargin, committedCapital, maxAllowedToAdd, isWalletFull, capacityPercent, standardPresets, currentRequestedAmount, customError, isAddDisabled, handleAddFunds, handleConfirmReset, resetPresets };
 }
 export type WalletViewModel = ReturnType<typeof useWalletView>;

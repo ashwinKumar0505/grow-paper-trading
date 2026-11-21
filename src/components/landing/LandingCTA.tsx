@@ -17,7 +17,7 @@ return (
                 Ready to scan stocks, practice trades, and master charts?
               </h3>
               <p className="text-xs sm:text-sm text-[#9AB0A5] leading-relaxed">
-                Start with the AI-Powered Nifty 500 Stock Screener, practice risk-free on the Paper Trading Desk, or explore 28+ setups in the Chart Pattern Library.
+                Start with the Rule-Based Nifty 500 Stock Screener, practice risk-free on the Paper Trading Desk, or explore 21 setups in the Chart Pattern Library.
               </p>
             </div>
 

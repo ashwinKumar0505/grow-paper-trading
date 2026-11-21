@@ -1,4 +1,5 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { buildAuthenticatedHeaders, setStoredSessionToken } from '../../../lib/authSession';
 import { auth, firebaseSignOut } from '../../../lib/firebase';
 import { normalizeUsageQuota } from '../../../lib/subscription';
 import {
@@ -61,6 +62,15 @@ export function useSignOut({
     setUsageQuota(normalizeUsageQuota(null));
     setLastExecutedOrder(null);
 
+    buildAuthenticatedHeaders()
+      .then((headers) => {
+        if (headers.Authorization) {
+          fetch('/api/auth/logout', { method: 'POST', headers }).catch(() => {});
+        }
+      })
+      .finally(() => {
+        setStoredSessionToken(null);
+      });
     try {
       localStorage.removeItem('mypaper_user_v2');
       localStorage.removeItem('groww_paper_user_v1');

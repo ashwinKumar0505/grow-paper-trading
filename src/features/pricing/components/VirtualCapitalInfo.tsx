@@ -9,7 +9,7 @@ import { accentText, btnSecondary, textMuted, textStrong } from '../pricingStyle
 const POINTS = [
   { icon: ShieldCheck, text: '100% simulated money. It cannot be withdrawn or converted to real cash.' },
   { icon: CalendarClock, text: "Balance resets automatically to your plan's capital at the start of each month." },
-  { icon: PlusCircle, text: 'Top-ups: ₹50 per +₹1 Lakh on Free; free top-ups up to your plan limit on paid plans.' },
+  { icon: PlusCircle, text: 'Beginner and Advanced subscriptions include free virtual refills up to your plan limit and unlimited manual resets.' },
 ];
 
 export const VirtualCapitalInfo: React.FC = () => {
@@ -62,7 +62,7 @@ export const VirtualCapitalInfo: React.FC = () => {
           className={btnSecondary}
           onClick={() => (user ? setIsWalletModalOpen(true) : openAuthModal('signup'))}
         >
-          Explore Virtual Capital Top-ups
+          Open Paper Wallet
         </button>
       </div>
     </section>

@@ -1,8 +1,4 @@
-import {
-BarChart3,
-CheckCircle2,
-LineChart
-} from 'lucide-react';
+import { BarChart3, CheckCircle2, LineChart } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { AnalysisAdvanced } from '../components/AnalysisAdvanced';
 import { AnalysisOverview } from '../components/AnalysisOverview';
@@ -17,17 +13,25 @@ import PriceChart from '../components/PriceChart';
 import ScreenerHeader from '../components/ScreenerHeader';
 import ScreenerLayout from '../components/ScreenerLayout';
 import { SectionCard } from '../components/ui';
-
-const POPULAR = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'LT', 'TATAMOTORS'];
-const analysisMemo = {};
-
-const toneFor = (sig) => (sig === 'BULLISH' ? 'positive' : sig === 'BEARISH' ? 'negative' : 'neutral');
-
 import { useStockAnalysis } from '../hooks/useStockAnalysis';
 
 export default function StockAnalysisPage({ marketStatus }) {
   const model = useStockAnalysis();
-  const { selectStockBySymbol, subscriptionTier, planConfig, usageQuota, openUpgradeModal, query, setQuery, suggestions, showDropdown, setShowDropdown, activeIdx, setActiveIdx, analysis, loading, loadingSym, error, lastAttemptSym, mode, setMode, inputRef, load, onKeyDown, clear, a, rec, isAdvanced, B, A } = model;
+  const {
+    subscriptionTier,
+    planConfig,
+    usageQuota,
+    openUpgradeModal,
+    loading,
+    loadingSym,
+    error,
+    lastAttemptSym,
+    load,
+    a,
+    isAdvanced,
+    B,
+    A,
+  } = model;
 
   return (
     <ScreenerLayout
@@ -45,12 +49,14 @@ export default function StockAnalysisPage({ marketStatus }) {
           lastUpdatedIso={a?.data_as_of_date}
           extra={
             planConfig.analysisDailyLimit < 999 ? (
-              <Button variant="unstyled" size="unstyled"
+              <Button
+                variant="unstyled"
+                size="unstyled"
                 type="button"
                 onClick={() =>
                   openUpgradeModal({
                     requiredTier: subscriptionTier === 'free' ? 'beginner' : 'advanced',
-                    featureName: 'More Daily AI Stock Analyses',
+                    featureName: 'More Daily Stock Analyses',
                     featureDescription: `Upgrade to Beginner for ${B.analysisDailyLimit} analyses/day or Advanced for Unlimited daily analyses and 2-year strategy backtests.`,
                   })
                 }
@@ -74,16 +80,28 @@ export default function StockAnalysisPage({ marketStatus }) {
         />
       }
       alerts={
-        error ? (
-          <div className="alert alert-error sc-alert-retry">
-            <span>{error}</span>
-            {lastAttemptSym && (
-              <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={() => load(lastAttemptSym, true)}>
-                Retry
-              </Button>
-            )}
-          </div>
-        ) : null
+        <>
+          {error && (
+            <div className="alert alert-error sc-alert-retry">
+              <span>{error}</span>
+              {lastAttemptSym && (
+                <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={() => load(lastAttemptSym, true)}>
+                  Retry
+                </Button>
+              )}
+            </div>
+          )}
+          {model.staleWarning && !error && (
+            <div className="alert alert-info sc-alert-retry">
+              <span>{model.staleWarning}</span>
+              {a?.symbol && (
+                <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={() => load(a.symbol, true)}>
+                  Refresh
+                </Button>
+              )}
+            </div>
+          )}
+        </>
       }
     >
       <AnalysisSearch {...model} />
@@ -112,15 +130,9 @@ export default function StockAnalysisPage({ marketStatus }) {
               trading insights.
             </p>
             <div className="placeholder-points">
-              <span>
-                <CheckCircle2 size={14} /> Technical Analysis
-              </span>
-              <span>
-                <LineChart size={14} /> Price Charts
-              </span>
-              <span>
-                <BarChart3 size={14} /> Financial Insights
-              </span>
+              <span><CheckCircle2 size={14} /> Technical Analysis</span>
+              <span><LineChart size={14} /> Price Charts</span>
+              <span><BarChart3 size={14} /> Financial Insights</span>
             </div>
             <div className="sc-empty-examples">
               <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={() => load('RELIANCE')}>
@@ -134,15 +146,10 @@ export default function StockAnalysisPage({ marketStatus }) {
         </section>
       ) : (
         <>
-      <AnalysisViewControls {...model} />
-      <AnalysisOverview {...model} />
-          {/* 2. Chart & Technical Indicators */}
+          <AnalysisViewControls {...model} />
+          <AnalysisOverview {...model} />
           <SectionCard
-            title={
-              <>
-                <LineChart size={18} /> Price Chart & Indicators
-              </>
-            }
+            title={<><LineChart size={18} /> Price Chart & Indicators</>}
             subtitle="Daily prices with moving average lines. Hover over the chart to inspect each session."
           >
             <PriceChart
@@ -153,7 +160,6 @@ export default function StockAnalysisPage({ marketStatus }) {
             />
           </SectionCard>
 
-          {/* 3. Revenue & Profit */}
           {planConfig.analysisAllowFinancialsAndLevels ? (
             <FinancialsSection symbol={a.symbol} />
           ) : (
@@ -162,14 +168,13 @@ export default function StockAnalysisPage({ marketStatus }) {
               title={`Unlock ${a.symbol} Revenue, Profit & Fundamental Trends`}
               description="Quarterly & yearly revenue, net profit, margin trends, and support/resistance levels are unlocked on Beginner and Advanced plans."
               benefits={[
-                `Full revenue & profit financials + support/resistance zones`,
-                `${B.analysisDailyLimit} AI stock analyses per day`,
-                `One-click paper trading from stock analysis`,
+                'Full revenue & profit financials + support/resistance zones',
+                `${B.analysisDailyLimit} rule-based stock analyses per day`,
+                'Navigate directly to paper trading from stock analysis',
               ]}
             />
           )}
 
-          {/* 4. Advanced Technical & Backtest Gate */}
           {isAdvanced && !planConfig.analysisAllowAdvancedMode && (
             <PremiumFeatureGate
               requiredTier="advanced"
@@ -183,8 +188,7 @@ export default function StockAnalysisPage({ marketStatus }) {
             />
           )}
 
-      <AnalysisAdvanced {...model} />
-
+          <AnalysisAdvanced {...model} />
         </>
       )}
     </ScreenerLayout>

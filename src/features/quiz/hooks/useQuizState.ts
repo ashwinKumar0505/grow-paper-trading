@@ -1,41 +1,57 @@
-import { useEffect,useState } from 'react';
-import { DEFAULT_INDICATORS,INITIAL_QUIZ_STATS,INITIAL_STATS,INITIAL_SURVIVAL,INITIAL_TOURNAMENT } from '../quizDefaults';
+import { useEffect, useRef, useState } from 'react';
+import { useTrading } from '../../../context/TradingContext';
 import {
-ChartScenario,
-ChartType,
-DifficultyLevel,
-GameMode,
-IndicatorSettings,
-QuizStats,
-SurvivalState,
-TournamentState,
-TradeDirection,
-TradeRecord,
-UserStats,
+  DEFAULT_INDICATORS,
+  INITIAL_SURVIVAL,
+  INITIAL_TOURNAMENT,
+} from '../quizDefaults';
+import {
+  ChartScenario,
+  ChartType,
+  DifficultyLevel,
+  GameMode,
+  IndicatorSettings,
+  QuizStats,
+  SurvivalState,
+  TournamentState,
+  TradeDirection,
+  TradeRecord,
+  UserStats,
 } from '../types/trading';
 import { generateScenario } from '../utils/dataGenerator';
+import { fetchRemoteQuizProgress, pushRemoteQuizProgress } from '../utils/quizRemoteSync';
+import {
+  loadScopedQuizProgress,
+  normalizeQuizScope,
+  saveScopedQuizProgress,
+} from '../utils/quizStorage';
 
 export function useQuizState() {
-  // Difficulty Level: 'All' | 'Beginner' | 'Intermediate' | 'Advanced'
+  const { user } = useTrading();
+  const uid = user?.uid || null;
+  const scope = normalizeQuizScope(uid);
+  const loadedScopeRef = useRef<string>(scope);
+
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(() => {
-    const saved = localStorage.getItem('tradepulse_difficulty');
-    return ['All', 'Beginner', 'Intermediate', 'Advanced'].includes(saved || '') ? saved as DifficultyLevel : 'Beginner';
+    try {
+      const saved =
+        localStorage.getItem(`niftylens_quiz_diff_${scope}`) ||
+        localStorage.getItem('tradepulse_difficulty');
+      return ['All', 'Beginner', 'Intermediate', 'Advanced'].includes(saved || '')
+        ? (saved as DifficultyLevel)
+        : 'Beginner';
+    } catch {
+      return 'Beginner';
+    }
   });
 
-  // Game Mode: 'quiz' (Casual Learn) vs 'survival' (3 Hearts) vs 'tournament' (10-Round Cash)
   const [gameMode, setGameMode] = useState<GameMode>('quiz');
+  const initialProgress = loadScopedQuizProgress(uid);
+  const [survivalState, setSurvivalState] = useState<SurvivalState>(initialProgress.survivalState);
+  const [quizStats, setQuizStats] = useState<QuizStats>(initialProgress.quizStats);
+  const [stats, setStats] = useState<UserStats>(initialProgress.stats);
+  const [tournamentState, setTournamentState] = useState<TournamentState>(INITIAL_TOURNAMENT);
 
-  // Survival Mode State
-  const [survivalState, setSurvivalState] = useState<SurvivalState>(() => {
-    const savedBest = localStorage.getItem('tradepulse_survival_best_streak');
-    const best = savedBest ? Number(savedBest) : 0;
-    return {
-      ...INITIAL_SURVIVAL,
-      bestStreak: isNaN(best) ? 0 : best,
-    };
-  });
-
-  // Application State
   const [scenario, setScenario] = useState<ChartScenario>(() => generateScenario(difficulty));
   const [tradeNumber, setTradeNumber] = useState<number>(1);
   const [revealedOutcomeCount, setRevealedOutcomeCount] = useState<number>(0);
@@ -43,76 +59,106 @@ export function useQuizState() {
   const [userTrade, setUserTrade] = useState<TradeRecord | null>(null);
   const [chosenDirection, setChosenDirection] = useState<TradeDirection | null>(null);
   const [entryPrice, setEntryPrice] = useState<number | null>(null);
-
-  // Tournament Risk Controls (Virtual Cash Mode only)
   const [positionSize, setPositionSize] = useState<number>(1000);
 
-  // Settings & Toggles
   const [indicatorSettings, setIndicatorSettings] = useState<IndicatorSettings>(() => {
-    const saved = localStorage.getItem('tradepulse_indicators');
-    try { return saved ? { ...DEFAULT_INDICATORS, ...JSON.parse(saved) } : DEFAULT_INDICATORS; } catch { return DEFAULT_INDICATORS; }
+    try {
+      const saved = localStorage.getItem('tradepulse_indicators');
+      return saved ? { ...DEFAULT_INDICATORS, ...JSON.parse(saved) } : DEFAULT_INDICATORS;
+    } catch {
+      return DEFAULT_INDICATORS;
+    }
   });
 
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [chartType, setChartType] = useState<ChartType>(() => {
-    const saved = localStorage.getItem('tradepulse_chart_type');
-    return (saved as ChartType) || 'candle';
-  });
-
-  // Quiz Stats (Pure accuracy, no money)
-  const [quizStats, setQuizStats] = useState<QuizStats>(() => {
-    const saved = localStorage.getItem('tradeplaybook_india_quiz_stats_v1');
-    if (saved) {
-      try {
-        return { ...INITIAL_QUIZ_STATS, ...JSON.parse(saved) };
-      } catch {
-        return INITIAL_QUIZ_STATS;
-      }
+    try {
+      const saved = localStorage.getItem('tradepulse_chart_type');
+      return (saved as ChartType) || 'candle';
+    } catch {
+      return 'candle';
     }
-    return INITIAL_QUIZ_STATS;
   });
 
-  // Tournament State (10 Rounds with ₹10,000 Virtual Cash)
-  const [tournamentState, setTournamentState] = useState<TournamentState>(INITIAL_TOURNAMENT);
-
-  // Overall Historical Trades for drawer
-  const [stats, setStats] = useState<UserStats>(() => {
-    const saved = localStorage.getItem('tradeplaybook_india_stats_v1');
-    if (saved) {
-      try {
-        return { ...INITIAL_STATS, ...JSON.parse(saved) };
-      } catch {
-        return INITIAL_STATS;
-      }
-    }
-    return INITIAL_STATS;
-  });
-
-  useEffect(() => { localStorage.setItem('tradepulse_difficulty', difficulty); }, [difficulty]);
-  useEffect(() => { localStorage.setItem('tradepulse_survival_best_streak', String(survivalState.bestStreak)); }, [survivalState.bestStreak]);
-
-  // Save Quiz Stats to LocalStorage
   useEffect(() => {
-    localStorage.setItem('tradeplaybook_india_quiz_stats_v1', JSON.stringify(quizStats));
-  }, [quizStats]);
+    const local = loadScopedQuizProgress(uid);
+    setQuizStats(local.quizStats);
+    setStats(local.stats);
+    setSurvivalState((prev) => ({
+      ...INITIAL_SURVIVAL,
+      lives: prev.lives,
+      bestStreak: local.survivalState.bestStreak,
+    }));
+    loadedScopeRef.current = scope;
 
-  // Save Overall Stats to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('tradeplaybook_india_stats_v1', JSON.stringify(stats));
-  }, [stats]);
+    if (!uid) return;
+    let alive = true;
 
-  // Save indicator settings to LocalStorage
+    fetchRemoteQuizProgress(uid).then((remote) => {
+      if (!alive || !remote) return;
+      setQuizStats(remote.quizStats);
+      setStats(remote.stats);
+      setSurvivalState((prev) => ({
+        ...prev,
+        bestStreak: Math.max(prev.bestStreak, remote.survivalBestStreak),
+      }));
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [scope, uid]);
+
   useEffect(() => {
-    localStorage.setItem('tradepulse_indicators', JSON.stringify(indicatorSettings));
+    if (loadedScopeRef.current !== scope) return;
+    saveScopedQuizProgress(uid, {
+      quizStats,
+      stats,
+      survivalBestStreak: survivalState.bestStreak,
+    });
+
+    if (!uid) return;
+    const timer = window.setTimeout(() => {
+      pushRemoteQuizProgress(uid, {
+        quizStats,
+        stats,
+        survivalBestStreak: survivalState.bestStreak,
+      });
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [scope, uid, quizStats, stats, survivalState.bestStreak]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`niftylens_quiz_diff_${scope}`, difficulty);
+    } catch {}
+  }, [scope, difficulty]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tradepulse_indicators', JSON.stringify(indicatorSettings));
+    } catch {}
   }, [indicatorSettings]);
 
-  // Save chart type preference to LocalStorage
   useEffect(() => {
-    localStorage.setItem('tradepulse_chart_type', chartType);
+    try {
+      localStorage.setItem('tradepulse_chart_type', chartType);
+    } catch {}
   }, [chartType]);
 
-  return { difficulty, setDifficulty, gameMode, setGameMode, survivalState, setSurvivalState, scenario, setScenario, tradeNumber, setTradeNumber, revealedOutcomeCount, setRevealedOutcomeCount, isRevealing, setIsRevealing, userTrade, setUserTrade, chosenDirection, setChosenDirection, entryPrice, setEntryPrice, positionSize, setPositionSize, indicatorSettings, setIndicatorSettings, isHistoryOpen, setIsHistoryOpen, isGuideOpen, setIsGuideOpen, chartType, setChartType, quizStats, setQuizStats, tournamentState, setTournamentState, stats, setStats };
+  return {
+    difficulty, setDifficulty, gameMode, setGameMode,
+    survivalState, setSurvivalState, scenario, setScenario,
+    tradeNumber, setTradeNumber, revealedOutcomeCount, setRevealedOutcomeCount,
+    isRevealing, setIsRevealing, userTrade, setUserTrade,
+    chosenDirection, setChosenDirection, entryPrice, setEntryPrice,
+    positionSize, setPositionSize, indicatorSettings, setIndicatorSettings,
+    isHistoryOpen, setIsHistoryOpen, isGuideOpen, setIsGuideOpen,
+    chartType, setChartType, quizStats, setQuizStats,
+    tournamentState, setTournamentState, stats, setStats,
+  };
 }
 
 export type QuizState = ReturnType<typeof useQuizState>;

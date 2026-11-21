@@ -55,7 +55,7 @@ export const ProfileWalletCard: React.FC<ProfileWalletCardProps> = ({
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#008F6B] dark:text-emerald-400 hover:underline cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            <span>Add Virtual Cash</span>
+            <span>{subscriptionTier === 'free' ? 'Upgrade Capital' : 'Add Virtual Cash'}</span>
           </button>
         </div>
 

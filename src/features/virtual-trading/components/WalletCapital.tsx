@@ -39,7 +39,7 @@ export function WalletCapital({ balance, setIsWalletModalOpen, portfolioSummary,
                 </span>
                 <span className="font-mono tabular-nums font-semibold text-[#00D09C] shrink-0">
                   {isFreeTier
-                    ? '₹50 / +1L Top-Up'
+                    ? 'Auto Monthly Reset'
                     : maxAllowedToAdd > 0
                     ? `₹${maxAllowedToAdd.toLocaleString('en-IN')} left to add`
                     : `${tierLabel} Limit Reached`}

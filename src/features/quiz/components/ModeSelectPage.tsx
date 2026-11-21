@@ -13,9 +13,9 @@ interface ModeSelectPageProps {
 }
 
 const modes = [
-  { id: 'quiz' as const, title: 'Practice', label: 'START HERE', icon: GraduationCap, description: 'Build your eye for patterns, one chart at a time.', features: ['Unlimited questions, no time limit', 'Track accuracy and your best streak', 'Learn from every answer'] },
+  { id: 'quiz' as const, title: 'Practice', label: 'START HERE', icon: GraduationCap, description: 'Build your eye for patterns, one synthetic educational chart at a time.', features: ['Unlimited questions on paid plans, no time limit', 'Track accuracy and your best streak', 'Learn from every answer'] },
   { id: 'survival' as const, title: 'Survival', label: 'TEST YOUR CONSISTENCY', icon: Heart, description: 'Three lives. How long can you keep your streak?', features: ['A wrong prediction costs one life', 'Build combos to multiply your score', 'Challenge your personal best'] },
-  { id: 'tournament' as const, title: 'Cash challenge', label: '10-ROUND CHALLENGE', icon: Trophy, description: 'Make ten calls and see how your decisions add up.', features: ['$10,000 in virtual challenge cash', 'Choose your position size each round', 'Finish with a scorecard and rank'] },
+  { id: 'tournament' as const, title: 'Cash challenge', label: 'SINGLE-PLAYER 10-ROUND CHALLENGE', icon: Trophy, description: 'Single-player challenge: make ten calls and see how your decisions add up.', features: ['₹10,000 in virtual challenge cash', 'Choose your position size each round', 'Finish with a single-player scorecard'] },
 ];
 const levels: { id: DifficultyLevel; description: string }[] = [
   { id: 'Beginner', description: 'Clear shapes and gentle trends' },
@@ -42,7 +42,7 @@ export const ModeSelectPage = ({ initialMode = 'quiz', initialDifficulty = 'Begi
         featureDescription:
           id === 'survival'
             ? '3-Lives Survival Mode (with combo multipliers & personal best streaks) is unlocked on the Beginner (₹299/mo) and Advanced (₹699/mo) packages.'
-            : 'The 10-Round Cash Challenge Tournament ($10,000 challenge capital, dynamic position sizing & rank card) is exclusive to the Advanced Package (₹699/mo).',
+            : 'The Single-Player 10-Round Cash Challenge (₹10,000 challenge capital, dynamic position sizing & scorecard) is exclusive to the Advanced Package (₹699/mo).',
       });
       return;
     }
@@ -78,7 +78,7 @@ export const ModeSelectPage = ({ initialMode = 'quiz', initialDifficulty = 'Begi
             )}
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Read the pattern.<br /><span className="text-emerald-700 dark:text-emerald-400">Make your next call.</span></h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[var(--quiz-muted)] sm:text-base">Study a simulated NSE stock chart, predict whether price moves up or down, then reveal the next candles and learn why.</p>
+          <p className="mt-5 max-w-xl text-sm leading-7 text-[var(--quiz-muted)] sm:text-base">Study a synthetic educational chart scenario, predict whether price moves up or down, then reveal the next candles and learn why. Scenarios are generated for pattern education and are not actual historical stock sessions.</p>
         </div>
         <button
           type="button"

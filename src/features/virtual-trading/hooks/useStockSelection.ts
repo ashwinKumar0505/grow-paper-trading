@@ -1,6 +1,5 @@
-import { INITIAL_STOCKS } from '../../../data/mockStocks';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import { IndexData, Stock } from '../../../types/market';
+import { IndexData, Stock, StockFundamentals } from '../../../types/market';
 import type { TradingState } from './useTradingState';
 
 type Options = Pick<
@@ -9,11 +8,24 @@ type Options = Pick<
 > &
   Pick<TradingContextType, 'addToast'>;
 
+const EMPTY_FUNDAMENTALS: StockFundamentals = {
+  available: false,
+  source: 'unavailable',
+  marketCap: null,
+  peRatio: null,
+  pbRatio: null,
+  industryPe: null,
+  debtToEquity: null,
+  roe: null,
+  divYield: null,
+  eps: null,
+  bookValue: null,
+};
+
 function buildIndexStock(idx: IndexData): Stock {
   const previousClose = Number((idx.value - idx.change).toFixed(2));
   const exchange = idx.symbol.toUpperCase() === 'SENSEX' ? 'BSE' : 'NSE';
   return {
-    ...INITIAL_STOCKS[0],
     symbol: idx.symbol,
     name: idx.name,
     sector: 'Index',
@@ -29,10 +41,14 @@ function buildIndexStock(idx: IndexData): Stock {
     volume: 0,
     week52High: Number((idx.value * 1.15).toFixed(2)),
     week52Low: Number((idx.value * 0.85).toFixed(2)),
+    fundamentals: EMPTY_FUNDAMENTALS,
     sparkline: idx.sparkline?.length ? idx.sparkline : [previousClose, idx.value],
     about: `${idx.name} is a benchmark market index tracked on ${exchange}.`,
     freshness: idx.freshness,
     quoteTimestamp: idx.quoteTimestamp,
+    isStale: idx.isStale,
+    providerAvailable: idx.providerAvailable,
+    dataStatus: idx.dataStatus,
   };
 }
 
@@ -55,7 +71,7 @@ export function useStockSelection({
               ? {
                   ...prev,
                   ...data.stock,
-                  fundamentals: data.stock.fundamentals || prev.fundamentals,
+                  fundamentals: data.stock.fundamentals || prev.fundamentals || EMPTY_FUNDAMENTALS,
                   about: data.stock.about || prev.about,
                 }
               : prev
@@ -96,17 +112,16 @@ export function useStockSelection({
         if (data.success && data.stock && data.stock.price > 0) {
           const freshStock = data.stock as Stock;
           setSelectedStockState((prev) => {
-            const base = existing || (prev.symbol.toUpperCase() === sym ? prev : INITIAL_STOCKS[0]);
+            const base = existing || (prev.symbol.toUpperCase() === sym ? prev : undefined);
             return {
-              ...base,
+              ...(base || {}),
               ...freshStock,
-              fundamentals:
-                freshStock.fundamentals || base?.fundamentals || INITIAL_STOCKS[0].fundamentals,
+              fundamentals: freshStock.fundamentals || base?.fundamentals || EMPTY_FUNDAMENTALS,
               about:
                 freshStock.about ||
                 base?.about ||
                 `${freshStock.name || sym} is listed on the National Stock Exchange of India (NSE).`,
-            };
+            } as Stock;
           });
           if (!matchedIndex && freshStock.sector !== 'Index') {
             setStocks((prev) => {
@@ -116,16 +131,15 @@ export function useStockSelection({
                 updated[idx] = {
                   ...updated[idx],
                   ...freshStock,
-                  fundamentals: freshStock.fundamentals || updated[idx].fundamentals,
+                  fundamentals: freshStock.fundamentals || updated[idx].fundamentals || EMPTY_FUNDAMENTALS,
                   about: freshStock.about || updated[idx].about,
                 };
                 return updated;
               }
               return [
                 {
-                  ...INITIAL_STOCKS[0],
                   ...freshStock,
-                  fundamentals: freshStock.fundamentals || INITIAL_STOCKS[0].fundamentals,
+                  fundamentals: freshStock.fundamentals || EMPTY_FUNDAMENTALS,
                   about:
                     freshStock.about ||
                     `${freshStock.name || sym} is listed on the National Stock Exchange of India (NSE).`,
@@ -139,8 +153,8 @@ export function useStockSelection({
         }
       } else if (!existing) {
         addToast(
-          'Server Unavailable',
-          'Unable to reach the market data server. Please try again in some time.',
+          'Quote Unavailable',
+          `Authentic market quote for ${sym} is currently unavailable.`,
           'error'
         );
       }

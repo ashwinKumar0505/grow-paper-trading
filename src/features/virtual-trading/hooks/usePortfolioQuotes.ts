@@ -1,12 +1,20 @@
 import { useEffect,type Dispatch,type SetStateAction } from 'react';
-import type { Holding,IntradayPosition,Order,Stock } from '../../../types/market';
+import type { Holding,IntradayPosition,Order,Stock,Watchlist } from '../../../types/market';
 import { mergePortfolioQuote,portfolioQuoteSymbols } from '../../../utils/portfolioQuotes';
 import { fetchPortfolioQuote } from '../services/marketData';
 
-export function usePortfolioQuotes(holdings: Holding[], intradayPositions: IntradayPosition[], orders: Order[], setStocks: Dispatch<SetStateAction<Stock[]>>) {
-  // Persisted trades may refer to search results outside INITIAL_STOCKS.
+export function usePortfolioQuotes(
+  holdings: Holding[],
+  intradayPositions: IntradayPosition[],
+  orders: Order[],
+  setStocks: Dispatch<SetStateAction<Stock[]>>,
+  watchlists: Watchlist[] = []
+) {
+  // Persisted trades and watchlists may refer to search results outside INITIAL_STOCKS.
   // Restore those quotes independently of the default market-list endpoint.
-  const portfolioSymbolsKey = JSON.stringify(portfolioQuoteSymbols(holdings, intradayPositions, orders));
+  const portfolioSymbolsKey = JSON.stringify(
+    portfolioQuoteSymbols(holdings, intradayPositions, orders, watchlists)
+  );
   useEffect(() => {
     const symbols: string[] = JSON.parse(portfolioSymbolsKey);
     if (symbols.length === 0) return;

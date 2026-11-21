@@ -20,11 +20,14 @@ const toneFor = (sig) => (sig === 'BULLISH' ? 'positive' : sig === 'BEARISH' ? '
 
 export function AnalysisAdvanced({ planConfig, a, isAdvanced }) {
   return <>
+          {/* Support/Resistance & Detailed Trade Plan (Unlocked on Beginner & Advanced) */}
+          {planConfig.analysisAllowFinancialsAndLevels && (
+            <AnalysisTradePlan a={a} />
+          )}
+
           {/* 5. Advanced Sections */}
           {isAdvanced && planConfig.analysisAllowAdvancedMode && (
             <>
-              <AnalysisTradePlan a={a} />
-
               <AnalysisReasons a={a} />
 
               <AnalysisIndicators a={a} />
@@ -58,7 +61,7 @@ export function AnalysisAdvanced({ planConfig, a, isAdvanced }) {
                               </div>
                             </div>
                             <p>{p.description}</p>
-                            <span className="pattern-rel">Reliability {p.reliability_score}%</span>
+                            <span className="pattern-rel">Heuristic weight {p.reliability_score}/100</span>
                           </div>
                         );
                       })}
@@ -69,38 +72,60 @@ export function AnalysisAdvanced({ planConfig, a, isAdvanced }) {
                 <SectionCard
                   title={
                     <>
-                      <Award size={18} /> Historical Pattern Performance
+                      <Award size={18} /> Historical Strategy Simulation
                     </>
                   }
-                  subtitle={`Past 2 years on ${a.symbol}`}
+                  subtitle={`2-year historical rule evaluation on ${a.symbol}`}
                 >
                   {a.stock_backtest_summary ? (
-                    <div className="stat-grid two">
-                      <div className="mini-stat">
-                        <span>Times signalled</span>
-                        <strong>{a.stock_backtest_summary.historical_signals_on_stock}</strong>
+                    <>
+                      <div className="stat-grid two">
+                        <div className="mini-stat">
+                          <span>Sample size (signals)</span>
+                          <strong>{a.stock_backtest_summary.historical_signals_on_stock ?? 0}</strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Positive/Target exits</span>
+                          <strong>
+                            {(a.stock_backtest_summary.stock_specific_precision_pct ??
+                              a.stock_backtest_summary.target_hit_rate_pct) != null
+                              ? `${a.stock_backtest_summary.stock_specific_precision_pct ?? a.stock_backtest_summary.target_hit_rate_pct}%`
+                              : '—'}
+                          </strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Ended in net profit</span>
+                          <strong>
+                            {a.stock_backtest_summary.stock_specific_win_rate_pct != null
+                              ? `${a.stock_backtest_summary.stock_specific_win_rate_pct}%`
+                              : '—'}
+                          </strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Avg net return / signal</span>
+                          <strong
+                            className={
+                              (a.stock_backtest_summary.avg_net_return_per_signal_pct ?? 0) >= 0 ? 'text-up' : 'text-down'
+                            }
+                          >
+                            {a.stock_backtest_summary.avg_net_return_per_signal_pct != null
+                              ? fmtPct(a.stock_backtest_summary.avg_net_return_per_signal_pct, 2)
+                              : '—'}
+                          </strong>
+                        </div>
                       </div>
-                      <div className="mini-stat">
-                        <span>Hit target</span>
-                        <strong>{a.stock_backtest_summary.stock_specific_precision_pct}%</strong>
-                      </div>
-                      <div className="mini-stat">
-                        <span>Ended in profit</span>
-                        <strong>{a.stock_backtest_summary.stock_specific_win_rate_pct}%</strong>
-                      </div>
-                      <div className="mini-stat">
-                        <span>Average return per trade</span>
-                        <strong
-                          className={
-                            a.stock_backtest_summary.avg_net_return_per_signal_pct >= 0 ? 'text-up' : 'text-down'
-                          }
-                        >
-                          {fmtPct(a.stock_backtest_summary.avg_net_return_per_signal_pct, 2)}
-                        </strong>
-                      </div>
-                    </div>
+                      <p className="fine-print" style={{ marginTop: 10 }}>
+                        <strong>Methodology:</strong>{' '}
+                        {a.validation_methodology ||
+                          '2-year historical rule simulation with fixed slippage and commission estimates.'}{' '}
+                        {a.stock_backtest_summary.is_low_sample
+                          ? 'Note: Small sample size (<10 signals); interpret historical percentages with caution. '
+                          : ''}
+                        {a.limitations || ''}
+                      </p>
+                    </>
                   ) : (
-                    <p className="muted">Not enough past signals on this stock.</p>
+                    <p className="muted">Not enough past signals on this stock to compute a valid sample.</p>
                   )}
                 </SectionCard>
               </div>
@@ -152,8 +177,12 @@ export function AnalysisAdvanced({ planConfig, a, isAdvanced }) {
                                 <Badge tone="neutral">No</Badge>
                               )}
                             </td>
-                            <td className="num">{st.historical_precision_pct}%</td>
-                            <td className="num">{st.historical_profit_factor}</td>
+                            <td className="num">
+                              {st.historical_precision_pct != null ? `${st.historical_precision_pct}%` : '—'}
+                            </td>
+                            <td className="num">
+                              {st.historical_profit_factor != null ? st.historical_profit_factor : '—'}
+                            </td>
                             <td className="wrap-cell">{st.condition_summary}</td>
                           </tr>
                         );

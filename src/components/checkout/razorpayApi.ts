@@ -1,3 +1,5 @@
+import { buildAuthenticatedHeaders } from '../../lib/authSession';
+
 export interface CreateOrderParams {
   tier: string;
   billingCycle: 'monthly' | 'yearly';
@@ -11,7 +13,7 @@ export interface CreateOrderParams {
 
 export interface CreateOrderResponse {
   success: boolean;
-  mode: 'razorpay_api' | 'demo';
+  mode: 'razorpay_api';
   paymentType?: 'subscription' | 'order';
   keyId: string;
   orderId: string;
@@ -24,6 +26,7 @@ export interface CreateOrderResponse {
   autoPayEnabled?: boolean;
   upiMandateId?: string | null;
   currency?: string;
+  code?: string;
   message?: string;
 }
 
@@ -43,22 +46,25 @@ export interface VerifyPaymentParams {
 export interface VerifyPaymentResponse {
   success: boolean;
   verified: boolean;
+  idempotentReplay?: boolean;
   message?: string;
 }
 
 export async function createRazorpayOrder(params: CreateOrderParams): Promise<CreateOrderResponse> {
+  const headers = await buildAuthenticatedHeaders();
   const res = await fetch('/api/payments/create-order', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(params),
   });
   return res.json();
 }
 
 export async function verifyRazorpayPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResponse> {
+  const headers = await buildAuthenticatedHeaders();
   const res = await fetch('/api/payments/verify', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(params),
   });
   return res.json();
@@ -98,14 +104,15 @@ async function parseJsonSafe<T>(res: Response, fallbackMessage: string): Promise
 export async function fetchRazorpaySubscriptionStatus(
   subscriptionId?: string
 ): Promise<SubscriptionStatusResponse> {
+  const headers = await buildAuthenticatedHeaders();
   const res = await fetch('/api/payments/subscription-status', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ subscriptionId }),
   });
   return parseJsonSafe<SubscriptionStatusResponse>(
     res,
-    'Payment endpoint unavailable. Restart the dev server and try again.'
+    'Payment endpoint unavailable. Restart the server and try again.'
   );
 }
 
@@ -132,27 +139,29 @@ export async function fetchRazorpayBillingHistory(params: {
   subscriptionId?: string;
   paymentId?: string;
 }): Promise<BillingHistoryResponse> {
+  const headers = await buildAuthenticatedHeaders();
   const res = await fetch('/api/payments/billing-history', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(params),
   });
   return parseJsonSafe<BillingHistoryResponse>(
     res,
-    'Billing endpoint unavailable. Restart the dev server and try again.'
+    'Billing endpoint unavailable. Restart the server and try again.'
   );
 }
 
 export async function cancelRazorpaySubscription(
   subscriptionId?: string
 ): Promise<CancelSubscriptionResponse> {
+  const headers = await buildAuthenticatedHeaders();
   const res = await fetch('/api/payments/cancel-subscription', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ subscriptionId }),
   });
   return parseJsonSafe<CancelSubscriptionResponse>(
     res,
-    'Payment endpoint unavailable. Restart the dev server and try again.'
+    'Payment endpoint unavailable. Restart the server and try again.'
   );
 }

@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, RefreshCw } from 'lucide-react';
 import { useTrading } from '../../../context/TradingContext';
 import { api } from '../api/client';
 import { fmtCrore, fmtPct } from '../utils/format';
+import { CACHE_KEYS, CACHE_TTL_MS, loadCachedScan, saveCachedScan } from '../utils/scanCache';
 import { Segmented, SectionCard, StatCard, Hint } from './ui';
-
-const memo = {};
 
 function growth(curr, prev) {
   if (curr == null || prev == null || prev === 0) return null;
@@ -49,40 +48,60 @@ function BarsChart({ rows }) {
 
 export default function FinancialsSection({ symbol }) {
   const { addToast } = useTrading();
-  const [data, setData] = useState(memo[symbol] || null);
-  const [loading, setLoading] = useState(!memo[symbol]);
+  const cacheKey = CACHE_KEYS.financialsPrefix + symbol;
+  const [cachedEntry, setCachedEntry] = useState(() => loadCachedScan(cacheKey, CACHE_TTL_MS.financials));
+  const [data, setData] = useState(cachedEntry?.data || null);
+  const [loading, setLoading] = useState(!cachedEntry?.data);
   const [error, setError] = useState('');
+  const [staleNotice, setStaleNotice] = useState(cachedEntry?.staleWarning || '');
   const [view, setView] = useState('yearly');
 
+  const fetchFinancials = useCallback(
+    (forceRefresh = false) => {
+      const existing = loadCachedScan(cacheKey, CACHE_TTL_MS.financials);
+      if (!forceRefresh && existing?.data && !existing.isStale) {
+        setCachedEntry(existing);
+        setData(existing.data);
+        setStaleNotice('');
+        setError('');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      api
+        .getStockFinancials(symbol, forceRefresh)
+        .then((res) => {
+          const saved = saveCachedScan(cacheKey, res, CACHE_TTL_MS.financials);
+          setCachedEntry(saved);
+          setData(res);
+          setStaleNotice('');
+          if (!res.yearly?.length && res.quarterly?.length) setView('quarterly');
+        })
+        .catch((e) => {
+          const msg = e.message || 'Could not load company financials. Please retry when the service is online.';
+          if (existing?.data) {
+            setCachedEntry(existing);
+            setData(existing.data);
+            setStaleNotice(
+              `Financials service is unreachable. Showing previously fetched snapshot from ${new Date(
+                existing.savedAt
+              ).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`
+            );
+          } else {
+            setData(null);
+          }
+          setError(msg);
+          addToast('Financials Unavailable', msg, 'error');
+        })
+        .finally(() => setLoading(false));
+    },
+    [addToast, cacheKey, symbol]
+  );
+
   useEffect(() => {
-    let alive = true;
-    if (memo[symbol]) {
-      setData(memo[symbol]);
-      setLoading(false);
-      return undefined;
-    }
-    setLoading(true);
-    setError('');
-    setData(null);
-    api
-      .getStockFinancials(symbol)
-      .then((res) => {
-        if (!alive) return;
-        memo[symbol] = res;
-        setData(res);
-        if (!res.yearly?.length && res.quarterly?.length) setView('quarterly');
-      })
-      .catch((e) => {
-        if (!alive) return;
-        const msg = e.message || 'Could not load company financials. Please try again in some time.';
-        setError(msg);
-        addToast('Financials Unavailable', msg, 'error');
-      })
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [symbol, addToast]);
+    fetchFinancials(false);
+  }, [fetchFinancials]);
 
   const rows = (view === 'yearly' ? data?.yearly : data?.quarterly) || [];
   const latest = rows[rows.length - 1];
@@ -93,67 +112,45 @@ export default function FinancialsSection({ symbol }) {
 
   return (
     <SectionCard
-      title={
-        <>
-          <BarChart3 size={18} /> Revenue & profit
-        </>
-      }
-      subtitle="How much the company sells (revenue) and how much it keeps after all expenses (net profit)."
+      title={<><BarChart3 size={18} /> Revenue & profit</>}
+      subtitle="Historical company revenue and net profit from reported financial statements."
       actions={
         data?.available && (
           <Segmented
             size="sm"
             value={view}
             onChange={setView}
-            options={[
-              { value: 'yearly', label: 'Yearly' },
-              { value: 'quarterly', label: 'Quarterly' },
-            ]}
+            options={[{ value: 'yearly', label: 'Yearly' }, { value: 'quarterly', label: 'Quarterly' }]}
           />
         )
       }
     >
-      {loading ? (
-        <div className="fin-loading">
-          <RefreshCw size={16} className="spin" /> Loading company financials…
+      {staleNotice && (
+        <div className="alert alert-info sc-alert-retry" style={{ marginBottom: 12 }}>
+          <span>{staleNotice}</span>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => fetchFinancials(true)}>Retry</button>
         </div>
-      ) : error ? (
-        <div className="muted-box">{error}</div>
+      )}
+      {loading ? (
+        <div className="fin-loading"><RefreshCw size={16} className="spin" /> Loading company financials…</div>
+      ) : error && (!data?.available || rows.length === 0) ? (
+        <div className="alert alert-error sc-alert-retry">
+          <span>{error}</span>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => fetchFinancials(true)}>Retry</button>
+        </div>
       ) : !data?.available || rows.length === 0 ? (
-        <div className="muted-box">{data?.message || 'Revenue and profit figures are not available for this stock.'}</div>
+        <div className="muted-box">
+          <span>{data?.message || 'Authentic revenue and profit statements are currently unavailable for this stock.'}</span>
+          <button type="button" className="btn btn-outline btn-sm" style={{ marginLeft: 12 }} onClick={() => fetchFinancials(true)}>Retry</button>
+        </div>
       ) : (
         <>
           <div className="stat-grid four">
-            <StatCard
-              label={`Revenue (${latest.period})`}
-              value={fmtCrore(latest.revenue)}
-              sub={revG != null ? <span className={revG >= 0 ? 'text-up' : 'text-down'}>{fmtPct(revG)} {prevLabel}</span> : null}
-            />
-            <StatCard
-              label={`Net profit (${latest.period})`}
-              value={fmtCrore(latest.net_profit)}
-              sub={proG != null ? <span className={proG >= 0 ? 'text-up' : 'text-down'}>{fmtPct(proG)} {prevLabel}</span> : null}
-            />
-            <StatCard
-              label={
-                <>
-                  Profit margin <Hint text="Out of every ₹100 of sales, how much is left as profit." />
-                </>
-              }
-              value={latest.profit_margin_pct != null ? `${latest.profit_margin_pct.toFixed(1)}%` : '—'}
-              sub={latest.profit_margin_pct != null ? `₹${latest.profit_margin_pct.toFixed(0)} profit per ₹100 sales` : null}
-            />
-            <StatCard
-              label={
-                <>
-                  P/E ratio <Hint text="Price ÷ yearly earnings per share. Lower can mean cheaper, but compare within the same industry." />
-                </>
-              }
-              value={data.key_stats?.pe_ratio != null ? data.key_stats.pe_ratio.toFixed(1) : '—'}
-              sub={data.key_stats?.market_cap ? `Company value ${fmtCrore(data.key_stats.market_cap)}` : null}
-            />
+            <StatCard label={`Revenue (${latest.period})`} value={fmtCrore(latest.revenue)} sub={revG != null ? <span className={revG >= 0 ? 'text-up' : 'text-down'}>{fmtPct(revG)} {prevLabel}</span> : null} />
+            <StatCard label={`Net profit (${latest.period})`} value={fmtCrore(latest.net_profit)} sub={proG != null ? <span className={proG >= 0 ? 'text-up' : 'text-down'}>{fmtPct(proG)} {prevLabel}</span> : null} />
+            <StatCard label={<>Profit margin <Hint text="Out of every ₹100 of sales, how much is left as profit." /></>} value={latest.profit_margin_pct != null ? `${latest.profit_margin_pct.toFixed(1)}%` : '—'} sub={latest.profit_margin_pct != null ? `₹${latest.profit_margin_pct.toFixed(0)} profit per ₹100 sales` : null} />
+            <StatCard label={<>P/E ratio <Hint text="Price ÷ yearly earnings per share. Compare within the same industry." /></>} value={data.key_stats?.pe_ratio != null ? data.key_stats.pe_ratio.toFixed(1) : '—'} sub={data.key_stats?.market_cap ? `Company value ${fmtCrore(data.key_stats.market_cap)}` : null} />
           </div>
-
           <div className="fin-chart-wrap">
             <div className="fin-legend">
               <span><i style={{ background: 'var(--fin-revenue)' }} /> Revenue</span>
@@ -161,16 +158,10 @@ export default function FinancialsSection({ symbol }) {
             </div>
             <BarsChart rows={rows} />
           </div>
-
           <div className="table-wrap">
             <table className="dtable compact">
               <thead>
-                <tr>
-                  <th>Period</th>
-                  <th className="num">Revenue</th>
-                  <th className="num">Net profit</th>
-                  <th className="num">Profit margin</th>
-                </tr>
+                <tr><th>Period</th><th className="num">Revenue</th><th className="num">Net profit</th><th className="num">Profit margin</th></tr>
               </thead>
               <tbody>
                 {[...rows].reverse().map((r) => (
@@ -184,7 +175,9 @@ export default function FinancialsSection({ symbol }) {
               </tbody>
             </table>
           </div>
-          <p className="fine-print">Figures in Indian Rupees (Cr = crore = 1,00,00,000). Source: {data.source}.</p>
+          <p className="fine-print">
+            Figures in Indian Rupees (Cr = crore = 1,00,00,000). Source: {data.source}{data.data_timestamp ? ` · Updated ${data.data_timestamp}` : ''}.
+          </p>
         </>
       )}
     </SectionCard>

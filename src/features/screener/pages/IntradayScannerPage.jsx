@@ -1,9 +1,4 @@
-import {
-  Lock,
-  PauseCircle,
-  PlayCircle,
-  RefreshCw,
-} from 'lucide-react';
+import { Lock, PauseCircle, PlayCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import MarketStatusBadge from '../components/MarketStatusBadge';
 import { IntradayScannerGates } from '../components/IntradayScannerGates';
@@ -18,34 +13,11 @@ import { useIntradayScanner } from '../hooks/useIntradayScanner';
 export default function IntradayScannerPage({ marketStatus }) {
   const model = useIntradayScanner(marketStatus);
   const {
-    planConfig,
-    scan,
-    loading,
-    error,
-    statusFilter,
-    setStatusFilter,
-    minConfidence,
-    setMinConfidence,
-    sectorFilter,
-    setSectorFilter,
-    selectedSignal,
-    setSelectedSignal,
-    isLocked,
-    data,
-    effectiveMarketStatus,
-    isMarketOpen,
-    fetchSignals,
-    sectors,
-    counts,
-    rows,
-    resetFilters,
-    mm,
-    ss,
-    visibleRows,
-    lockedCount,
-    B,
-    A,
-    stats,
+    planConfig, scan, loading, error, statusFilter, setStatusFilter,
+    minConfidence, setMinConfidence, sectorFilter, setSectorFilter,
+    selectedSignal, setSelectedSignal, isLocked, data, effectiveMarketStatus,
+    isMarketOpen, fetchSignals, sectors, counts, rows, resetFilters,
+    mm, ss, visibleRows, lockedCount, B, A, stats,
   } = model;
 
   return (
@@ -130,6 +102,20 @@ export default function IntradayScannerPage({ marketStatus }) {
                 onClick={() => fetchSignals(false)}
               >
                 Retry
+              </Button>
+            </div>
+          )}
+          {model.staleWarning && !error && (
+            <div className="alert alert-info sc-alert-retry">
+              <span>{model.staleWarning}</span>
+              <Button
+                variant="unstyled"
+                size="unstyled"
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => fetchSignals(true)}
+              >
+                Refresh
               </Button>
             </div>
           )}

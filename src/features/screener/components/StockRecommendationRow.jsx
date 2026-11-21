@@ -49,9 +49,7 @@ export function StockRecommendationRow({
           <div className="stock-avatar">{signal.symbol.slice(0, 2)}</div>
           <div>
             <div className="stock-sym">{signal.symbol}</div>
-            <div className="stock-name" title={signal.name}>
-              {signal.name}
-            </div>
+            <div className="stock-name" title={signal.name}>{signal.name}</div>
           </div>
         </div>
       </td>
@@ -63,20 +61,13 @@ export function StockRecommendationRow({
           <Badge
             tone={statusObj.tone}
             title={statusObj.help}
-            icon={
-              isSwing
-                ? signal.signal_type === 'CONFIRMED_SIGNAL'
-                  ? CheckCircle2
-                  : Eye
-                : INTRADAY_ICON[statusObj.tone] || Clock
-            }
+            icon={isSwing ? (signal.signal_type === 'CONFIRMED_SIGNAL' ? CheckCircle2 : Eye) : INTRADAY_ICON[statusObj.tone] || Clock}
           >
             {statusObj.label}
           </Badge>
           {!isSwing && signal.pnl_pct != null && (
             <span className={`pnl ${signal.pnl_pct >= 0 ? 'text-up' : 'text-down'}`}>
-              {signal.pnl_pct >= 0 ? 'Profit ' : 'Loss '}
-              {fmtPct(signal.pnl_pct, 2)}
+              {signal.pnl_pct >= 0 ? 'Profit ' : 'Loss '}{fmtPct(signal.pnl_pct, 2)}
             </span>
           )}
         </div>
@@ -93,10 +84,7 @@ export function StockRecommendationRow({
         <div className="cell-main text-up">{fmtPrice(target)}</div>
         <div className="cell-sub">
           {isSwing ? (
-            <>
-              <span className="text-up">{fmtPct(signal.expected_gain_pct)}</span> · by{' '}
-              {shortDate(signal.estimated_sell_date)}
-            </>
+            <><span className="text-up">{fmtPct(signal.expected_gain_pct)}</span> · by {shortDate(signal.estimated_sell_date)}</>
           ) : isClosed && signal.actual_exit_price != null ? (
             `Sold ${fmtPrice(signal.actual_exit_price)} at ${shortTime(signal.actual_exit_time_ist)}`
           ) : (
@@ -107,17 +95,11 @@ export function StockRecommendationRow({
       <td className="num">
         <div className="cell-main text-down">{fmtPrice(sl)}</div>
         <div className="cell-sub">
-          {isSwing
-            ? fmtPct(-signal.stop_loss_risk_pct)
-            : entry
-            ? fmtPct(((sl - entry) / entry) * 100, 2)
-            : '—'}
+          {isSwing ? fmtPct(-signal.stop_loss_risk_pct) : entry ? fmtPct(((sl - entry) / entry) * 100, 2) : '—'}
         </div>
       </td>
       <td className="col-strategy">
-        <div className="strat-name" title={strat.help}>
-          {strat.label}
-        </div>
+        <div className="strat-name" title={strat.help}>{strat.label}</div>
         {isSwing && signal.detected_patterns?.length > 0 && (
           <div className="chips">
             {signal.detected_patterns.slice(0, 2).map((p) => {
@@ -134,18 +116,14 @@ export function StockRecommendationRow({
           </div>
         )}
         {!isSwing && signal.reasoning && (
-          <div className="strat-reason" title={signal.reasoning}>
-            {signal.reasoning}
-          </div>
+          <div className="strat-reason" title={signal.reasoning}>{signal.reasoning}</div>
         )}
       </td>
       <td className="num">
         <span className={`rr ${rr >= 2 ? 'rr-good' : rr >= 1.5 ? 'rr-ok' : ''}`}>{rr.toFixed(1)}x</span>
       </td>
       <td className="col-action">
-        <span className="row-toggle" aria-hidden="true">
-          <ChevronRight size={17} />
-        </span>
+        <span className="row-toggle" aria-hidden="true"><ChevronRight size={17} /></span>
       </td>
     </tr>
   );
@@ -175,22 +153,10 @@ export function StockRecommendationMobileCard({ signal, mode = 'swing', onSelect
       </div>
 
       <div className="sc-mob-metrics">
-        <div>
-          <span>Entry</span>
-          <strong>{fmtPrice(entry)}</strong>
-        </div>
-        <div>
-          <span>Target</span>
-          <strong className="text-up">{fmtPrice(target)}</strong>
-        </div>
-        <div>
-          <span>Stop-Loss</span>
-          <strong className="text-down">{fmtPrice(signal.stop_loss)}</strong>
-        </div>
-        <div>
-          <span>R : R</span>
-          <strong>{rr.toFixed(1)}x</strong>
-        </div>
+        <div><span>Entry</span><strong>{fmtPrice(entry)}</strong></div>
+        <div><span>Target</span><strong className="text-up">{fmtPrice(target)}</strong></div>
+        <div><span>Stop-Loss</span><strong className="text-down">{fmtPrice(signal.stop_loss)}</strong></div>
+        <div><span>R : R</span><strong>{rr.toFixed(1)}x</strong></div>
       </div>
 
       <div className="sc-mob-foot">

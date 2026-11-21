@@ -1,9 +1,25 @@
-import type { Holding, IntradayPosition, Order, Stock } from '../types/market';
+import type { Holding, IntradayPosition, Order, Stock, Watchlist } from '../types/market';
 
-export function portfolioQuoteSymbols(holdings: Holding[], positions: IntradayPosition[], orders: Order[]): string[] {
-  return [...new Set([...holdings, ...positions, ...orders.filter(o => o.status === 'PENDING' || o.status === 'SCHEDULED')]
-    .filter(item => item.exchange === 'NSE')
-    .map(item => item.symbol.toUpperCase()))].sort();
+export function portfolioQuoteSymbols(
+  holdings: Holding[],
+  positions: IntradayPosition[],
+  orders: Order[],
+  watchlists: Watchlist[] = []
+): string[] {
+  const tradeSymbols = [
+    ...holdings,
+    ...positions,
+    ...orders.filter((o) => o.status === 'PENDING' || o.status === 'SCHEDULED'),
+  ]
+    .filter((item) => item.exchange === 'NSE')
+    .map((item) => item.symbol.toUpperCase());
+
+  const watchlistSymbols = watchlists
+    .flatMap((wl) => (Array.isArray(wl.symbols) ? wl.symbols : []))
+    .map((sym) => sym.trim().toUpperCase())
+    .filter(Boolean);
+
+  return [...new Set([...tradeSymbols, ...watchlistSymbols])].sort();
 }
 
 /** Reject failed/mismatched responses rather than inventing a price. */

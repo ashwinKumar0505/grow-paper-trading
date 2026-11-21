@@ -16,8 +16,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const [apiResults, setApiResults] = useState<any[]>([]);
+  const [apiResults, setApiResults] = useState<Array<{ symbol: string; name: string; exchange: string; sector: string }>>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -28,7 +27,6 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
     }
   }, [isOpen]);
 
-  // Debounced API search for stocks not in local list
   useEffect(() => {
     if (!query.trim() || query.length < 2) {
       setApiResults([]);
@@ -42,7 +40,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
           const data = await res.json();
           if (data.success && Array.isArray(data.results)) {
             const extra = data.results.filter(
-              (r: any) => !stocks.some((s) => s.symbol.toUpperCase() === r.symbol.toUpperCase())
+              (r: { symbol: string }) => !stocks.some((s) => s.symbol.toUpperCase() === r.symbol.toUpperCase())
             );
             setApiResults(extra);
           }
@@ -71,7 +69,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
     onClose();
   };
 
-  const handleSelectApiResult = async (item: any) => {
+  const handleSelectApiResult = (item: { symbol: string }) => {
     selectStockBySymbol(item.symbol);
     onClose();
   };
@@ -103,7 +101,6 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
       <div className="fixed inset-0" onClick={onClose} />
 
       <div className="relative w-full max-w-2xl bg-white dark:bg-[#1A1D24] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#2B303C] overflow-hidden z-10 flex flex-col max-h-[80vh]">
-        {/* Search Input Bar */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-[#2B303C]">
           <Search className="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0" />
           <input
@@ -119,10 +116,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
             className="w-full bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base focus:outline-hidden"
           />
           {query ? (
-            <button
-              onClick={() => setQuery('')}
-              className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
+            <button onClick={() => setQuery('')} className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <X className="w-4 h-4" />
             </button>
           ) : (
@@ -132,7 +126,6 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
           )}
         </div>
 
-        {/* Quick Suggestion Pills */}
         {query.trim() === '' && (
           <div className="px-5 py-2.5 bg-gray-50/60 dark:bg-[#16181F] border-b border-gray-100 dark:border-[#2B303C] flex items-center gap-2 overflow-x-auto no-scrollbar text-xs">
             <span className="text-gray-400 dark:text-gray-500 font-medium shrink-0">Popular:</span>
@@ -148,7 +141,6 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
           </div>
         )}
 
-        {/* Results List */}
         <div className="overflow-y-auto p-2 divide-y divide-gray-50 dark:divide-transparent">
           {localFiltered.length === 0 && apiResults.length === 0 ? (
             <div className="py-12 text-center text-gray-400 dark:text-gray-500">
@@ -172,18 +164,13 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
                 />
               ))}
 
-              {/* Real Market Search Results from API */}
               {apiResults.length > 0 && (
                 <div className="pt-2">
                   <div className="px-4 py-1 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                     More Real Market Equities
                   </div>
                   {apiResults.map((item) => (
-                    <StockSearchApiResultItem
-                      key={item.symbol}
-                      item={item}
-                      onSelect={handleSelectApiResult}
-                    />
+                    <StockSearchApiResultItem key={item.symbol} item={item} onSelect={handleSelectApiResult} />
                   ))}
                 </div>
               )}
@@ -191,7 +178,6 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
           )}
         </div>
 
-        {/* Footer shortcuts */}
         <div className="px-5 py-3 bg-gray-50 dark:bg-[#16181F] border-t border-gray-100 dark:border-[#2B303C] flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500">
           <div className="flex items-center gap-3">
             <span>Use <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↑</kbd> <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↓</kbd> to navigate</span>

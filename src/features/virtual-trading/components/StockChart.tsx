@@ -1,7 +1,7 @@
-import React,{ useEffect,useLayoutEffect,useMemo,useRef,useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { generateChartData } from '../../../data/mockStocks';
-import { ChartPoint,ChartType,Stock,Timeframe } from '../../../types/market';
+import { ChartType, Stock, Timeframe } from '../../../types/market';
+import { sessionMinute, toMs, useStockChartData } from '../hooks/useStockChartData';
 
 interface StockChartProps {
   stock: Stock;
@@ -11,23 +11,6 @@ const TIMEFRAMES: Timeframe[] = ['1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y',
 const SESSION_MINUTES = 375; // 09:15 AM → 03:30 PM IST
 const UP = '#00B386';
 const DOWN = '#EB5B3C';
-
-const toMs = (ts: number) => (ts > 1e11 ? ts : ts * 1000);
-
-/** Minutes elapsed since 09:15 IST for a timestamp, or null if outside 09:15–15:30. */
-function sessionMinute(ts: number): number | null {
-  if (!ts) return null;
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date(toMs(ts)));
-  const h = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10) % 24;
-  const m = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
-  const mins = h * 60 + m - 555;
-  return mins >= 0 && mins <= SESSION_MINUTES ? mins : null;
-}
 
 function formatHoverTimestamp(ts: number, tf: Timeframe, fallback: string): string {
   if (!ts) return fallback;
@@ -68,21 +51,29 @@ function formatAxisLabel(ts: number, tf: Timeframe, fallback: string): string {
 const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
-  const { fetchRealChart, marketStatus } = useTrading();
+  const { marketStatus } = useTrading();
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
   const [chartType, setChartType] = useState<ChartType>('line');
   const [isTerminalMode, setIsTerminalMode] = useState<boolean>(false);
-  const [points, setPoints] = useState<ChartPoint[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  const {
+    data,
+    is1D,
+    isLive,
+    validPrice,
+    prevClose,
+    currentPrice,
+    isLoading,
+    chartError,
+    staleNotice,
+    hoverIdx,
+    setHoverIdx,
+    handleRetryChart,
+  } = useStockChartData(stock, timeframe, marketStatus.isOpen);
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(760);
   const height = isTerminalMode ? 370 : 300;
-
-  const is1D = timeframe === '1D';
-  const isLive = marketStatus.isOpen;
-  const validPrice = stock.price > 0;
   const areaGradId = `growwArea-${stock.symbol.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
   // Measure container width so SVG renders at crisp 1:1 pixel ratio
@@ -96,69 +87,6 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     return () => ro.disconnect();
   }, []);
 
-  // Load candles for the selected stock & timeframe
-  useEffect(() => {
-    let alive = true;
-    setIsLoading(true);
-    setHoverIdx(null);
-    fetchRealChart(stock.symbol, timeframe).then((pts: ChartPoint[] | null) => {
-      if (!alive) return;
-      if (pts && pts.length >= 2) {
-        setPoints(pts);
-      } else {
-        setPoints(generateChartData(stock, timeframe));
-      }
-      setIsLoading(false);
-    });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stock.symbol, timeframe, fetchRealChart]);
-
-  // Synchronize latest point with live market quote during trading hours
-  useEffect(() => {
-    if (!is1D || !validPrice) return;
-    setPoints((prev) => {
-      if (!prev || prev.length === 0) return prev;
-      const last = prev[prev.length - 1];
-      const price = stock.price;
-      const now = Date.now();
-      const bucket = Math.floor(now / 120000) * 120000; // 2-min bar
-      const lastTs = toMs(last.timestamp);
-      if (isLive && sessionMinute(now) !== null && bucket > lastTs && sessionMinute(lastTs) !== null) {
-        return [
-          ...prev,
-          {
-            time: new Date(bucket)
-              .toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
-              .toUpperCase(),
-            timestamp: bucket,
-            open: last.close,
-            high: Math.max(last.close, price),
-            low: Math.min(last.close, price),
-            close: price,
-            price,
-            volume: last.volume || Math.round((stock.volume || 0) / Math.max(1, prev.length)),
-          },
-        ];
-      }
-      if (last.close === price) return prev;
-      const copy = prev.slice();
-      copy[copy.length - 1] = {
-        ...last,
-        close: price,
-        price,
-        high: Math.max(last.high, price),
-        low: Math.min(last.low, price),
-      };
-      return copy;
-    });
-  }, [stock.price, stock.volume, is1D, isLive, validPrice]);
-
-  const data = points || [];
-  const prevClose = stock.previousClose > 0 ? stock.previousClose : data[0]?.open || 0;
-  const currentPrice = validPrice ? stock.price : data[data.length - 1]?.close || 0;
   const baseline = is1D ? prevClose : data[0]?.close || currentPrice;
 
   const hovered = hoverIdx !== null ? data[hoverIdx] : null;
@@ -376,11 +304,37 @@ export const StockChart: React.FC<StockChartProps> = ({ stock }) => {
         )}
       </div>
 
+      {staleNotice && (
+        <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-2">
+          <span>{staleNotice}</span>
+          <button
+            type="button"
+            onClick={handleRetryChart}
+            className="font-semibold underline hover:text-amber-900 dark:hover:text-amber-100 cursor-pointer shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Interactive SVG Chart Canvas */}
       <div ref={wrapRef} className="relative w-full mt-2 select-none" style={{ height }}>
         {isLoading && data.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
             Loading chart…
+          </div>
+        ) : chartError && data.length === 0 ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-200 dark:border-[#282C37] bg-gray-50/60 dark:bg-[#14171F] p-6 text-center">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-300 max-w-md">
+              {chartError}
+            </p>
+            <button
+              type="button"
+              onClick={handleRetryChart}
+              className="rounded-lg bg-[#00B386] hover:bg-[#009A73] px-3.5 py-1.5 text-xs font-bold text-white cursor-pointer transition-colors"
+            >
+              Retry Loading Chart
+            </button>
           </div>
         ) : (
           <svg

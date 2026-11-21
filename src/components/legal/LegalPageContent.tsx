@@ -32,7 +32,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">4. Subscriptions &amp; Payments</h2>
             <p>
-              Paid membership tiers (Beginner, Advanced, and Virtual Capital Top-ups) unlock software features such as extended screener filters, higher virtual wallet limits, and detailed simulated brokerage breakdowns. Payments are processed securely in INR via Razorpay.
+              Paid subscription tiers (Beginner and Advanced) unlock software features such as extended screener filters, historical backtesting diagnostics, interactive chart pattern lessons, higher virtual wallet limits, and detailed simulated brokerage breakdowns. Subscriptions renew automatically on a monthly or yearly basis via Razorpay in INR until cancelled.
             </p>
           </section>
           <section className="space-y-2">
@@ -85,7 +85,6 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>7-Day Satisfaction Window:</strong> First-time subscribers to Beginner or Advanced plans may request a full refund within 7 days of initial purchase if they are not satisfied with the platform.</li>
               <li><strong>Duplicate or Failed Charges:</strong> Any accidental duplicate payment or technical billing error will be refunded 100% upon verification.</li>
-              <li><strong>One-Time Virtual Top-ups:</strong> Virtual capital top-ups (₹99) are digital consumables and are non-refundable once credited, unless a technical error occurred.</li>
             </ul>
           </section>
           <section className="space-y-2">

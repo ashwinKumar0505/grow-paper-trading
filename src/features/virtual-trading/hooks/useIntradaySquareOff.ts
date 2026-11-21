@@ -1,27 +1,37 @@
 import type { RefObject } from 'react';
 import { useEffect } from 'react';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import {
-Stock
-} from '../../../types/market';
+import { Stock } from '../../../types/market';
 import { AUTO_SQUARE_OFF_CHARGE } from '../../../utils/charges';
 import {
-classifyQuoteFreshness,
-getIndianMarketStatus,
-getISTParts,
-isPastIntradayCutoff
+  classifyQuoteFreshness,
+  getIndianMarketStatus,
+  getISTParts,
+  isPastIntradayCutoff,
 } from '../../../utils/marketHours';
 import {
-applyFill,
-EngineState,
-OrderBookState,
-processOrderQueue
+  applyFill,
+  EngineState,
+  OrderBookState,
+  processOrderQueue,
 } from '../../../utils/orderEngine';
-type Options = Pick<TradingContextType, 'addToast' | 'marketStatus'> & { engineRef: RefObject<OrderBookState>; stocksRef: RefObject<Stock[]>; commitEngine: (patch: Partial<OrderBookState>) => void };
 
-export function useIntradaySquareOff({ engineRef, stocksRef, commitEngine, addToast, marketStatus }: Options) {
+type Options = Pick<TradingContextType, 'addToast' | 'marketStatus'> & {
+  engineRef: RefObject<OrderBookState>;
+  stocksRef: RefObject<Stock[]>;
+  commitEngine: (patch: Partial<OrderBookState>) => void;
+};
+
+export function useIntradaySquareOff({
+  engineRef,
+  stocksRef,
+  commitEngine,
+  addToast,
+  marketStatus,
+}: Options) {
   // Risk management (RMS): expire day orders at close and auto square-off
   // intraday positions at 3:20 PM IST with the ₹59 (₹50 + GST) penalty.
+  // Never fabricates an execution price or falls back to entryPrice when authentic market data is unavailable!
   useEffect(() => {
     const runRms = () => {
       const now = Date.now();
@@ -57,13 +67,29 @@ export function useIntradaySquareOff({ engineRef, stocksRef, commitEngine, addTo
       const today = getISTParts(now).dateKey;
       for (const pos of state.positions) {
         if (!isPastIntradayCutoff(pos.timestamp, now)) continue;
-        const stock = stocksRef.current.find((s) => s.symbol === pos.symbol);
+        const stock = stocksRef.current.find(
+          (s) => s.symbol === pos.symbol && s.exchange === pos.exchange
+        );
+
+        // Require an authentic provider-backed quote; never use entryPrice on data outage
+        if (
+          !stock ||
+          stock.providerAvailable === false ||
+          stock.freshness === 'UNAVAILABLE' ||
+          !Number.isFinite(stock.price) ||
+          stock.price <= 0
+        ) {
+          continue;
+        }
+
         const sameDay = getISTParts(pos.timestamp).dateKey === today;
-        const price = stock
-          ? !sameDay && currentMarketStatus.isOpen
-            ? stock.previousClose || stock.price
-            : stock.price
-          : pos.entryPrice;
+        const price =
+          !sameDay && currentMarketStatus.isOpen
+            ? stock.previousClose > 0
+              ? stock.previousClose
+              : stock.price
+            : stock.price;
+
         const res = applyFill(state, {
           symbol: pos.symbol,
           stockName: pos.stockName,
@@ -106,6 +132,5 @@ export function useIntradaySquareOff({ engineRef, stocksRef, commitEngine, addTo
       clearTimeout(initial);
       clearInterval(timer);
     };
-  }, [marketStatus.isOpen, commitEngine, addToast]);
-
+  }, [marketStatus.isOpen, commitEngine, addToast, engineRef, stocksRef]);
 }

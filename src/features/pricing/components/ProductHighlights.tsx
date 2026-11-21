@@ -6,8 +6,8 @@ import { accentText, focusRing, surface, textMuted, textStrong } from '../pricin
 const PRODUCTS = [
   {
     icon: Radar,
-    title: 'AI Stock Screener & Backtests',
-    description: 'Scan NSE stocks with chart analysis, 2- to 5-year backtested strategies, and an AI insights layer.',
+    title: 'Rule-Based Stock Screener & Backtests',
+    description: 'Scan NSE stocks with chart analysis, 2-year historical strategy backtests, and quantitative technical insights.',
     href: '/screener',
     cta: 'Explore Screener',
   },
@@ -21,7 +21,7 @@ const PRODUCTS = [
   {
     icon: BookOpen,
     title: 'Learn Charts & Guess the Chart',
-    description: 'Master 28+ chart patterns, then sharpen your read with chart quizzes.',
+    description: 'Master 21 chart patterns, then sharpen your read with chart quizzes.',
     href: '/learn',
     cta: 'Start Learning',
   },

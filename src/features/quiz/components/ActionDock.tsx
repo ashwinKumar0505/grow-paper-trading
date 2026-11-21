@@ -82,7 +82,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-1.5 text-xs font-mono">
                 <span className="text-[var(--quiz-muted)] font-sans text-[11px]">Bet:</span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold">${positionSize.toLocaleString()}</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold">₹{positionSize.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 {[500, 1000, 2500, 5000].map((amt) => (
@@ -96,7 +96,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
                         : 'text-[var(--quiz-muted)] bg-[var(--quiz-subtle)]/50 hover:bg-[var(--quiz-subtle)] hover:text-[var(--quiz-text)] disabled:opacity-30'
                     }`}
                   >
-                    ${amt >= 1000 ? `${amt / 1000}k` : amt}
+                    ₹{amt >= 1000 ? `${amt / 1000}k` : amt}
                   </button>
                 ))}
               </div>

@@ -91,7 +91,7 @@ export const QuizHud: React.FC<QuizHudProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="text-[var(--quiz-muted)] text-[11px]">Virtual Equity:</span>
             <span className="text-[var(--quiz-text)] font-bold tabular-nums text-sm">
-              ${tournamentState.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{tournamentState.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
           <span
@@ -99,7 +99,7 @@ export const QuizHud: React.FC<QuizHudProps> = ({
               isProfitable ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
             }`}
           >
-            {isProfitable ? '+' : ''}${tournamentPnl.toFixed(2)} (
+            {isProfitable ? '+' : ''}₹{tournamentPnl.toFixed(2)} (
             {isProfitable ? '+' : ''}
             {((tournamentPnl / tournamentState.startingBalance) * 100).toFixed(1)}%)
           </span>

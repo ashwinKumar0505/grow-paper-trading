@@ -13,7 +13,6 @@ type Props = Pick<
   | 'setIsWalletModalOpen'
   | 'subscriptionTier'
   | 'openUpgradeModal'
-  | 'openRazorpayCheckout'
   | 'activeTab'
   | 'selectedAddPreset'
   | 'setSelectedAddPreset'
@@ -40,7 +39,6 @@ export function WalletTopUp({
   setIsWalletModalOpen,
   subscriptionTier,
   openUpgradeModal,
-  openRazorpayCheckout,
   activeTab,
   selectedAddPreset,
   setSelectedAddPreset,
@@ -74,7 +72,6 @@ export function WalletTopUp({
       ) : isFreeTier ? (
         <WalletFreeTierPrompt
           setIsWalletModalOpen={setIsWalletModalOpen}
-          openRazorpayCheckout={openRazorpayCheckout}
           openUpgradeModal={openUpgradeModal}
         />
       ) : isWalletFull ? (

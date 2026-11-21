@@ -42,7 +42,11 @@ export const INTRADAY_STATUS = {
   LIVE_ACTIVE_ENTRY: { label: 'Active signal', tone: 'info', group: 'open' },
   PROJECTED_EXIT_PENDING: { label: 'Setup open', tone: 'warning', group: 'open' },
   COMPLETED_TARGET_HIT: { label: 'Target reached', tone: 'positive', group: 'closed' },
+  COMPLETED_GAP_TARGET: { label: 'Gap target hit', tone: 'positive', group: 'closed' },
   COMPLETED_STOP_LOSS_HIT: { label: 'Stop loss hit', tone: 'negative', group: 'closed' },
+  COMPLETED_GAP_STOP_LOSS: { label: 'Gap stop hit', tone: 'negative', group: 'closed' },
+  COMPLETED_TRAILING_STOP: { label: 'Trailing stop exit', tone: 'info', group: 'closed' },
+  COMPLETED_SQUARE_OFF_1515: { label: 'Closed at 3:15 PM', tone: 'neutral', group: 'closed' },
   COMPLETED_SQUARE_OFF_320PM: { label: 'Closed at 3:20 PM', tone: 'neutral', group: 'closed' },
 };
 

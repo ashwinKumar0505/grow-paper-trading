@@ -1,27 +1,67 @@
-import { useCallback,useEffect } from 'react';
-import { db,doc,setDoc } from '../../../lib/firebase';
+import { useCallback, useEffect, type RefObject } from 'react';
+import { db, doc, setDoc } from '../../../lib/firebase';
 import {
-getCurrentMonthKey,
-normalizeUsageQuota,
-UserUsageQuota
+  getCurrentMonthKey,
+  normalizeUsageQuota,
+  UserUsageQuota,
 } from '../../../lib/subscription';
-import {
-WalletTransaction
-} from '../../../types/market';
-import {
-OrderBookState
-} from '../../../utils/orderEngine';
+import { WalletTransaction } from '../../../types/market';
+import { OrderBookState } from '../../../utils/orderEngine';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'usageQuota' | 'planConfig' | 'setInitialBalance' | 'setUsageQuota' | 'setWalletTransactions' | 'user' | 'openUpgradeModal' | 'subscriptionTier'> & { commitEngine: (patch: Partial<OrderBookState>) => void };
 
-export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitialBalance, setUsageQuota, setWalletTransactions, user, openUpgradeModal, subscriptionTier }: Options) {
-  // Automatic Monthly Reset (1L for Free, 10L for Beginner, 50L for Advanced)
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+type Options = Pick<
+  TradingState,
+  | 'usageQuota'
+  | 'planConfig'
+  | 'setInitialBalance'
+  | 'setUsageQuota'
+  | 'setWalletTransactions'
+  | 'user'
+  | 'openUpgradeModal'
+  | 'subscriptionTier'
+> & {
+  engineRef: RefObject<OrderBookState>;
+  commitEngine: (patch: Partial<OrderBookState>) => void;
+};
+
+export function useUsageQuota({
+  usageQuota,
+  planConfig,
+  engineRef,
+  commitEngine,
+  setInitialBalance,
+  setUsageQuota,
+  setWalletTransactions,
+  user,
+  openUpgradeModal,
+  subscriptionTier,
+}: Options) {
+  // Consistent Monthly Virtual-Capital Refresh Policy:
+  // Computes committed capital (cash + holdings net of MTF loans + intraday margin + reserved orders)
+  // and tops up any shortfall below the plan's starting capital floor without destroying or creating phantom funds.
   useEffect(() => {
     const currentMonth = getCurrentMonthKey();
     if (usageQuota.lastAutoResetMonth && usageQuota.lastAutoResetMonth !== currentMonth) {
-      const targetResetAmount = planConfig.defaultStartingCash; // 1L Free, 10L Beginner, 50L Advanced
-      commitEngine({ balance: targetResetAmount });
-      setInitialBalance(targetResetAmount);
+      const targetFloor = round2(planConfig.defaultStartingCash + (user?.paidTopUpCredit || 0));
+      const curBook = engineRef.current;
+      const holdingsNet = curBook.holdings.reduce(
+        (s, h) => s + ((h.totalInvested || 0) - (h.mtfLoanAmount || 0)),
+        0
+      );
+      const posMargin = curBook.positions.reduce((s, p) => s + (p.marginBlocked || 0), 0);
+      const reserved = curBook.orders.reduce(
+        (s, o) =>
+          s +
+          ((o.status === 'PENDING' || o.status === 'SCHEDULED') && o.blockedAmount
+            ? o.blockedAmount
+            : 0),
+        0
+      );
+      const committedCapital = round2(curBook.balance + holdingsNet + posMargin + reserved);
+      const shortfall = Math.max(0, round2(targetFloor - committedCapital));
+      const nextBalance = round2(curBook.balance + shortfall);
 
       const nextQuota: UserUsageQuota = {
         ...normalizeUsageQuota(usageQuota),
@@ -31,21 +71,23 @@ export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitial
       };
       setUsageQuota(nextQuota);
 
-      const autoTx: WalletTransaction = {
-        id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-        type: 'DEPOSIT',
-        amount: targetResetAmount,
-        description: `Automatic Monthly Reset (${planConfig.name} · ₹${targetResetAmount.toLocaleString('en-IN')})`,
-        timestamp: Date.now(),
-      };
-      setWalletTransactions((prev) => [autoTx, ...prev]);
+      if (shortfall > 0) {
+        commitEngine({ balance: nextBalance });
+        setInitialBalance(targetFloor);
+        const autoTx: WalletTransaction = {
+          id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+          type: 'DEPOSIT',
+          amount: shortfall,
+          description: `Monthly Virtual Capital Refresh (+₹${shortfall.toLocaleString('en-IN')} to ₹${targetFloor.toLocaleString('en-IN')} floor · ${planConfig.name})`,
+          timestamp: Date.now(),
+        };
+        setWalletTransactions((prev) => [autoTx, ...prev]);
+      }
 
       if (user?.uid) {
         setDoc(
           doc(db, 'users', user.uid),
           {
-            balance: targetResetAmount,
-            initialBalance: targetResetAmount,
             usage: nextQuota,
             updatedAt: Date.now(),
           },
@@ -53,9 +95,19 @@ export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitial
         ).catch(() => {});
       }
     }
-  }, [usageQuota, planConfig.defaultStartingCash, planConfig.name, commitEngine, user?.uid]);
+  }, [
+    usageQuota,
+    planConfig.defaultStartingCash,
+    planConfig.name,
+    commitEngine,
+    engineRef,
+    setInitialBalance,
+    setUsageQuota,
+    setWalletTransactions,
+    user?.uid,
+    user?.paidTopUpCredit,
+  ]);
 
-  // Daily Usage Quota Helpers for AI Stock Analysis & Guess the Chart Quiz
   const consumeAnalysisSearch = useCallback(
     (_symbol?: string): boolean => {
       const normalized = normalizeUsageQuota(usageQuota);
@@ -63,9 +115,11 @@ export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitial
       if (normalized.analysisSearchesCount >= limit) {
         openUpgradeModal({
           requiredTier: subscriptionTier === 'free' ? 'beginner' : 'advanced',
-          featureName: 'Daily AI Stock Analysis Limit Reached',
-          featureDescription: `You have used all ${limit} AI Stock Analysis searches included in your ${planConfig.name} today. Upgrade to unlock ${
-            subscriptionTier === 'free' ? '15 searches/day (Beginner) or Unlimited searches (Advanced)' : 'Unlimited daily searches & 2-Year Strategy Backtests'
+          featureName: 'Daily Stock Analysis Limit Reached',
+          featureDescription: `You have used all ${limit} Stock Analysis searches included in your ${planConfig.name} today. Upgrade to unlock ${
+            subscriptionTier === 'free'
+              ? '15 searches/day (Beginner) or Unlimited searches (Advanced)'
+              : 'Unlimited daily searches & 2-Year Strategy Backtests'
           }.`,
         });
         return false;
@@ -80,7 +134,7 @@ export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitial
       }
       return true;
     },
-    [usageQuota, planConfig, subscriptionTier, openUpgradeModal, user?.uid]
+    [usageQuota, planConfig, subscriptionTier, openUpgradeModal, setUsageQuota, user?.uid]
   );
 
   const consumeQuizQuestion = useCallback((): boolean => {
@@ -104,7 +158,7 @@ export function useUsageQuota({ usageQuota, planConfig, commitEngine, setInitial
       setDoc(doc(db, 'users', user.uid), { usage: next, updatedAt: Date.now() }, { merge: true }).catch(() => {});
     }
     return true;
-  }, [usageQuota, planConfig, openUpgradeModal, user?.uid]);
+  }, [usageQuota, planConfig, openUpgradeModal, setUsageQuota, user?.uid]);
 
   return { consumeAnalysisSearch, consumeQuizQuestion };
 }

@@ -1,37 +1,22 @@
-import React,{ useEffect,useMemo,useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { generateMarketDepth } from '../../../data/mockStocks';
-import { Exchange,OrderAction,OrderProduct,OrderType } from '../../../types/market';
+import { Exchange, MarketDepthItem, OrderAction, OrderProduct, OrderType } from '../../../types/market';
 import { calculateCharges } from '../../../utils/charges';
-import { getISTParts,INTRADAY_SQUARE_OFF_MIN } from '../../../utils/marketHours';
-import {
-getReservedSellQuantity,
-INTRADAY_LEVERAGE,
-MTF_LEVERAGE,
-roundToTick
-} from '../../../utils/orderEngine';
-
+import { getISTParts, INTRADAY_SQUARE_OFF_MIN } from '../../../utils/marketHours';
+import { getReservedSellQuantity, INTRADAY_LEVERAGE, MTF_LEVERAGE, roundToTick } from '../../../utils/orderEngine';
 import type { OrderPanelProps } from '../types/orderTicket';
-import { BUY,ORDER_TYPE_LABEL,SELL } from '../utils/orderTicket';
+import { BUY, ORDER_TYPE_LABEL, SELL } from '../utils/orderTicket';
 
 export function useOrderTicket({
   stock,
   defaultAction = 'BUY',
   defaultProduct = 'DELIVERY',
   defaultQuantity = 1,
-  onClose,
   onPlaced,
 }: OrderPanelProps) {
   const {
-    executeOrder,
-    balance,
-    holdings,
-    intradayPositions,
-    orders,
-    marketStatus,
-    setIsWalletModalOpen,
-    planConfig,
-    openUpgradeModal,
+    executeOrder, balance, holdings, intradayPositions, orders,
+    marketStatus, setIsWalletModalOpen, planConfig, openUpgradeModal,
   } = useTrading();
 
   const [action, setAction] = useState<OrderAction>(defaultAction);
@@ -46,7 +31,6 @@ export function useOrderTicket({
   const [showTypes, setShowTypes] = useState(false);
   const [showDepth, setShowDepth] = useState(false);
 
-  // Sync defaults when stock or modal parameters change
   useEffect(() => {
     setExchange(stock.exchange);
     setAction(defaultAction);
@@ -72,11 +56,7 @@ export function useOrderTicket({
   const needsPrice = orderType === 'LIMIT' || orderType === 'SL';
   const needsTrigger = orderType === 'SL' || orderType === 'SL-M';
   const effPrice =
-    orderType === 'MARKET'
-      ? ltp
-      : orderType === 'SL-M'
-      ? triggerPrice || ltp
-      : limitPrice || ltp;
+    orderType === 'MARKET' ? ltp : orderType === 'SL-M' ? triggerPrice || ltp : limitPrice || ltp;
 
   const holding = holdings.find((h) => h.symbol === stock.symbol);
   const heldQty = holding?.quantity || 0;
@@ -87,7 +67,6 @@ export function useOrderTicket({
   const isExit = product === 'INTRADAY' && !!position && position.action !== action;
   const reverseQty = isExit ? Math.max(0, qty - position!.quantity) : 0;
 
-  // Quick quantity chips (like Groww's floating "6 | 9 | 15" badge above the Qty input)
   const quickQuantities = useMemo(() => {
     if ((product === 'DELIVERY' || product === 'MTF') && !isBuy && sellableQty > 0) {
       const q1 = Math.max(1, Math.floor(sellableQty * 0.25));
@@ -98,7 +77,6 @@ export function useOrderTicket({
       const half = Math.max(1, Math.floor(position.quantity / 2));
       return Array.from(new Set([half, position.quantity])).slice(0, 3);
     }
-    // Suggest realistic share counts based on price (similar to Groww's 6 | 9 | 15)
     if (ltp >= 2000) return [6, 9, 15];
     if (ltp >= 500) return [10, 25, 50];
     return [25, 50, 100];
@@ -116,24 +94,26 @@ export function useOrderTicket({
     else if (product === 'MTF') required = isBuy ? value / MTF_LEVERAGE + charges.total : 0;
     else if (isExit && position) {
       const closeQty = Math.min(qty, position.quantity);
-      const released = position.marginBlocked * closeQty / position.quantity;
+      const released = (position.marginBlocked * closeQty) / position.quantity;
       const gross = (effPrice - position.entryPrice) * closeQty * (position.action === 'BUY' ? 1 : -1);
-      // Full exits remain possible even if a loss takes the wallet negative.
-      required = reverseQty > 0 ? Math.max(0, reverseQty * effPrice / INTRADAY_LEVERAGE + charges.total - released - gross) : 0;
-    }
-    else required = value / INTRADAY_LEVERAGE + charges.total;
+      required = reverseQty > 0 ? Math.max(0, (reverseQty * effPrice) / INTRADAY_LEVERAGE + charges.total - released - gross) : 0;
+    } else required = value / INTRADAY_LEVERAGE + charges.total;
   }
 
   const insufficient = required > balance;
   const tradable = marketStatus.isOpen;
   const istMin = getISTParts().minutes;
   const intradayBlocked =
-    product === 'INTRADAY' &&
-    marketStatus.isOpen &&
-    istMin >= INTRADAY_SQUARE_OFF_MIN &&
-    !(isExit && reverseQty === 0);
+    product === 'INTRADAY' && marketStatus.isOpen && istMin >= INTRADAY_SQUARE_OFF_MIN && !(isExit && reverseQty === 0);
 
-  const depth = useMemo(() => generateMarketDepth(ltp), [ltp]);
+  const depth: MarketDepthItem = useMemo(() => {
+    if (stock.marketDepth?.available && stock.marketDepth.bids.length > 0) return stock.marketDepth;
+    return {
+      available: false, source: 'unavailable',
+      reason: 'Authentic 5-level exchange order book depth is unavailable on the current market data feed.',
+      timestamp: null, bids: [], asks: [], totalBuyQty: 0, totalSellQty: 0,
+    };
+  }, [stock.marketDepth]);
 
   const switchType = (t: OrderType) => {
     if (!planConfig.allowedOrderTypes.includes(t)) {
@@ -165,31 +145,28 @@ export function useOrderTicket({
     setError('');
     if (!Number.isSafeInteger(qty) || qty <= 0) return setError('Enter a positive whole number of shares');
     const res = executeOrder({
-      symbol: stock.symbol,
-      action,
-      product,
-      orderType,
-      exchange,
-      quantity: qty,
-      limitPrice: needsPrice ? limitPrice : undefined,
-      triggerPrice: needsTrigger ? triggerPrice : undefined,
+      symbol: stock.symbol, action, product, orderType, exchange, quantity: qty,
+      limitPrice: needsPrice ? limitPrice : undefined, triggerPrice: needsTrigger ? triggerPrice : undefined,
     });
     if (!res.success) return setError(res.message);
     onPlaced?.();
   };
 
-  let submitLabel = tradable
-    ? isBuy
-      ? 'Buy'
-      : 'Sell'
-    : isBuy
-      ? 'Schedule Buy'
-      : 'Schedule Sell';
+  let submitLabel = tradable ? (isBuy ? 'Buy' : 'Sell') : isBuy ? 'Schedule Buy' : 'Schedule Sell';
   if (tradable && isExit && reverseQty === 0 && qty > 0) {
     submitLabel = qty >= position!.quantity ? `Exit (${action} ${qty})` : `${submitLabel} · Reduce`;
   }
 
-  return { balance, holdings, orders, setIsWalletModalOpen, planConfig, openUpgradeModal, action, setAction, product, setProduct, exchange, setExchange, orderType, setOrderType, qtyText, setQtyText, priceText, setPriceText, triggerText, setTriggerText, error, setError, showCharges, setShowCharges, showTypes, setShowTypes, showDepth, setShowDepth, nsePrice, bsePrice, qty, isBuy, accent, needsPrice, needsTrigger, effPrice, heldQty, reservedSell, sellableQty, position, isExit, quickQuantities, charges, value, required, insufficient, tradable, intradayBlocked, depth, switchType, submit, submitLabel };
+  return {
+    balance, holdings, orders, setIsWalletModalOpen, planConfig, openUpgradeModal,
+    action, setAction, product, setProduct, exchange, setExchange, orderType, setOrderType,
+    qtyText, setQtyText, priceText, setPriceText, triggerText, setTriggerText, error, setError,
+    showCharges, setShowCharges, showTypes, setShowTypes, showDepth, setShowDepth,
+    nsePrice, bsePrice, qty, isBuy, accent, needsPrice, needsTrigger, effPrice,
+    heldQty, reservedSell, sellableQty, position, isExit, quickQuantities,
+    charges, value, required, insufficient, tradable, intradayBlocked, depth,
+    switchType, submit, submitLabel,
+  };
 }
 
 export type OrderTicket = ReturnType<typeof useOrderTicket>;

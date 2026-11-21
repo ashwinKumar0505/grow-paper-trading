@@ -71,48 +71,55 @@ export function OrderQuoteHeader({ planConfig, openUpgradeModal, exchange, setEx
 
         {/* Inline Collapsible Market Depth Drawer */}
         {showDepth && (
-          <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-[#2A2E39] grid grid-cols-2 gap-3 text-[11px] font-mono tabular-nums">
-            <div>
-              <div className="flex justify-between text-gray-400 font-sans mb-1">
-                <span>Bid</span>
-                <span>Qty</span>
-              </div>
-              {depth.bids.slice(0, 5).map((b, i) => (
-                <div
-                  key={i}
-                  onClick={() => {
-                    setOrderType('LIMIT');
-                    setPriceText(b.price.toFixed(2));
-                  }}
-                  className="flex justify-between py-0.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#232732] rounded px-1"
-                  title="Click to use this Bid price as Limit price"
-                >
-                  <span className="text-[#00B386] font-medium">{b.price.toFixed(2)}</span>
-                  <span className="text-gray-600 dark:text-gray-300">{b.quantity}</span>
-                </div>
-              ))}
+          !depth.available || depth.bids.length === 0 ? (
+            <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-[#2A2E39] text-[11px] text-gray-500 dark:text-gray-400">
+              {depth.reason ||
+                'Authentic 5-level exchange order book depth is unavailable on the current market data adapter.'}
             </div>
-            <div>
-              <div className="flex justify-between text-gray-400 font-sans mb-1">
-                <span>Ask</span>
-                <span>Qty</span>
-              </div>
-              {depth.asks.slice(0, 5).map((a, i) => (
-                <div
-                  key={i}
-                  onClick={() => {
-                    setOrderType('LIMIT');
-                    setPriceText(a.price.toFixed(2));
-                  }}
-                  className="flex justify-between py-0.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#232732] rounded px-1"
-                  title="Click to use this Ask price as Limit price"
-                >
-                  <span className="text-[#EB5B3C] font-medium">{a.price.toFixed(2)}</span>
-                  <span className="text-gray-600 dark:text-gray-300">{a.quantity}</span>
+          ) : (
+            <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-[#2A2E39] grid grid-cols-2 gap-3 text-[11px] font-mono tabular-nums">
+              <div>
+                <div className="flex justify-between text-gray-400 font-sans mb-1">
+                  <span>Bid</span>
+                  <span>Qty</span>
                 </div>
-              ))}
+                {depth.bids.slice(0, 5).map((b, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setOrderType('LIMIT');
+                      setPriceText(b.price.toFixed(2));
+                    }}
+                    className="flex justify-between py-0.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#232732] rounded px-1"
+                    title="Click to use this Bid price as Limit price"
+                  >
+                    <span className="text-[#00B386] font-medium">{b.price.toFixed(2)}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{b.quantity}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex justify-between text-gray-400 font-sans mb-1">
+                  <span>Ask</span>
+                  <span>Qty</span>
+                </div>
+                {depth.asks.slice(0, 5).map((a, i) => (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setOrderType('LIMIT');
+                      setPriceText(a.price.toFixed(2));
+                    }}
+                    className="flex justify-between py-0.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#232732] rounded px-1"
+                    title="Click to use this Ask price as Limit price"
+                  >
+                    <span className="text-[#EB5B3C] font-medium">{a.price.toFixed(2)}</span>
+                    <span className="text-gray-600 dark:text-gray-300">{a.quantity}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
 

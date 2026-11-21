@@ -50,7 +50,7 @@ export function formatProfileDate(timestamp?: number | null): string {
 
 export function getSubscriptionStatusDisplay(params: {
   tier: SubscriptionTier;
-  status?: 'active' | 'expired' | 'cancelled';
+  status?: 'active' | 'expired' | 'cancelled' | 'past_due' | 'halted';
   billingCycle?: string;
   expiresAt?: number | null;
 }): {
@@ -75,6 +75,14 @@ export function getSubscriptionStatusDisplay(params: {
       summaryText: expiresAt
         ? `Your plan remains active until ${expiryText}`
         : 'Auto-renewal cancelled · Active until end of cycle',
+    };
+  }
+
+  if (status === 'past_due' || status === 'halted') {
+    return {
+      badgeLabel: status === 'halted' ? 'Payment Halted' : 'Payment Pending',
+      tone: 'amber',
+      summaryText: 'Renewal payment requires attention to keep paid entitlements active',
     };
   }
 

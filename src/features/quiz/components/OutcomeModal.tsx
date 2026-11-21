@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { TradeRecord, ChartScenario, GameMode } from '../types/trading';
-import {
-  CheckCircle2,
-  XCircle,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Trophy,
-} from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, EyeOff, Trophy } from 'lucide-react';
 import { OutcomeNumbersGrid } from './OutcomeNumbersGrid';
 import { OutcomeLessonContent } from './OutcomeLessonContent';
 import { OutcomeCheatSheetViewer } from './OutcomeCheatSheetViewer';
@@ -49,9 +42,22 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
   const isSurvival = mode === 'survival';
   const isLastRound = isTournament && tournamentRound >= tournamentTotalRounds;
 
+  const headingText = isSurvival
+    ? isWin
+      ? 'Spot On! ❤️ Heart Preserved'
+      : survivalLives > 0
+        ? `Lost 1 Heart! (${survivalLives} Remaining) 💔`
+        : 'Out of Hearts! Run Over 💔'
+    : isTournament
+      ? isWin
+        ? `Round ${tournamentRound} Won! 🎉`
+        : `Round ${tournamentRound} Loss`
+      : isWin
+        ? 'Spot On! Sharp Chart Reading!'
+        : 'Review the Setup Breakdown Below 💡';
+
   return (
     <>
-      {/* If minimized, show a sleek bottom floating bar */}
       {isMinimized ? (
         <OutcomeMinimizedBar
           isWin={isWin}
@@ -62,15 +68,11 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
           onNext={onNext}
         />
       ) : (
-        /* Full Modal Overlay */
         <div className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
           <div className="bg-[#121824] border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-            {/* Top Status Header Banner */}
             <div
               className={`relative px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 border-b shrink-0 ${
-                isWin
-                  ? 'bg-emerald-950/40 border-emerald-800/40'
-                  : 'bg-rose-950/40 border-rose-800/40'
+                isWin ? 'bg-emerald-950/40 border-emerald-800/40' : 'bg-rose-950/40 border-rose-800/40'
               }`}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0 pr-9 sm:pr-0">
@@ -105,19 +107,7 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
                       isWin ? 'text-emerald-300' : 'text-rose-300'
                     }`}
                   >
-                    {isSurvival
-                      ? isWin
-                        ? 'Spot On! ❤️ Heart Preserved'
-                        : survivalLives > 0
-                        ? `Lost 1 Heart! (${survivalLives} Remaining) 💔`
-                        : 'Out of Hearts! Run Over 💔'
-                      : isTournament
-                      ? isWin
-                        ? `Round ${tournamentRound} Won! 🎉`
-                        : `Round ${tournamentRound} Loss`
-                      : isWin
-                      ? 'Spot On! Sharp Chart Reading!'
-                      : 'Review the Setup Breakdown Below 💡'}
+                    {headingText}
                   </h3>
 
                   <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5 truncate">
@@ -126,7 +116,6 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
                 </div>
               </div>
 
-              {/* Eye button to peek at chart behind */}
               <button
                 onClick={() => setIsMinimized(true)}
                 title="Minimize to inspect chart"
@@ -137,7 +126,6 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
               </button>
             </div>
 
-            {/* Performance Numbers Grid */}
             <OutcomeNumbersGrid
               isSurvival={isSurvival}
               isTournament={isTournament}
@@ -153,7 +141,6 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
               tournamentBalance={tournamentBalance}
             />
 
-            {/* Main Lesson Content & Illustration */}
             <OutcomeLessonContent
               scenario={scenario}
               isWin={isWin}
@@ -161,7 +148,6 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
               onOpenGuide={onOpenGuide}
             />
 
-            {/* Modal Footer CTA */}
             <div className="px-4 sm:px-6 py-3 bg-[#0B0E14] border-t border-slate-800 flex items-center justify-between shrink-0">
               <span className="text-xs text-slate-500 hidden sm:inline font-sans">
                 Press <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-slate-300">Space</kbd> or{' '}
@@ -189,7 +175,6 @@ export const OutcomeModal: React.FC<OutcomeModalProps> = ({
         </div>
       )}
 
-      {/* Visual Cheat Sheet Reference Overlay */}
       {showCheatSheetViewer && (
         <OutcomeCheatSheetViewer
           scenario={scenario}

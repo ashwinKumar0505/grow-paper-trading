@@ -6,14 +6,12 @@ import type { PaymentSuccessInfo } from './useRazorpayCheckout';
 
 interface CheckoutReceiptViewProps {
   paymentSuccess: PaymentSuccessInfo;
-  isTopUp: boolean;
   billingCycle: 'monthly' | 'yearly';
   onClose: () => void;
 }
 
 export const CheckoutReceiptView: React.FC<CheckoutReceiptViewProps> = ({
   paymentSuccess,
-  isTopUp,
   billingCycle,
   onClose,
 }) => {
@@ -28,9 +26,7 @@ export const CheckoutReceiptView: React.FC<CheckoutReceiptViewProps> = ({
           {paymentSuccess.planName} Activated
         </h3>
         <p className="text-xs text-[#9AB0A5]">
-          {isTopUp
-            ? '₹1,00,000 paper trading capital has been added to your wallet.'
-            : 'Your plan features and virtual capital limits are active immediately.'}
+          Your plan features and virtual capital limits are active immediately.
         </p>
       </div>
 
@@ -52,9 +48,7 @@ export const CheckoutReceiptView: React.FC<CheckoutReceiptViewProps> = ({
           </div>
         )}
         <div className="flex justify-between">
-          <span className="text-[#9AB0A5]">
-            {isTopUp ? 'Updated Wallet Balance' : 'Virtual Capital Cap'}
-          </span>
+          <span className="text-[#9AB0A5]">Virtual Capital Cap</span>
           <strong className="text-white">{formatINR(paymentSuccess.newWalletLimit)}</strong>
         </div>
       </div>

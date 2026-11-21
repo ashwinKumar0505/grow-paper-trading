@@ -30,7 +30,7 @@ export const OutcomeMinimizedBar: React.FC<OutcomeMinimizedBarProps> = ({
         <span className={`font-mono font-bold text-sm ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
           {isTournament ? (
             <>
-              {isWin ? 'WIN' : 'LOSS'}: {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+              {isWin ? 'WIN' : 'LOSS'}: {trade.pnl >= 0 ? '+' : ''}₹{trade.pnl.toFixed(2)}
             </>
           ) : (
             <>

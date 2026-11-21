@@ -20,12 +20,12 @@ export function PatternDemonstration({ symbol, setSymbol, setVariation, showOutc
             {/* Chart Top Control Header */}
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2eae6] dark:border-[#20332a] px-5 py-4 sm:px-6">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm sm:text-base font-extrabold text-[#15241d] dark:text-white">
                     Interactive Chart Demonstration
                   </span>
                   <span className="rounded-md bg-[#00b386]/10 dark:bg-[#00d09c]/15 px-2 py-0.5 text-[11px] font-bold text-[#008f6b] dark:text-[#00d09c]">
-                    NSE: {symbol}
+                    Synthetic Educational Example · {symbol} Template
                   </span>
                 </div>
                 <p className="text-xs text-[#5b7066] dark:text-[#9ab0a5] mt-0.5">
@@ -125,7 +125,7 @@ export function PatternDemonstration({ symbol, setSymbol, setVariation, showOutc
             {/* Bottom Chart Status Footer */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e2eae6] dark:border-[#20332a] bg-[#f6f9f7] dark:bg-[#16241e] px-5 py-3.5 sm:px-6">
               <p className="text-xs text-[#5b7066] dark:text-[#9ab0a5]">
-                Simulated NSE chart for pattern education · Prices in ₹ · Hover or drag across candles to inspect OHLC values.
+                Synthetic educational chart generated for pattern instruction (not historical NSE exchange candles) · Prices in ₹ · Hover or drag across candles to inspect OHLC values.
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="unstyled" size="unstyled"

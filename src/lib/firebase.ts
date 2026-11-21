@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfigData from '../../firebase-applet-config.json';
 
-const env = import.meta.env;
+const env = (import.meta.env || {}) as Record<string, string | undefined>;
 const usingEnvConfig = Boolean(env.VITE_FIREBASE_PROJECT_ID && env.VITE_FIREBASE_API_KEY);
 
 const firebaseConfig = {

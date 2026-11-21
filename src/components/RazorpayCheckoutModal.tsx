@@ -12,7 +12,6 @@ export const RazorpayCheckoutModal: React.FC = () => {
   const { user, openAuthModal } = useTrading();
   const {
     isOpen,
-    isTopUp,
     plan,
     billingCycle,
     setBillingCycle,
@@ -61,7 +60,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
               </svg>
             </div>
             <DialogTitle className="font-bold text-lg text-white tracking-tight">
-              {isTopUp ? 'Complete Wallet Top-Up' : 'Complete Your Subscription'}
+              Complete Your Subscription
             </DialogTitle>
             <DialogDescription className="sr-only">
               Review your subscription summary and continue to Razorpay to complete payment.
@@ -83,14 +82,12 @@ export const RazorpayCheckoutModal: React.FC = () => {
           {paymentSuccess ? (
             <CheckoutReceiptView
               paymentSuccess={paymentSuccess}
-              isTopUp={isTopUp}
               billingCycle={billingCycle}
               onClose={closeRazorpayCheckout}
             />
           ) : (
             <form onSubmit={handleStartPayment} className="p-6 space-y-5">
               <CheckoutOrderSummary
-                isTopUp={isTopUp}
                 plan={plan}
                 billingCycle={billingCycle}
                 setBillingCycle={setBillingCycle}
@@ -137,11 +134,7 @@ export const RazorpayCheckoutModal: React.FC = () => {
                       <span>Preparing Checkout…</span>
                     </>
                   ) : (
-                    <span>
-                      {isTopUp
-                        ? `Continue to Pay ${formatINR(amountINR)}`
-                        : `Subscribe & Pay ${formatINR(amountINR)}`}
-                    </span>
+                    <span>Subscribe &amp; Pay {formatINR(amountINR)}</span>
                   )}
                 </Button>
 
@@ -150,15 +143,9 @@ export const RazorpayCheckoutModal: React.FC = () => {
                     <Lock className="w-3.5 h-3.5 text-[#10B981]" />
                     <span>Secure payment powered by Razorpay</span>
                   </p>
-                  {!isTopUp ? (
-                    <p className="text-xs text-[#6B8578] leading-relaxed">
-                      Recurring {billingCycle} subscription · Renews at {formatINR(upgradeQuote.fullPriceINR)}/{renewalPeriod} until cancelled. Cancel anytime. Instant upgrade after successful payment.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-[#6B8578]">
-                      Instant wallet credit after successful payment.
-                    </p>
-                  )}
+                  <p className="text-xs text-[#6B8578] leading-relaxed">
+                    Recurring {billingCycle} subscription · Renews at {formatINR(upgradeQuote.fullPriceINR)}/{renewalPeriod} until cancelled. Cancel anytime. Instant upgrade after successful payment.
+                  </p>
                 </div>
               </div>
             </form>

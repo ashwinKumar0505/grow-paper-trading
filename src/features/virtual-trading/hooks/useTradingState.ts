@@ -85,7 +85,7 @@ export function useTradingState(){
 
   const [razorpayModalState, setRazorpayModalState] = useState<{
     isOpen: boolean;
-    tier: 'beginner' | 'advanced' | 'topup_1l';
+    tier: 'beginner' | 'advanced';
     billingCycle: 'monthly' | 'yearly';
   }>({
     isOpen: false,
@@ -110,7 +110,7 @@ export function useTradingState(){
   }, []);
 
   const openRazorpayCheckout = useCallback(
-    (tier: 'beginner' | 'advanced' | 'topup_1l', billingCycle: 'monthly' | 'yearly' = 'monthly') => {
+    (tier: 'beginner' | 'advanced', billingCycle: 'monthly' | 'yearly' = 'monthly') => {
       setUpgradeModalState((prev) => ({ ...prev, isOpen: false }));
       setRazorpayModalState({
         isOpen: true,

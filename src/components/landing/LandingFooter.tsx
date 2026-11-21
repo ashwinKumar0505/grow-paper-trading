@@ -37,7 +37,7 @@ return (
 
           <div className="space-y-2 text-[11px] leading-relaxed text-[#5B7066] dark:text-[#7F9C8E]">
             <p>
-              <strong>Disclaimer:</strong> Nifty Lens is an educational stock screening, AI-assisted chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and AI insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
+              <strong>Disclaimer:</strong> Nifty Lens is an educational stock screening, rule-based technical chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and quantitative insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
             </p>
             <p>
               This platform is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, sub-broker, portfolio manager, or investment adviser. Nothing on this website constitutes investment advice, financial guidance, tax advisory, or a recommendation to buy or sell any financial instrument.

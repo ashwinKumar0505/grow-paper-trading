@@ -42,14 +42,19 @@ export function AnalysisOverview({ a, rec }) {
               </div>
               <div className="verdict-conf">
                 <span className="verdict-label">
-                  Confidence score{' '}
-                  <Hint text="0–100 based on backtested pattern precision and indicator agreement. It is an analytical score, not a guaranteed win probability." />
+                  Strategy alignment score{' '}
+                  <Hint
+                    text={
+                      a.score_explanation ||
+                      '0–100 rule-based technical score combining moving averages, momentum indicators, and pattern triggers. It is an analytical alignment score, not a calibrated win probability.'
+                    }
+                  />
                 </span>
                 <ConfidenceMeter score={a.overall_confidence_score} />
                 <div className="conf-scale">
                   <span>Avoid</span>
                   <span>Wait</span>
-                  <span>Recommended</span>
+                  <span>Bullish Setup</span>
                 </div>
               </div>
               <p className="verdict-summary">{a.recommendation_summary}</p>
@@ -68,8 +73,9 @@ export function AnalysisOverview({ a, rec }) {
                 <span className="plan-k">Target price</span>
                 <span className="plan-v text-up">{fmtPrice(a.projected_target_1)}</span>
                 <span className="plan-s">
-                  {fmtPct(((a.projected_target_1 - a.current_price) / a.current_price) * 100)} ·{' '}
-                  {a.estimated_target_window_days}
+                  {a.projected_target_1 != null && a.current_price > 0
+                    ? `${fmtPct(((a.projected_target_1 - a.current_price) / a.current_price) * 100)} · ${a.estimated_target_window_days || ''}`
+                    : '—'}
                 </span>
               </div>
               <div className="plan-cell">
@@ -77,14 +83,22 @@ export function AnalysisOverview({ a, rec }) {
                   Stop loss <Hint text="Reference invalidation level to manage risk." />
                 </span>
                 <span className="plan-v text-down">{fmtPrice(a.stop_loss)}</span>
-                <span className="plan-s">{fmtPct(((a.stop_loss - a.current_price) / a.current_price) * 100)}</span>
+                <span className="plan-s">
+                  {a.stop_loss != null && a.current_price > 0
+                    ? fmtPct(((a.stop_loss - a.current_price) / a.current_price) * 100)
+                    : '—'}
+                </span>
               </div>
               <div className="plan-cell">
                 <span className="plan-k">
                   Reward : Risk <Hint text="Estimated upside for every ₹1 you risk." />
                 </span>
-                <span className="plan-v">{a.risk_reward_ratio.toFixed(1)}x</span>
-                <span className="plan-s">Gain ₹{a.risk_reward_ratio.toFixed(1)} per ₹1 risked</span>
+                <span className="plan-v">{a.risk_reward_ratio != null ? `${Number(a.risk_reward_ratio).toFixed(1)}x` : '—'}</span>
+                <span className="plan-s">
+                  {a.risk_reward_ratio != null
+                    ? `Gain ₹${Number(a.risk_reward_ratio).toFixed(1)} per ₹1 risked`
+                    : 'Reference only'}
+                </span>
               </div>
             </div>
           </section>

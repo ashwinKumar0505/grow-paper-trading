@@ -1,25 +1,107 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own user profile, holdings, orders, and subscription mapping
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId
-                         || userId.matches('^(email_|user_|google_).*');
 
-      match /{allSubcollections=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId
-                           || userId.matches('^(email_|user_|google_).*');
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null && request.auth.uid.size() > 0;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Server-authoritative fields that clients are never allowed to mutate directly
+    function protectedServerFields() {
+      return [
+        'subscriptionTier',
+        'subscriptionBillingCycle',
+        'subscriptionStatus',
+        'subscriptionExpiresAt',
+        'subscriptionUpdatedAt',
+        'subscriptionAutoPay',
+        'subscriptionUpiMandateId',
+        'razorpayPaymentId',
+        'razorpayOrderId',
+        'razorpaySubscriptionId',
+        'lastTopUpPaymentId',
+        'lastTopUpOrderId',
+        'paidTopUpCredit',
+        'balance',
+        'initialBalance',
+        'holdings',
+        'intradayPositions',
+        'orders',
+        'executedOrderKeys',
+        'walletTransactions'
+      ];
+    }
+
+    function isSafeInitialProfileCreate(userId) {
+      let data = request.resource.data;
+      return isOwner(userId)
+        && (!('userId' in data) || data.userId == userId)
+        && (!('subscriptionTier' in data) || data.subscriptionTier == 'free')
+        && (!('subscriptionBillingCycle' in data) || data.subscriptionBillingCycle == 'free')
+        && (!('subscriptionStatus' in data) || data.subscriptionStatus == 'active')
+        && (!('subscriptionExpiresAt' in data) || data.subscriptionExpiresAt == null)
+        && !('razorpayPaymentId' in data)
+        && !('razorpayOrderId' in data)
+        && !('razorpaySubscriptionId' in data)
+        && (!('paidTopUpCredit' in data) || data.paidTopUpCredit == 0)
+        && (!('balance' in data) || data.balance == 100000)
+        && (!('initialBalance' in data) || data.initialBalance == 100000)
+        && (!('holdings' in data) || data.holdings.size() == 0)
+        && (!('intradayPositions' in data) || data.intradayPositions.size() == 0)
+        && (!('orders' in data) || data.orders.size() == 0);
+    }
+
+    function isSafeProfileUpdate(userId) {
+      return isOwner(userId)
+        && (!('userId' in request.resource.data) || request.resource.data.userId == userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedServerFields());
+    }
+
+    // User profile document: strict UID ownership and protection of server-controlled fields
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSafeInitialProfileCreate(userId);
+      allow update: if isSafeProfileUpdate(userId);
+      allow delete: if false;
+
+      // Account-scoped learning and quiz progress
+      match /quiz_progress/{progressId} {
+        allow read, create, update: if isOwner(userId);
+        allow delete: if false;
+      }
+
+      // Read-only user subscription history (written only by trusted backend)
+      match /subscriptions/{subId} {
+        allow get, list: if isOwner(userId);
+        allow write: if false;
+      }
+
+      // Deny all other subcollections by default
+      match /{otherSubcollection}/{docId} {
+        allow read, write: if false;
       }
     }
 
-    // Email-indexed profile & subscription lookup so users retain their plan across Email OTP and Google Sign-In
+    // Email-indexed lookup table is restricted exclusively to trusted backend services
     match /users_by_email/{emailKey} {
-      allow read, write: if request.auth != null || emailKey.size() > 0;
+      allow read, write: if false;
     }
 
-    // Top-level subscriptions collection mapping users to Razorpay payment & subscription records
+    // Top-level subscriptions collection: read-only for the owning user, backend-only writes
     match /subscriptions/{subscriptionId} {
-      allow read, write: if request.auth != null || resource == null || request.resource != null;
+      allow get: if isSignedIn() && resource != null && resource.data.userId == request.auth.uid;
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // Deny-by-default fallback for every other collection
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

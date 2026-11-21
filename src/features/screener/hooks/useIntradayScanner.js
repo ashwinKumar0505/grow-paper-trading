@@ -1,25 +1,20 @@
-import {
-Activity,
-Clock,
-Layers,
-Target
-} from 'lucide-react';
-import { useEffect,useMemo,useRef,useState } from 'react';
+import { Activity, Clock, Layers, Target } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
 import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
 import { api } from '../api/client';
-import { shortDate } from '../utils/format';
-import { CACHE_KEYS,loadCachedScan,saveCachedScan } from '../utils/scanCache';
+import { shortDate, timeAgo } from '../utils/format';
+import { CACHE_KEYS, CACHE_TTL_MS, loadCachedScan, saveCachedScan } from '../utils/scanCache';
 import {
-computeIntradayCounts,
-extractSectors,
-filterIntradaySignals,
+  computeIntradayCounts,
+  extractSectors,
+  filterIntradaySignals,
 } from '../utils/screenerHelpers';
 import { INTRADAY_STATUS } from '../utils/terms';
 
 export function useIntradayScanner(marketStatus) {
   const { planConfig, openUpgradeModal, addToast } = useTrading();
-  const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.intraday));
+  const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.intraday, CACHE_TTL_MS.intraday));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -31,6 +26,7 @@ export function useIntradayScanner(marketStatus) {
 
   const isLocked = planConfig.intradayAccess === 'locked';
   const data = isLocked ? null : scan?.data;
+  const staleWarning = !isLocked ? scan?.staleWarning || '' : '';
   const effectiveMarketStatus = marketStatus || data?.market_status;
   const isMarketOpen = effectiveMarketStatus?.is_market_open ?? false;
   const interval = (effectiveMarketStatus?.intraday_refresh_interval_seconds || 300) * 1000;
@@ -41,7 +37,7 @@ export function useIntradayScanner(marketStatus) {
         requiredTier: 'beginner',
         featureName: '15-Minute Intraday Stock Screener',
         featureDescription:
-          'Access intraday trading setups with entry price, target, stop-loss, and signal tracking.',
+          'Access rule-based 15-minute intraday setups with reference entry price, target, stop-loss, and session status tracking.',
       });
       return;
     }
@@ -55,24 +51,34 @@ export function useIntradayScanner(marketStatus) {
         forceRefresh: isMarketOpen ? forceRefresh : false,
         includeLastSession: true,
       });
-      setScan(saveCachedScan(CACHE_KEYS.intraday, res));
+      setScan(saveCachedScan(CACHE_KEYS.intraday, res, CACHE_TTL_MS.intraday));
     } catch (err) {
-      const msg = err.message || 'Server is down or unreachable. Please try again in some time.';
+      const msg =
+        err.message ||
+        'Intraday screener service is currently unreachable. Please retry when the service is online.';
       setError(msg);
-      addToast('Intraday Scan Failed', msg, 'error');
+      const cached = loadCachedScan(CACHE_KEYS.intraday, CACHE_TTL_MS.intraday);
+      if (cached) {
+        setScan({
+          ...cached,
+          isStale: true,
+          staleWarning: `Live intraday refresh failed (${msg}). Showing previously fetched snapshot from ${new Date(
+            cached.savedAt
+          ).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`,
+        });
+      }
+      addToast('Intraday Scan Unavailable', msg, 'error');
     } finally {
       loadingRef.current = false;
       setLoading(false);
     }
   };
 
-  // First visit with no saved results: load automatically if unlocked.
   useEffect(() => {
     if (!scan && !isLocked) fetchSignals(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLocked]);
 
-  // Live auto-refresh every 5 minutes, only while NSE is open AND user has Advanced plan.
   useEffect(() => {
     if (!isMarketOpen || !planConfig.intradayAutoRefresh) return undefined;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -90,19 +96,12 @@ export function useIntradayScanner(marketStatus) {
   }, [isMarketOpen, planConfig.intradayAutoRefresh, secondsLeft]);
 
   const sectors = useMemo(() => extractSectors(data?.signals), [data]);
-
   const counts = useMemo(
     () => computeIntradayCounts(data?.signals, minConfidence, sectorFilter),
     [data, minConfidence, sectorFilter]
   );
-
   const rows = useMemo(
-    () =>
-      filterIntradaySignals(data?.signals, {
-        minConfidence,
-        statusFilter,
-        sectorFilter,
-      }),
+    () => filterIntradaySignals(data?.signals, { minConfidence, statusFilter, sectorFilter }),
     [data, minConfidence, statusFilter, sectorFilter]
   );
 
@@ -125,32 +124,44 @@ export function useIntradayScanner(marketStatus) {
     ? [
         {
           icon: Layers,
-          label: 'Stocks watched',
+          label: 'Stocks scanned',
           value: data.total_scanned,
-          sub: 'Top 100 liquid Nifty stocks',
-          hint: 'Intraday screening focuses on the 100 most liquid Nifty stocks rather than the full Nifty 500 to ensure tight spreads and reliable 15-minute volume.',
+          sub: `${data.total_scanned} liquid NSE symbols evaluated`,
+          hint: 'Reflects the actual number of symbols evaluated on 15-minute bars during this scan run.',
         },
         {
           icon: Activity,
-          label: 'Open trades',
+          label: 'Open setups',
           value: data.active_signals_count,
           sub: isMarketOpen ? 'Active in current session' : 'Open at last session close',
           tone: 'primary',
         },
         {
           icon: Target,
-          label: 'Closed trades',
+          label: 'Modelled outcomes',
           value: data.completed_trades_count,
-          sub: closed.length ? `${wins} of ${closed.length} ended in profit` : 'None yet',
+          sub: closed.length ? `${wins} of ${closed.length} hit modelled target` : 'None yet',
+          hint: 'Outcomes walk subsequent 15m bars (stop-first on ambiguous bars) and do not represent live user executions.',
         },
         {
           icon: Clock,
-          label: 'Trading day',
+          label: 'Session date',
           value: shortDate(data.session_date),
-          sub: isMarketOpen ? 'Live session' : 'Last session (paused)',
+          sub: scan?.savedAt
+            ? `${scan.isStale ? 'Stale · ' : ''}Updated ${timeAgo(scan.savedAt)}`
+            : isMarketOpen
+              ? 'Active session'
+              : 'Previous session',
         },
       ]
     : [];
 
-  return { planConfig, scan, loading, error, statusFilter, setStatusFilter, minConfidence, setMinConfidence, sectorFilter, setSectorFilter, selectedSignal, setSelectedSignal, isLocked, data, effectiveMarketStatus, isMarketOpen, fetchSignals, sectors, counts, rows, resetFilters, mm, ss, visibleRows, lockedCount, B, A, stats };
+  return {
+    planConfig, scan, staleWarning, loading, error,
+    statusFilter, setStatusFilter, minConfidence, setMinConfidence,
+    sectorFilter, setSectorFilter, selectedSignal, setSelectedSignal,
+    isLocked, data, effectiveMarketStatus, isMarketOpen, fetchSignals,
+    sectors, counts, rows, resetFilters, mm, ss,
+    visibleRows, lockedCount, B, A, stats,
+  };
 }

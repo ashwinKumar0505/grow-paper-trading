@@ -1,28 +1,54 @@
-import { useCallback,useEffect,useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useIntradaySquareOff } from '../../../features/virtual-trading/hooks/useIntradaySquareOff';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
-import {
-Holding,
-IntradayPosition,
-Order,
-Stock
-} from '../../../types/market';
-import {
-classifyQuoteFreshness,
-getIndianMarketStatus
-} from '../../../utils/marketHours';
-import {
-OrderBookState,
-processOrderQueue
-} from '../../../utils/orderEngine';
+import { buildAuthenticatedHeaders } from '../../../lib/authSession';
+import { Holding, IntradayPosition, Order, Stock } from '../../../types/market';
+import { classifyQuoteFreshness, getIndianMarketStatus } from '../../../utils/marketHours';
+import { OrderBookState, processOrderQueue } from '../../../utils/orderEngine';
 import type { ToastMessage } from '../types/tradingContext';
 import type { TradingState } from './useTradingState';
-type Options = Pick<TradingState, 'intradayPositions' | 'balance' | 'holdings' | 'orders' | 'executedOrderKeys' | 'stocks' | 'setBalance' | 'setHoldings' | 'setIntradayPositions' | 'setOrders' | 'setExecutedOrderKeys' | 'user'> & Pick<TradingContextType, 'addToast' | 'marketStatus'>;
 
-export function useOrderEngine({ intradayPositions, balance, holdings, orders, executedOrderKeys, stocks, setBalance, setHoldings, setIntradayPositions, setOrders, setExecutedOrderKeys, user, addToast, marketStatus }: Options) {
-  // ---------------------------------------------------------------------------
-  // REAL-MARKET ORDER ENGINE & SCHEDULED AMO QUEUE
-  // ---------------------------------------------------------------------------
+type Options = Pick<
+  TradingState,
+  | 'intradayPositions'
+  | 'balance'
+  | 'initialBalance'
+  | 'holdings'
+  | 'orders'
+  | 'executedOrderKeys'
+  | 'walletTransactions'
+  | 'stocks'
+  | 'setBalance'
+  | 'setInitialBalance'
+  | 'setHoldings'
+  | 'setIntradayPositions'
+  | 'setOrders'
+  | 'setExecutedOrderKeys'
+  | 'setWalletTransactions'
+  | 'user'
+> &
+  Pick<TradingContextType, 'addToast' | 'marketStatus'>;
+
+export function useOrderEngine({
+  intradayPositions,
+  balance,
+  initialBalance,
+  holdings,
+  orders,
+  executedOrderKeys,
+  walletTransactions,
+  stocks,
+  setBalance,
+  setInitialBalance,
+  setHoldings,
+  setIntradayPositions,
+  setOrders,
+  setExecutedOrderKeys,
+  setWalletTransactions,
+  user,
+  addToast,
+  marketStatus,
+}: Options) {
   const engineRef = useRef<OrderBookState>({
     balance,
     holdings,
@@ -30,6 +56,7 @@ export function useOrderEngine({ intradayPositions, balance, holdings, orders, e
     orders,
     executedOrderKeys,
   });
+  const walletMetaRef = useRef({ initialBalance, walletTransactions });
   useEffect(() => {
     engineRef.current = {
       balance,
@@ -38,7 +65,8 @@ export function useOrderEngine({ intradayPositions, balance, holdings, orders, e
       orders,
       executedOrderKeys,
     };
-  }, [balance, holdings, intradayPositions, orders, executedOrderKeys]);
+    walletMetaRef.current = { initialBalance, walletTransactions };
+  }, [balance, holdings, intradayPositions, orders, executedOrderKeys, initialBalance, walletTransactions]);
 
   const stocksRef = useRef(stocks);
   useEffect(() => {
@@ -62,44 +90,58 @@ export function useOrderEngine({ intradayPositions, balance, holdings, orders, e
       if (next.orders) setOrders(next.orders);
       if (next.executedOrderKeys) setExecutedOrderKeys(next.executedOrderKeys);
     },
-    []
+    [setBalance, setExecutedOrderKeys, setHoldings, setIntradayPositions, setOrders]
   );
 
-  // Sync paper trading book with backend so scheduled AMO orders execute even if browser is closed
+  // Reconcile paper trading state with authoritative backend ledger when user is authenticated
   useEffect(() => {
-    const accountId = user?.uid || 'guest_default';
-    const syncTimer = setTimeout(() => {
-      const currentBook = engineRef.current;
-      fetch('/api/paper-trading/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accountId,
-          state: { ...currentBook, updatedAt: Date.now() },
-        }),
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.success && data.changed && data.state) {
-            commitEngine({
-              balance: data.state.balance,
-              holdings: data.state.holdings,
-              positions: data.state.positions,
-              orders: data.state.orders,
-              executedOrderKeys: data.state.executedOrderKeys || [],
-            });
-            if (Array.isArray(data.toasts)) {
-              data.toasts.forEach((t: ToastMessage) => addToast(t.title, t.description, t.type));
-            }
+    if (!user?.uid) return;
+    const syncTimer = setTimeout(async () => {
+      try {
+        const headers = await buildAuthenticatedHeaders();
+        if (!headers.Authorization) return;
+        const currentBook = engineRef.current;
+        const r = await fetch('/api/paper-trading/sync', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            migrateIfEmpty: true,
+            state: {
+              ...currentBook,
+              ...walletMetaRef.current,
+              updatedAt: Date.now(),
+            },
+          }),
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (data?.success && data.state) {
+          commitEngine({
+            balance: data.state.balance,
+            holdings: data.state.holdings,
+            positions: data.state.positions,
+            orders: data.state.orders,
+            executedOrderKeys: data.state.executedOrderKeys || [],
+          });
+          if (typeof data.state.initialBalance === 'number') {
+            setInitialBalance(data.state.initialBalance);
           }
-        })
-        .catch(() => {});
+          if (Array.isArray(data.state.walletTransactions)) {
+            setWalletTransactions(data.state.walletTransactions);
+          }
+          if (Array.isArray(data.toasts)) {
+            data.toasts.forEach((t: ToastMessage) => addToast(t.title, t.description, t.type));
+          }
+        }
+      } catch {
+        // Ignore network errors while offline
+      }
     }, 600);
 
     return () => clearTimeout(syncTimer);
-  }, [user?.uid, marketStatus.isOpen, commitEngine, addToast]);
+  }, [user?.uid, marketStatus.isOpen, commitEngine, addToast, setInitialBalance, setWalletTransactions]);
 
-  // Process SCHEDULED (AMO) and PENDING orders whenever real quotes or market status update
+  // Process SCHEDULED (AMO) and PENDING orders against authentic tradable quotes
   useEffect(() => {
     const eng = engineRef.current;
     const hasActive = eng.orders.some((o) => o.status === 'SCHEDULED' || o.status === 'PENDING');

@@ -77,10 +77,10 @@ export function LearnChartsPage({ onStartQuiz }: Props) {
           {isCurrentPatternLocked ? (
             <LockedFeatureCard
               requiredTier="beginner"
-              featureName={`Unlock "${shortName(pattern.name)}" & Full 28-Pattern Interactive Library`}
-              description="Free Starter accounts include the 8 foundational beginner patterns. Upgrade to Beginner (₹299/mo) or Advanced (₹699/mo) to unlock all 28 Reversal, Continuation, Bilateral & Candlestick patterns with Entry, Stop-Loss, and Target rules."
+              featureName={`Unlock "${shortName(pattern.name)}" & Full 21-Pattern Interactive Library`}
+              description="Free Starter accounts include the 8 foundational beginner patterns. Upgrade to Beginner (₹299/mo) or Advanced (₹699/mo) to unlock all 21 Reversal, Continuation, Bilateral & Candlestick patterns with Entry, Stop-Loss, and Target rules."
               bullets={[
-                'All 28 Interactive Chart Patterns (Reversal, Continuation, Bilateral & Special)',
+                'All 21 Interactive Chart Patterns (Reversal, Continuation, Bilateral & Special)',
                 'Full Entry Trigger, Stop-Loss Invalidation & Profit Target Playbook Rules',
                 'Unlimited New Chart Example Variations + SMA 50 & RSI Indicator Overlays',
               ]}

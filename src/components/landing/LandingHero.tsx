@@ -15,16 +15,6 @@ return (
         <div className="w-full max-w-[1880px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-12">
           {/* Left Column: 45% width on desktop for text and CTAs */}
           <div className="w-full lg:w-[45%] space-y-6 text-left">
-            <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-[#00B386]/30 bg-[#00B386]/10 dark:border-[#00D09C]/30 dark:bg-[#00D09C]/10 px-3.5 py-1.5 text-xs font-extrabold text-[#008F6B] dark:text-[#00D09C]">
-              <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
-              <span>Paper Trading</span>
-              <span>·</span>
-              <span>AI Stock Screener</span>
-              <span>·</span>
-              <span>Backtested Strategies</span>
-              <span>·</span>
-              <span>Interactive Learning</span>
-            </div>
 
             <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black  text-[#00B386] dark:text-[#00D09C]  tracking-tight leading-[1.08]">
               Real time Paper Trading.{' '}
@@ -35,8 +25,8 @@ return (
 
             <p className="text-base sm:text-lg text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed max-w-2xl">
               Practice intraday and delivery trades risk-free with{' '}
-              <strong>virtual capital and live NSE quotes</strong>. Discover high-potential Indian
-              stocks with <strong>AI-powered insights</strong>,{' '}
+              <strong>virtual capital and NSE quotes</strong>. Discover high-potential Indian
+              stocks with <strong>rule-based technical insights</strong>,{' '}
               <strong>advanced chart analysis</strong>, and{' '}
               <strong>backtested trading strategies</strong>.
             </p>
@@ -87,7 +77,7 @@ return (
                   <span>2. Stock Screener &amp; Backtests</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Backtested swing &amp; intraday strategies, chart analysis &amp; AI insights.
+                  Backtested swing &amp; intraday strategies, chart analysis &amp; technical insights.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
@@ -96,7 +86,7 @@ return (
                   <span>3. Learn &amp; Quiz</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  28+ interactive chart patterns &amp; Guess the Chart game.
+                  21 interactive chart patterns &amp; Guess the Chart game.
                 </p>
               </div>
             </div>

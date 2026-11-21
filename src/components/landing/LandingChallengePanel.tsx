@@ -101,7 +101,7 @@ export function LandingChallengePanel({
           Study the price action, volume &amp; key levels before the cutoff line.
         </h4>
         <p className="text-xs sm:text-sm leading-relaxed text-[#9AB0A5]">
-          Will <strong className="text-white">{scenario.assetSymbol}</strong> ({scenario.timeframe}) break higher or drop lower after the entry point?
+          Will this synthetic educational scenario (<strong className="text-white">{scenario.assetSymbol}</strong> template · {scenario.timeframe}) break higher or drop lower after the entry point?
         </p>
       </div>
 

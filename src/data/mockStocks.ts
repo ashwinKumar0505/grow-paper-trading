@@ -1247,10 +1247,12 @@ export const INITIAL_STOCKS: Stock[] = [
 ];
 
 /**
- * Build deterministic chart points from the stock's actual quote data (sparkline & OHLC)
- * when the remote chart endpoint has not yet loaded. Does not generate random market movements.
+ * Isolated development/test helper only. Never returns synthetic chart candles in production.
  */
 export function generateChartData(stock: Stock, timeframe: Timeframe): ChartPoint[] {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return [];
+  }
   const currentPrice = stock.price > 0 ? stock.price : 0;
   if (currentPrice <= 0) return [];
   const prevClose = stock.previousClose > 0 ? stock.previousClose : currentPrice;
@@ -1311,9 +1313,21 @@ export function generateChartData(stock: Stock, timeframe: Timeframe): ChartPoin
 }
 
 /**
- * Deterministic NSE tick-level order book ladder around the last traded price (₹0.05 tick size).
+ * Isolated test fixture helper only. Returns an explicit unavailable state in production.
  */
 export function generateMarketDepth(price: number): MarketDepthItem {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return {
+      available: false,
+      source: 'unavailable',
+      reason: 'Synthetic market depth is disabled in production.',
+      timestamp: null,
+      bids: [],
+      asks: [],
+      totalBuyQty: 0,
+      totalSellQty: 0,
+    };
+  }
   const bids = [];
   const asks = [];
   let totalBuy = 0;
@@ -1337,6 +1351,9 @@ export function generateMarketDepth(price: number): MarketDepthItem {
   }
 
   return {
+    available: false,
+    source: 'mock_test_fixture',
+    reason: 'Simulated order book fixture for isolated test environments only.',
     bids,
     asks,
     totalBuyQty: totalBuy,

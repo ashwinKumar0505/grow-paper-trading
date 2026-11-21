@@ -26,7 +26,7 @@ export interface RemoteUserRecord {
   portfolioUpdatedAt?: number;
   subscriptionTier?: SubscriptionTier;
   subscriptionBillingCycle?: BillingCycle;
-  subscriptionStatus?: 'active' | 'expired' | 'cancelled';
+  subscriptionStatus?: 'active' | 'expired' | 'cancelled' | 'past_due' | 'halted';
   subscriptionUpdatedAt?: number;
   subscriptionExpiresAt?: number | null;
   razorpayPaymentId?: string;
@@ -34,6 +34,9 @@ export interface RemoteUserRecord {
   razorpaySubscriptionId?: string;
   subscriptionAutoPay?: boolean;
   subscriptionUpiMandateId?: string;
+  paidTopUpCredit?: number;
+  lastTopUpPaymentId?: string;
+  lastTopUpOrderId?: string;
   usage?: unknown;
   createdAt?: number;
   updatedAt?: number;

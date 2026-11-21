@@ -50,7 +50,7 @@ export const HistoryTradeItem: React.FC<HistoryTradeItemProps> = ({
                 trade.isWin ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
-              {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+              {trade.pnl >= 0 ? '+' : ''}₹{trade.pnl.toFixed(2)}
             </span>
             <span className="text-[10px] text-slate-500 tabular-nums">
               {trade.pnlPct >= 0 ? '+' : ''}{trade.pnlPct.toFixed(1)}%
@@ -71,11 +71,11 @@ export const HistoryTradeItem: React.FC<HistoryTradeItemProps> = ({
           <div className="grid grid-cols-2 gap-2 text-[11px] font-mono pt-1">
             <div>
               <span className="text-slate-600">Entry: </span>
-              <span className="text-slate-300">${trade.entryPrice.toFixed(2)}</span>
+              <span className="text-slate-300">₹{trade.entryPrice.toFixed(2)}</span>
             </div>
             <div>
               <span className="text-slate-600">Exit: </span>
-              <span className="text-slate-300">${trade.exitPrice.toFixed(2)}</span>
+              <span className="text-slate-300">₹{trade.exitPrice.toFixed(2)}</span>
             </div>
             <div>
               <span className="text-slate-600">Category: </span>
@@ -83,7 +83,7 @@ export const HistoryTradeItem: React.FC<HistoryTradeItemProps> = ({
             </div>
             <div>
               <span className="text-slate-600">Bet Size: </span>
-              <span className="text-slate-300">${trade.positionSize?.toLocaleString() || '1,000'}</span>
+              <span className="text-slate-300">₹{trade.positionSize?.toLocaleString('en-IN') || '1,000'}</span>
             </div>
           </div>
           <p className="text-[11px] text-slate-300 bg-slate-900/60 p-2 rounded border border-slate-800 leading-relaxed">

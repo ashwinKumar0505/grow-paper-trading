@@ -88,7 +88,7 @@ export const OutcomeNumbersGrid: React.FC<OutcomeNumbersGridProps> = ({
         <div className="flex flex-col">
           <span className="text-slate-500 text-[11px] font-sans">Round PnL</span>
           <span className={`text-base font-bold tabular-nums ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>
-            {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+            {trade.pnl >= 0 ? '+' : ''}₹{trade.pnl.toFixed(2)}
           </span>
           <span className={`text-[10px] font-semibold ${isWin ? 'text-emerald-500' : 'text-rose-500'}`}>
             {trade.pnlPct >= 0 ? '+' : ''}{trade.pnlPct.toFixed(2)}% ROI
@@ -98,7 +98,7 @@ export const OutcomeNumbersGrid: React.FC<OutcomeNumbersGridProps> = ({
         <div className="flex flex-col">
           <span className="text-slate-500 text-[11px] font-sans">Bet Size</span>
           <span className="text-slate-200 text-sm font-semibold tabular-nums mt-0.5">
-            ${trade.positionSize.toLocaleString()}
+            ₹{trade.positionSize.toLocaleString('en-IN')}
           </span>
           <span className="text-slate-500 text-[10px]">Virtual cash</span>
         </div>
@@ -121,7 +121,7 @@ export const OutcomeNumbersGrid: React.FC<OutcomeNumbersGridProps> = ({
         <div className="flex flex-col">
           <span className="text-slate-500 text-[11px] font-sans">New Balance</span>
           <span className="text-slate-100 text-sm font-bold tabular-nums mt-0.5">
-            ${(tournamentBalance ?? trade.pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₹{(tournamentBalance ?? trade.pnl).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <span className="text-slate-500 text-[10px]">Round {tournamentRound}/{tournamentTotalRounds}</span>
         </div>
@@ -147,7 +147,7 @@ export const OutcomeNumbersGrid: React.FC<OutcomeNumbersGridProps> = ({
           {trade.direction === 'BUY' ? '▲ UP (BUY)' : '▼ DOWN (SELL)'}
         </span>
         <span className="text-slate-500 text-[10px] font-sans">
-          At entry ${trade.entryPrice.toFixed(2)}
+          At entry ₹{trade.entryPrice.toFixed(2)}
         </span>
       </div>
 
@@ -169,7 +169,7 @@ export const OutcomeNumbersGrid: React.FC<OutcomeNumbersGridProps> = ({
       <div className="flex flex-col">
         <span className="text-slate-500 text-[11px] font-sans">Exit Price</span>
         <span className="text-slate-200 text-sm font-semibold tabular-nums mt-0.5">
-          ${trade.exitPrice.toFixed(2)}
+          ₹{trade.exitPrice.toFixed(2)}
         </span>
         <span className="text-slate-500 text-[10px] font-sans">{scenario.difficulty} Level</span>
       </div>

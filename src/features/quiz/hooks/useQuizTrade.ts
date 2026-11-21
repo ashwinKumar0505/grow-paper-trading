@@ -130,20 +130,26 @@ export function useQuizTrade(options: Options) {
             });
           }
 
-          // Also record to overall history
+          // Also record to overall history with mathematically consistent balance
           setStats((prev) => {
             const newWins = isWin ? prev.wins + 1 : prev.wins;
             const newLosses = !isWin ? prev.losses + 1 : prev.losses;
             const newTotal = prev.totalTrades + 1;
+            const newNetProfit = Number((prev.netProfit + tradePnl).toFixed(2));
+            const newBalance = Math.max(
+              0,
+              Number((prev.startingBalance + newNetProfit).toFixed(2))
+            );
             return {
               ...prev,
+              balance: newBalance,
               totalTrades: newTotal,
               wins: newWins,
               losses: newLosses,
               winRate: (newWins / newTotal) * 100,
               currentStreak: isWin ? prev.currentStreak + 1 : 0,
               bestStreak: Math.max(prev.bestStreak, isWin ? prev.currentStreak + 1 : 0),
-              netProfit: prev.netProfit + tradePnl,
+              netProfit: newNetProfit,
               tradeHistory: [record, ...prev.tradeHistory],
             };
           });

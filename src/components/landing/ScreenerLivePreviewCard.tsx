@@ -19,9 +19,14 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
         {/* Top Bar with Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#1D3A2D]">
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[#00D09C] flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
-              AI Insights · Backtested Strategies · Chart Analysis · Nifty 500
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#00D09C] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#00D09C]" />
+                Quantitative Insights · Backtested Strategies · Chart Analysis · Nifty 500
+              </div>
+              <span className="rounded-full border border-amber-400/35 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+                Illustrative Sample Preview — Not a Live Scan
+              </span>
             </div>
             <div className="text-lg sm:text-xl font-extrabold text-white mt-0.5">
               Interactive Screener & Stock Analysis Preview
@@ -32,7 +37,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
             {[
               { id: 'swing' as const, label: 'Swing Picks' },
               { id: 'intraday' as const, label: 'Intraday 15m' },
-              { id: 'analysis' as const, label: 'AI Stock Check' },
+              { id: 'analysis' as const, label: 'Technical Stock Check' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -58,14 +63,14 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
         {/* Tab 2: Intraday 15m Preview */}
         {activeTab === 'intraday' && <ScreenerPreviewIntradayTab />}
 
-        {/* Tab 3: AI Stock Check Preview */}
+        {/* Tab 3: Technical Stock Check Preview */}
         {activeTab === 'analysis' && (
           <div className="space-y-3.5">
             <div className="rounded-2xl border border-[#00D09C]/40 bg-[#11241C] p-4 sm:p-5 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-[11px] text-[#00D09C] font-bold uppercase">
-                    NSE: RELIANCE · AI Technical & Fundamental Health Check
+                    NSE: RELIANCE · Rule-Based Technical & Fundamental Health Check (Sample)
                   </span>
                   <h4 className="text-lg font-extrabold text-white">Reliance Industries Ltd</h4>
                 </div>
@@ -77,7 +82,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
               </div>
 
               <p className="text-xs sm:text-sm text-[#D6E6DE] leading-relaxed">
-                AI-assisted technical synthesis shows price trading above its 20-day and 50-day moving averages with strong buying volume, a confirmed breakout above resistance, and historical strategy alignment.
+                Rule-based technical synthesis shows price trading above its 20-day and 50-day moving averages with strong buying volume, a confirmed breakout above resistance, and historical strategy alignment.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#1D3A2D] text-xs">
@@ -106,7 +111,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
                 href="/screener/analysis?symbol=RELIANCE"
                 className="font-extrabold text-[#00D09C] hover:underline"
               >
-                Open Full AI Stock Analysis →
+                Open Full Stock Analysis →
               </AppLink>
             </div>
           </div>
@@ -116,7 +121,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
         <div className="rounded-xl bg-[#12281F] border border-[#1D3A2D] px-3.5 py-2 text-[11px] text-[#9AB0A5] flex items-center gap-2">
           <Info className="w-3.5 h-3.5 text-[#00D09C] shrink-0" />
           <span>
-            <strong className="text-white">Educational Note:</strong> Signals combine AI-powered technical insights, chart analysis, and historical strategy backtests for educational research. Historical performance does not guarantee future returns.
+            <strong className="text-white">Educational Note:</strong> Signals combine rule-based technical insights, chart analysis, and historical strategy backtests for educational research. Historical performance does not guarantee future returns.
           </span>
         </div>
 
@@ -146,7 +151,7 @@ export const ScreenerLivePreviewCard: React.FC<ScreenerLivePreviewCardProps> = (
       <div className="rounded-3xl border border-[#1D3A2D] bg-gradient-to-r from-[#0C1D16] via-[#122B21] to-[#0C1D16] p-6 sm:p-8 text-white flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-lg">
         <div className="space-y-1.5 max-w-2xl">
           <div className="text-xs font-extrabold uppercase tracking-wider text-[#00D09C]">
-            Try Instant AI Stock Check
+            Try Instant Technical Stock Check
           </div>
           <h3 className="text-xl sm:text-2xl font-extrabold">
             Click any popular NSE stock to inspect its BUY / WAIT / AVOID signal, chart levels & backtest stats:

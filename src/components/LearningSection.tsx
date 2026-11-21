@@ -139,12 +139,12 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
                 Pattern Library & Guess the Chart
               </h3>
               <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
-                Study 28+ classic reversal, continuation, and candlestick patterns with step-by-step trade rules, then test your instincts in Guess the Chart.
+                Study 21 classic reversal, continuation, and candlestick patterns with step-by-step trade rules, then test your instincts in Guess the Chart.
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-slate-700 dark:text-[#d6e6de]">
                 {[
-                  '28+ Interactive Patterns',
+                  '21 Interactive Patterns',
                   'Why the Chart Works',
                   'Entry, Stop & Target Rules',
                   'Guess the Chart Arena',

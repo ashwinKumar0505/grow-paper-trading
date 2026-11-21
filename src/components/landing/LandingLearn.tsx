@@ -44,7 +44,7 @@ return (
             <div className="lg:col-span-6 space-y-6 text-left order-1 lg:order-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Chart Learning Studio · 28+ Patterns &amp; Quiz</span>
+                <span>Chart Learning Studio · 21 Patterns &amp; Quiz</span>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
@@ -54,7 +54,7 @@ return (
 
               <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
                 Master candlestick patterns through <strong>interactive lessons</strong>,{' '}
-                <strong>replay market movements</strong>, and test your knowledge with{' '}
+                <strong>step through synthetic educational chart setups</strong>, and test your knowledge with{' '}
                 <strong>Guess the Chart quizzes</strong>. Build confidence by practicing chart
                 analysis and learning from every decision.
               </p>
@@ -67,17 +67,17 @@ return (
                     <span>Candlestick Pattern Library</span>
                   </div>
                   <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                    Explore 28+ reversal, continuation, and candlestick setups with entry, stop-loss, and target rules.
+                    Explore 21 reversal, continuation, and candlestick setups with entry, stop-loss, and target rules.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
                     <PlayCircle className="w-4 h-4 text-[#00D09C] shrink-0" />
-                    <span>Interactive Chart Replay</span>
+                    <span>Interactive Pattern Replay</span>
                   </div>
                   <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                    Step through historical market setups candle by candle to see how patterns unfold in real time.
+                    Step through synthetic educational chart setups candle by candle to see how patterns unfold.
                   </p>
                 </div>
 
@@ -87,14 +87,14 @@ return (
                     <span>Guess the Chart Quiz</span>
                   </div>
                   <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
-                    Test your instincts across Casual Quiz, 3-Life Survival, and 10-Round Challenge modes.
+                    Test your instincts across Casual Quiz, 3-Life Survival, and 10-Round Single-Player Challenge modes.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-[#F3F6F4] dark:bg-[#111C17] p-4 space-y-1.5">
                   <div className="flex items-center gap-2 text-sm font-extrabold text-[#15241D] dark:text-white">
                     <Award className="w-4 h-4 text-[#00D09C] shrink-0" />
-                    <span>Learning Progress &amp; Achievements</span>
+                    <span>Learning Progress &amp; Performance Journal</span>
                   </div>
                   <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
                     Track your accuracy, win streaks, and detailed post-question explanations after every call.

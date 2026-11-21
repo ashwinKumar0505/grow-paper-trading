@@ -55,9 +55,14 @@ export const LandingChallengePreview: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-5 border-b border-[#1D3A2D]">
         <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#00D09C]/30 bg-[#00D09C]/15 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#00D09C]">
-            <GraduationCap className="h-3.5 w-3.5" />
-            <span>INTERACTIVE CHALLENGE</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#00D09C]/30 bg-[#00D09C]/15 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#00D09C]">
+              <GraduationCap className="h-3.5 w-3.5" />
+              <span>INTERACTIVE CHALLENGE</span>
+            </div>
+            <span className="inline-flex items-center rounded-full border border-amber-400/35 bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+              Synthetic Educational Chart
+            </span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
             Can You Predict What Happens Next?
@@ -99,7 +104,7 @@ export const LandingChallengePreview: React.FC = () => {
         </div>
       ) : !scenario || scenario.candles.length === 0 ? (
         <div className="rounded-2xl border border-[#1D3A2D] bg-[#11241C] p-8 text-center text-sm text-[#9AB0A5]">
-          Loading historical chart setup...
+          Loading synthetic educational chart setup...
         </div>
       ) : (
         <div className="flex flex-col lg:flex-row gap-5 items-stretch">

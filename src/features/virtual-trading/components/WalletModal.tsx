@@ -68,7 +68,7 @@ export const WalletModal: React.FC = () => {
             }`}
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            <span>{isFreeTier ? 'Top Up (+₹1L)' : 'Top Up Capital'}</span>
+            <span>{isFreeTier ? 'Add Capital' : 'Top Up Capital'}</span>
           </button>
           <button
             type="button"

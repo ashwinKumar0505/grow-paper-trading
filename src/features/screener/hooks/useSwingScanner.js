@@ -1,26 +1,26 @@
 import {
-CheckCircle2,
-Clock,
-Layers,
-TrendingUp
+  CheckCircle2,
+  Clock,
+  Layers,
+  TrendingUp,
 } from 'lucide-react';
-import { useMemo,useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
 import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
 import { api } from '../api/client';
-import { shortDate,timeAgo } from '../utils/format';
-import { CACHE_KEYS,loadCachedScan,saveCachedScan } from '../utils/scanCache';
+import { shortDate, timeAgo } from '../utils/format';
+import { CACHE_KEYS, CACHE_TTL_MS, loadCachedScan, saveCachedScan } from '../utils/scanCache';
 import {
-computeSwingCounts,
-extractSectors,
-filterSwingSignals,
+  computeSwingCounts,
+  extractSectors,
+  filterSwingSignals,
 } from '../utils/screenerHelpers';
 
 const SCAN_MIN_CONFIDENCE = 50;
 
 export function useSwingScanner() {
   const { subscriptionTier, planConfig, openUpgradeModal, addToast } = useTrading();
-  const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.swing));
+  const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.swing, CACHE_TTL_MS.swing));
   const [loading, setLoading] = useState(false);
   const [loadingMode, setLoadingMode] = useState('scan');
   const [error, setError] = useState('');
@@ -31,16 +31,18 @@ export function useSwingScanner() {
   const [sortBy, setSortBy] = useState('confidence_score');
   const [sortDir, setSortDir] = useState('desc');
   const [selectedSignal, setSelectedSignal] = useState(null);
+  const autoLoadedRef = useRef(false);
 
   const data = scan?.data;
+  const staleWarning = scan?.staleWarning || '';
 
   const runScan = async (forceRefresh) => {
     if (forceRefresh && !planConfig.swingAllowForceRefresh) {
       openUpgradeModal({
         requiredTier: 'advanced',
-        featureName: 'Live Market Data Force Refresh',
+        featureName: 'On-Demand Screener Data Force Refresh',
         featureDescription:
-          'Downloading fresh real-time Nifty 500 market prices on-demand is an Advanced Package feature. Free and Beginner plans use cached scanner snapshots.',
+          'Requesting an immediate upstream market-data refresh before scanning is an Advanced Package feature. Free and Beginner plans scan the latest backend snapshot.',
       });
       return;
     }
@@ -54,16 +56,36 @@ export function useSwingScanner() {
         signalType: 'ALL',
         forceRefresh,
       });
-      setScan(saveCachedScan(CACHE_KEYS.swing, res));
+      setScan(saveCachedScan(CACHE_KEYS.swing, res, CACHE_TTL_MS.swing));
       setSelectedSignal(null);
     } catch (err) {
-      const msg = err.message || 'Server is down or unreachable. Please try again in some time.';
+      const msg =
+        err.message ||
+        'Screener analytics service is currently unreachable. Please retry when the service is online.';
       setError(msg);
-      addToast('Scan Failed', msg, 'error');
+      const cached = loadCachedScan(CACHE_KEYS.swing, CACHE_TTL_MS.swing);
+      if (cached) {
+        setScan({
+          ...cached,
+          isStale: true,
+          staleWarning: `Live scan failed (${msg}). Displaying previously fetched snapshot from ${new Date(
+            cached.savedAt
+          ).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`,
+        });
+      }
+      addToast('Scan Unavailable', msg, 'error');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!scan && !autoLoadedRef.current) {
+      autoLoadedRef.current = true;
+      runScan(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sectors = useMemo(() => extractSectors(data?.signals), [data]);
 
@@ -112,35 +134,64 @@ export function useSwingScanner() {
           label: 'Stocks screened',
           value: data.total_scanned,
           sub:
-            data.total_scanned < data.total_universe_count
-              ? `${data.total_scanned} of ${data.total_universe_count} Nifty 500 (incomplete symbols skipped)`
-              : `of ${data.total_universe_count} in Nifty 500`,
+            data.total_universe_count && data.total_scanned !== data.total_universe_count
+              ? `${data.total_scanned} of ${data.total_universe_count} constituent symbols evaluated`
+              : `${data.total_scanned} constituent symbols evaluated`,
           hint:
-            data.total_scanned < data.total_universe_count
-              ? 'Stocks with insufficient recent price history are excluded from screening.'
-              : undefined,
+            'Reflects the exact number of symbols with sufficient valid daily OHLCV bars evaluated in this scan run.',
         },
         {
           icon: TrendingUp,
-          label: 'Technical Setups',
+          label: 'Rule-Based Setups',
           value: data.bullish_signals_found,
-          sub: 'Matched backtested chart patterns',
+          sub: 'Matched technical strategy rules',
           tone: 'primary',
         },
         {
           icon: CheckCircle2,
           label: 'Confirmed setups',
           value: readyCount,
-          sub: 'All chart conditions aligned',
+          sub: 'All rule conditions aligned',
         },
         {
           icon: Clock,
           label: 'Data as of',
           value: shortDate(data.data_as_of_date),
-          sub: scan?.savedAt ? `Screened ${timeAgo(scan.savedAt)}` : 'Latest snapshot',
+          sub: scan?.savedAt
+            ? `${scan.isStale ? 'Stale snapshot · ' : ''}Screened ${timeAgo(scan.savedAt)}`
+            : 'Latest snapshot',
         },
       ]
     : [];
 
-  return { planConfig, scan, loading, loadingMode, error, minConfidence, setMinConfidence, statusFilter, setStatusFilter, sectorFilter, setSectorFilter, sortBy, sortDir, selectedSignal, setSelectedSignal, data, runScan, sectors, counts, rows, onSort, resetFilters, visibleRows, lockedCount, nextTier, nextPlan, stats };
+  return {
+    planConfig,
+    scan,
+    staleWarning,
+    loading,
+    loadingMode,
+    error,
+    minConfidence,
+    setMinConfidence,
+    statusFilter,
+    setStatusFilter,
+    sectorFilter,
+    setSectorFilter,
+    sortBy,
+    sortDir,
+    selectedSignal,
+    setSelectedSignal,
+    data,
+    runScan,
+    sectors,
+    counts,
+    rows,
+    onSort,
+    resetFilters,
+    visibleRows,
+    lockedCount,
+    nextTier,
+    nextPlan,
+    stats,
+  };
 }

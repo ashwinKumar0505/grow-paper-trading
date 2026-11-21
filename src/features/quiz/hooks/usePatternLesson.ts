@@ -21,10 +21,16 @@ export function usePatternLesson() {
     showRsi: false,
   });
 
-  const unlockedPatternNames = useMemo(
-    () => new Set(PATTERN_TEMPLATES.slice(0, planConfig.patternLibraryMaxFreePatterns).map((p) => p.name)),
-    [planConfig.patternLibraryMaxFreePatterns]
-  );
+  const unlockedPatternNames = useMemo(() => {
+    if (planConfig.patternLibraryMaxFreePatterns >= PATTERN_TEMPLATES.length) {
+      return new Set(PATTERN_TEMPLATES.map((p) => p.name));
+    }
+    const beginnerPatterns = PATTERN_TEMPLATES.filter((p) => p.difficulty === 'Beginner').slice(
+      0,
+      planConfig.patternLibraryMaxFreePatterns
+    );
+    return new Set(beginnerPatterns.map((p) => p.name));
+  }, [planConfig.patternLibraryMaxFreePatterns]);
 
   const pattern = PATTERN_TEMPLATES.find((item) => item.name === patternName) || PATTERN_TEMPLATES[0];
   const isCurrentPatternLocked = !unlockedPatternNames.has(pattern.name);
