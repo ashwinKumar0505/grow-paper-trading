@@ -3,9 +3,11 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import express from 'express';
 import { createExpressApp, runServerBackgroundTradingTick } from './src/server/app';
+import { marketDataRegistry } from './src/server/providers/providerRegistry';
 import { defaultStore } from './src/server/storage/durableStore';
 
 dotenv.config();
+marketDataRegistry.refreshPolicies(process.env);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

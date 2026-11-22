@@ -49,11 +49,36 @@
       },
       "createdAt": 1795332131301,
       "updatedAt": 1795332132119
+    },
+    "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
+      "uid": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "email": "ashwin.gps@gmail.com",
+      "name": "J.J. Ashwin kumar",
+      "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL-pG1nP8YHDocRFwcKnS6wIYqIkYQ6DWfYflBfhCB0nrTgk1AB=s96-c",
+      "authProvider": "google",
+      "subscriptionTier": "free",
+      "subscriptionBillingCycle": "free",
+      "subscriptionStatus": "active",
+      "subscriptionUpdatedAt": 1795343065625,
+      "subscriptionExpiresAt": null,
+      "subscriptionAutoPay": false,
+      "paidTopUpCredit": 0,
+      "usageQuota": {
+        "dateKey": "2026-11-22",
+        "analysisSearchesCount": 0,
+        "quizQuestionsCount": 0,
+        "lastPortfolioResetMonth": "2026-11",
+        "portfolioResetsThisMonth": 0,
+        "lastAutoResetMonth": "2026-11"
+      },
+      "createdAt": 1795343065625,
+      "updatedAt": 1795344711755
     }
   },
   "emailIndex": {
     "ashwinku50@gmail.com": "sRHPteR060hsY2c94umd4XJsHvu1",
-    "jjashwin05@gmail.com": "SIPqqmeN4Ha4gESO1BdS1cfHgR32"
+    "jjashwin05@gmail.com": "SIPqqmeN4Ha4gESO1BdS1cfHgR32",
+    "ashwin.gps@gmail.com": "ltL3mt5huOdzDYyj2mtYzd6RJxd2"
   },
   "otpRecords": {},
   "revokedTokens": {
@@ -403,6 +428,46 @@
       "updatedAt": 1795332131429,
       "processingLockUntil": 0,
       "processingInstanceId": "inst_60344_28e9cc6a"
+    },
+    "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "version": 1,
+      "balance": 100000,
+      "initialBalance": 100000,
+      "paidTopUpCredit": 0,
+      "holdings": [],
+      "positions": [],
+      "orders": [],
+      "executions": [],
+      "executedOrderKeys": [],
+      "walletTransactions": [
+        {
+          "id": "TX-2225BC92",
+          "type": "DEPOSIT",
+          "amount": 100000,
+          "description": "Initial virtual capital (Free Starter)",
+          "timestamp": 1795343065916
+        }
+      ],
+      "watchlists": [
+        {
+          "id": "default",
+          "name": "My Watchlist",
+          "symbols": [
+            "RELIANCE",
+            "TCS",
+            "HDFCBANK",
+            "TATAMOTORS",
+            "ZOMATO",
+            "INFY"
+          ]
+        }
+      ],
+      "squareOffPendingSymbols": [],
+      "lastAutoResetMonth": "2026-11",
+      "updatedAt": 1795343065916,
+      "processingLockUntil": 0,
+      "processingInstanceId": "inst_74660_8b76c91e"
     }
   },
   "quizProgress": {
@@ -540,6 +605,33 @@
         ]
       },
       "updatedAt": 1795284896815
+    },
+    "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "quizStats": {
+        "totalQuestions": 0,
+        "correctAnswers": 0,
+        "currentStreak": 0,
+        "bestStreak": 0,
+        "recentResults": []
+      },
+      "survivalBestStreak": 0,
+      "survivalBestScore": 0,
+      "tournamentCompletedCount": 0,
+      "tournamentBestBalance": 10000,
+      "stats": {
+        "balance": 10000,
+        "startingBalance": 10000,
+        "totalTrades": 0,
+        "wins": 0,
+        "losses": 0,
+        "winRate": 0,
+        "currentStreak": 0,
+        "bestStreak": 0,
+        "netProfit": 0,
+        "tradeHistory": []
+      },
+      "updatedAt": 1795344676351
     }
   },
   "auditLog": [
@@ -575,6 +667,16 @@
       "action": "ACCOUNT_CREATED",
       "details": {
         "authProvider": "email"
+      }
+    },
+    {
+      "id": "aud_1795343065625_t2jgsd",
+      "timestamp": 1795343065625,
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "category": "AUTH",
+      "action": "ACCOUNT_CREATED",
+      "details": {
+        "authProvider": "google"
       }
     }
   ]

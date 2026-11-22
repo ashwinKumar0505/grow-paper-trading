@@ -17,6 +17,7 @@ import type {
   ProviderResponse,
   StockSearchItem,
 } from './types';
+import { UpstoxMarketDataProvider } from './upstoxProvider';
 import { YahooFinanceProvider } from './yahooFinanceProvider';
 
 class DisabledMarketDataProvider implements MarketDataProvider {
@@ -91,6 +92,7 @@ export class MarketDataProviderRegistry {
 
   constructor(env: Record<string, string | undefined> = process.env) {
     this.policies = resolveMarketDataPolicies(env);
+    this.providers.set('upstox', new UpstoxMarketDataProvider({ env }));
     this.providers.set('yahoo_finance', new YahooFinanceProvider());
     this.providers.set('disabled', new DisabledMarketDataProvider('disabled'));
   }
@@ -136,6 +138,10 @@ export class MarketDataProviderRegistry {
       );
     }
     return provider;
+  }
+
+  getUnderlyingUpstoxProvider(): UpstoxMarketDataProvider {
+    return this.providers.get('upstox') as UpstoxMarketDataProvider;
   }
 
   getUnderlyingYahooProvider(): YahooFinanceProvider {

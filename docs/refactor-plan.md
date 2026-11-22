@@ -43,3 +43,24 @@ Every backend service, route, provider, storage engine, entitlement module, fron
 ## 4. Rebrand to Tradedia (2026-11-22)
 
 - [x] Replaced user-facing Nifty Lens branding with Tradedia, swapped in the new logo (`public/images/landing/logo*.png`), and updated SEO metadata around "One Place to Learn Trading". Follow-up: storage keys, server setting names, store file, demo-key check and report documents renamed with backward-compatible migration/fallbacks. Details and risks are in `docs/refactor-summary.md` §6. lint/test/build: PASS.
+
+## 5. Market-Data Migration: Yahoo Finance / yfinance → Upstox Analytics Token (2026-11-22, branch `upstox-implementation`)
+
+- [x] **Frontend / Express (`grow-paper-trading`)**:
+  - Replaced default active dev provider with `UpstoxMarketDataProvider` (`src/server/providers/upstoxTypes.ts`, `upstoxHttpClient.ts`, `upstoxNormalizer.ts`, `upstoxQuotes.ts`, `upstoxCandles.ts`, `upstoxProvider.ts`; every new/modified file `<= 195` code lines).
+  - Enforced server-side read-only `UPSTOX_ANALYTICS_TOKEN` ONLY (no daily OAuth substitution, no `VITE_*` exposure, no token logging), shared-account rate limiting, request deduplication, bounded timeouts, retries with backoff on `429`/`5xx`, and `401`/`403` auth cooldown.
+  - Added verified NSE ISIN / Upstox instrument mapping for all 59 catalog entries (preserving aliases `ZOMATO -> ETERNAL`, `TATAMOTORS -> TMPV`) and all 5 indices (`NIFTY 50`, `SENSEX`, `BANK NIFTY`, `NIFTY IT`, `NIFTY AUTO`), keeping Upstox instrument keys internal.
+  - Switched active portfolio/background queue lookups in `app.ts` and `paperTradingRoutes.ts` to bulk `getStockQuotes()`.
+  - Enforced provider-scoped disk CSV reading (`diskCacheReader.ts`) and v4 provider-aware browser `scanCache.js` (purging legacy v3 Yahoo entries) so Yahoo caches are never presented as Upstox data.
+  - Retained `YahooFinanceProvider` as explicit rollback (`MARKET_DATA_PROVIDER=yahoo_finance`).
+  - Added unit/integration suites (`src/utils/upstoxProvider.test.ts`, `src/utils/upstoxIntegration.test.ts`).
+- [x] **Python Analytics Backend (`grow-paper-trading-backend/backend`)**:
+  - Implemented `UpstoxHttpClient`, `UpstoxInstrumentResolver`, `upstox_financials.py` (crore → INR rupee conversion via `units_in`, provider-scoped `financials_upstox_{symbol}.json`), and `UpstoxMarketDataProvider` (V3 historical + intraday merging, bounded concurrency, rate limits, honest commercial/realtime flags) behind `MarketDataProvider`.
+  - Added provider compatibility verification in `artifact_store.py` (preserving legacy `backtest_report.json` while refusing to serve it under `upstox`), provider-scoped scan artifacts, and strict corporate-action guard failing closed on unverified `PRICE_ADJUSTMENT_POLICY=SPLIT_AND_DIVIDEND_ADJUSTED` until live verification or explicit policy selection (`SPLIT_ADJUSTED_ONLY` / `UNADJUSTED_RAW`).
+  - Added `backend/scripts/verify_upstox_live.py` and `backend/tests/test_upstox_provider.py`.
+- [x] **Live Read-Only Upstox & Corporate-Action Verification (2026-11-22)**:
+  - Verified live read-only Upstox Analytics Token responses across 59/59 Node catalog equities, 500/500 NIFTY 500 ISINs, 5/5 indices, all 9 chart timeframes (`1D`–`ALL`), search (`ZOMATO -> ETERNAL`), yearly/quarterly financials with rupee conversion (`HDFCBANK`, `RELIANCE`, `ZOMATO`, `TATAMOTORS`), and 2y daily / 15m intraday candles.
+  - Empirically verified corporate-action behaviour (`RELIANCE`, `HDFCBANK`, `COALINDIA`, `ITC`): Upstox V3 historical candles are **split/bonus-adjusted (`SPLIT_ADJUSTED_ONLY`)** and **NOT cash-dividend or demerger-adjusted** (not equivalent to Yahoo `auto_adjust=True`). Python backend remains safely fail-closed under `PRICE_ADJUSTMENT_POLICY=SPLIT_AND_DIVIDEND_ADJUSTED` pending user confirmation to switch to `SPLIT_ADJUSTED_ONLY`.
+- [ ] **Remaining External Verification**:
+  - Interactive Chrome UI verification (blocked: Chrome remote debugging `DevToolsActivePort` not active on host).
+  - User decision on `PRICE_ADJUSTMENT_POLICY=SPLIT_ADJUSTED_ONLY` + running an Upstox walk-forward backtest (`run_backtests.py`) to replace `UNVALIDATED` status.

@@ -8,6 +8,7 @@ import {
   adaptStockAnalysisResponse,
   adaptSwingResponse,
 } from './adapters';
+import { syncActiveScreenerProvider } from '../utils/scanCache';
 
 export {
   adaptFinancialsResponse,
@@ -118,6 +119,11 @@ async function request(path, options = {}) {
         throw new Error(detail);
       }
       const json = await res.json();
+      if (path === '/health' && json?.provider) {
+        syncActiveScreenerProvider(json.provider);
+      } else if (json?.data_provenance?.provider_id) {
+        syncActiveScreenerProvider(json.data_provenance.provider_id);
+      }
       emitScreenerApiStatus({ ok: true, path });
       return json;
     } catch (err) {

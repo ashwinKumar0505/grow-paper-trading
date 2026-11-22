@@ -34,7 +34,7 @@ export function resolveMarketDataPolicies(
     nodeEnv === 'production' ? 'production' : nodeEnv === 'test' ? 'test' : 'development';
   const isProd = environment === 'production';
 
-  const defaultProvider: ProviderId = isProd ? 'disabled' : 'yahoo_finance';
+  const defaultProvider: ProviderId = isProd ? 'disabled' : 'upstox';
   const analyticsProvider = parseProviderId(
     env.MARKET_DATA_PROVIDER_ANALYTICS || env.MARKET_DATA_PROVIDER,
     defaultProvider

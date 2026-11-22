@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import type { ChartPoint, Stock, Timeframe } from '../../types/market';
-import { NSE_SYMBOL_CATALOG } from './symbolCatalog';
-import type { ProviderChartPayload } from './types';
+import { NSE_SYMBOL_CATALOG, resolveCanonicalSymbol } from './symbolCatalog';
+import type { ProviderChartPayload, ProviderId } from './types';
 
 const BACKEND_CACHE_ROOT =
   process.env.TRADEDIA_BACKEND_CACHE_DIR ||
-  process.env.NIFTYLENS_BACKEND_CACHE_DIR || // legacy name, kept so existing deployments keep working
+  process.env.NIFTYLENS_BACKEND_CACHE_DIR ||
   path.resolve(process.cwd(), '../grow-paper-trading-backend/backend/data_cache/raw_ohlcv');
 
 export async function mapWithConcurrency<T, R>(
@@ -27,10 +27,7 @@ export async function mapWithConcurrency<T, R>(
 }
 
 export function resolveDiskCacheSymbol(symbol: string): string {
-  const upper = symbol.trim().toUpperCase();
-  if (upper === 'ZOMATO') return 'ETERNAL';
-  if (upper === 'TATAMOTORS') return 'TMPV';
-  return upper.replace(/\.NS$/i, '');
+  return resolveCanonicalSymbol(symbol);
 }
 
 function parseIstDateTimestamp(raw: string): number {
@@ -54,14 +51,60 @@ export function formatChartTimeLabel(tsMs: number, timeframe: Timeframe): string
   return d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit', timeZone: 'Asia/Kolkata' });
 }
 
-export function readBackendCsvCandles(symbol: string, kind: 'daily' | 'intraday'): ChartPoint[] | null {
+function verifySidecarProvider(metaPath: string, expectedProvider: string, requireSidecar: boolean): boolean {
+  if (!fs.existsSync(metaPath)) return !requireSidecar;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(metaPath, 'utf8')) as { provider_id?: string };
+    return String(parsed.provider_id || '').toLowerCase() === expectedProvider.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+function resolveProviderCsvPath(
+  clean: string,
+  kind: 'daily' | 'intraday',
+  providerId: ProviderId,
+  cacheRoot: string
+): string | null {
+  const metaDir = path.join(cacheRoot, 'meta');
+  if (providerId === 'yahoo_finance') {
+    const csvPath =
+      kind === 'intraday'
+        ? path.join(cacheRoot, 'intraday', `${clean}_15m.csv`)
+        : path.join(cacheRoot, 'daily', `${clean}.csv`);
+    const metaPath = path.join(metaDir, `yfinance_${clean}_${kind === 'intraday' ? '15m' : '1d'}_adj.meta.json`);
+    if (!fs.existsSync(csvPath)) return null;
+    return verifySidecarProvider(metaPath, 'yfinance', false) ? csvPath : null;
+  }
+
+  // Non-Yahoo providers MUST NEVER read legacy Yahoo filenames ({clean}.csv / {clean}_15m.csv)
+  // and require a matching provider sidecar to prevent cross-provider cache contamination.
+  const suffixes = ['split_adj', 'raw', 'adj'];
+  const intervalTag = kind === 'intraday' ? '15m' : '1d';
+  for (const suffix of suffixes) {
+    const csvPath =
+      kind === 'intraday'
+        ? path.join(cacheRoot, 'intraday', `${providerId}_${clean}_15m_${suffix}.csv`)
+        : path.join(cacheRoot, 'daily', `${providerId}_${clean}_${suffix}.csv`);
+    const metaPath = path.join(metaDir, `${providerId}_${clean}_${intervalTag}_${suffix}.meta.json`);
+    if (fs.existsSync(csvPath) && verifySidecarProvider(metaPath, providerId, true)) {
+      return csvPath;
+    }
+  }
+  return null;
+}
+
+export function readBackendCsvCandles(
+  symbol: string,
+  kind: 'daily' | 'intraday',
+  providerId: ProviderId = 'yahoo_finance',
+  cacheRoot: string = BACKEND_CACHE_ROOT
+): ChartPoint[] | null {
   try {
     const clean = resolveDiskCacheSymbol(symbol);
-    const filePath =
-      kind === 'intraday'
-        ? path.join(BACKEND_CACHE_ROOT, 'intraday', `${clean}_15m.csv`)
-        : path.join(BACKEND_CACHE_ROOT, 'daily', `${clean}.csv`);
-    if (!fs.existsSync(filePath)) return null;
+    const filePath = resolveProviderCsvPath(clean, kind, providerId, cacheRoot);
+    if (!filePath) return null;
     const lines = fs.readFileSync(filePath, 'utf8').trim().split(/\r?\n/);
     if (lines.length < 3) return null;
 
@@ -70,10 +113,7 @@ export function readBackendCsvCandles(symbol: string, kind: 'daily' | 'intraday'
       const cols = lines[i].split(',');
       if (cols.length < 6) continue;
       const ts = parseIstDateTimestamp(cols[0]);
-      const o = Number(cols[1]);
-      const h = Number(cols[2]);
-      const l = Number(cols[3]);
-      const c = Number(cols[4]);
+      const [o, h, l, c] = [Number(cols[1]), Number(cols[2]), Number(cols[3]), Number(cols[4])];
       const v = Math.max(0, Math.round(Number(cols[5]) || 0));
       if (!Number.isFinite(ts) || !Number.isFinite(c) || c <= 0) continue;
       const open = Number.isFinite(o) && o > 0 ? o : c;
@@ -81,13 +121,8 @@ export function readBackendCsvCandles(symbol: string, kind: 'daily' | 'intraday'
       const low = Number.isFinite(l) && l > 0 ? l : Math.min(open, c);
       points.push({
         time: formatChartTimeLabel(ts, kind === 'intraday' ? '1D' : '1Y'),
-        timestamp: ts,
-        price: Number(c.toFixed(2)),
-        open: Number(open.toFixed(2)),
-        high: Number(high.toFixed(2)),
-        low: Number(low.toFixed(2)),
-        close: Number(c.toFixed(2)),
-        volume: v,
+        timestamp: ts, price: Number(c.toFixed(2)), open: Number(open.toFixed(2)),
+        high: Number(high.toFixed(2)), low: Number(low.toFixed(2)), close: Number(c.toFixed(2)), volume: v,
       });
     }
     return points.length >= 2 ? points : null;
@@ -96,8 +131,13 @@ export function readBackendCsvCandles(symbol: string, kind: 'daily' | 'intraday'
   }
 }
 
-export function buildRawStockFromDiskCsv(symbol: string, now: number): Stock | null {
-  const daily = readBackendCsvCandles(symbol, 'daily');
+export function buildRawStockFromDiskCsv(
+  symbol: string,
+  now: number,
+  providerId: ProviderId = 'yahoo_finance',
+  cacheRoot: string = BACKEND_CACHE_ROOT
+): Stock | null {
+  const daily = readBackendCsvCandles(symbol, 'daily', providerId, cacheRoot);
   if (!daily || daily.length < 2) return null;
   const latest = daily[daily.length - 1];
   const prev = daily[daily.length - 2];
@@ -138,9 +178,14 @@ export function buildRawStockFromDiskCsv(symbol: string, now: number): Stock | n
   };
 }
 
-export function buildChartFromDiskCsv(symbol: string, timeframe: Timeframe): ProviderChartPayload | null {
+export function buildChartFromDiskCsv(
+  symbol: string,
+  timeframe: Timeframe,
+  providerId: ProviderId = 'yahoo_finance',
+  cacheRoot: string = BACKEND_CACHE_ROOT
+): ProviderChartPayload | null {
   if (timeframe === '1D' || timeframe === '1W') {
-    const intra = readBackendCsvCandles(symbol, 'intraday');
+    const intra = readBackendCsvCandles(symbol, 'intraday', providerId, cacheRoot);
     if (intra && intra.length >= 2) {
       let filtered = intra;
       if (timeframe === '1D') {
@@ -153,7 +198,7 @@ export function buildChartFromDiskCsv(symbol: string, timeframe: Timeframe): Pro
     }
   }
 
-  const daily = readBackendCsvCandles(symbol, 'daily');
+  const daily = readBackendCsvCandles(symbol, 'daily', providerId, cacheRoot);
   if (!daily || daily.length < 2) return null;
   const countMap: Record<Timeframe, number> = {
     '1D': 15, '1W': 10, '1M': 22, '3M': 66, '6M': 130, '1Y': 252, '3Y': 756, '5Y': 1260, ALL: daily.length,

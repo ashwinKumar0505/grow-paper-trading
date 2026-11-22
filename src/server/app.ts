@@ -59,14 +59,15 @@ export async function runServerBackgroundTradingTick(
 
   const provider = marketDataRegistry.getProviderForUseCase('paper_trading');
   const quotes: Record<string, Stock | undefined> = {};
-  await Promise.all(
-    Array.from(symbols).map(async (sym) => {
-      const res = await provider.getStockQuote(sym, now);
-      if (res.available && res.data) {
-        quotes[sym] = res.data;
+  const symbolList = Array.from(symbols);
+  if (symbolList.length > 0) {
+    const bulk = await provider.getStockQuotes(symbolList, now);
+    if (bulk.available && bulk.data) {
+      for (const stock of bulk.data) {
+        quotes[stock.symbol.toUpperCase()] = stock;
       }
-    })
-  );
+    }
+  }
 
   for (const l of activeLedgers) {
     await processAccountBackgroundQueue({
