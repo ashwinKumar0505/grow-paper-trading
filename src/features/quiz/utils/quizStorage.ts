@@ -7,7 +7,7 @@ export { reconcileQuizStats, reconcileUserStats };
 const LEGACY_QUIZ_STATS_KEY = 'tradeplaybook_india_quiz_stats_v1';
 const LEGACY_USER_STATS_KEY = 'tradeplaybook_india_stats_v1';
 const LEGACY_SURVIVAL_BEST_KEY = 'tradepulse_survival_best_streak';
-const LEGACY_MIGRATED_FLAG = 'niftylens_quiz_legacy_migrated_v2';
+const LEGACY_MIGRATED_FLAG = 'tradedia_quiz_legacy_migrated_v2';
 
 export function normalizeQuizScope(uid?: string | null): string {
   const cleaned = (uid || '').trim();
@@ -15,19 +15,19 @@ export function normalizeQuizScope(uid?: string | null): string {
 }
 
 export function getQuizStatsStorageKey(uid?: string | null): string {
-  return `niftylens_quiz_stats_v2_${normalizeQuizScope(uid)}`;
+  return `tradedia_quiz_stats_v2_${normalizeQuizScope(uid)}`;
 }
 
 export function getQuizJournalStorageKey(uid?: string | null): string {
-  return `niftylens_quiz_journal_v2_${normalizeQuizScope(uid)}`;
+  return `tradedia_quiz_journal_v2_${normalizeQuizScope(uid)}`;
 }
 
 export function getQuizSurvivalBestStorageKey(uid?: string | null): string {
-  return `niftylens_quiz_survival_best_v2_${normalizeQuizScope(uid)}`;
+  return `tradedia_quiz_survival_best_v2_${normalizeQuizScope(uid)}`;
 }
 
 export function getQuizSurvivalBestScoreStorageKey(uid?: string | null): string {
-  return `niftylens_quiz_survival_score_v2_${normalizeQuizScope(uid)}`;
+  return `tradedia_quiz_survival_score_v2_${normalizeQuizScope(uid)}`;
 }
 
 /**

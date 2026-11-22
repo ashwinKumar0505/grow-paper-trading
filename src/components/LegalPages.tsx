@@ -26,12 +26,12 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind }) => {
   > = {
     terms: {
       title: 'Terms of Service',
-      subtitle: 'Rules and conditions governing the use of the Nifty Lens educational platform.',
+      subtitle: 'Rules and conditions governing the use of the Tradedia educational platform.',
       icon: <FileText className="w-5 h-5 text-[#00B386] dark:text-[#00D09C]" />,
     },
     privacy: {
       title: 'Privacy Policy',
-      subtitle: 'How Nifty Lens collects, stores, and protects your account and simulation data.',
+      subtitle: 'How Tradedia collects, stores, and protects your account and simulation data.',
       icon: <Lock className="w-5 h-5 text-[#00B386] dark:text-[#00D09C]" />,
     },
     'refund-policy': {
@@ -62,7 +62,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind }) => {
             className="inline-flex items-center gap-2 text-xs font-semibold text-[#5B7066] dark:text-[#9AB0A5] hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Nifty Lens Home</span>
+            <span>Back to Tradedia Home</span>
           </AppLink>
           <span className="text-[11px] font-medium text-[#5B7066] dark:text-[#7F9C8E]">
             Last updated: {LAST_UPDATED}

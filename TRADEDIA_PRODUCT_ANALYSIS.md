@@ -1,4 +1,4 @@
-# NiftyLens — Complete Product & Feature Analysis
+# Tradedia — Complete Product & Feature Analysis
 
 Analysis date: 19 November 2026.
 
@@ -8,7 +8,7 @@ Method: inspected application routes, components, hooks, engines, API handlers, 
 
 ## 1. Executive Summary
 
-NiftyLens combines Indian equity paper trading, technical stock screening, individual stock analysis, and interactive chart education in a single web application. Substantial functionality exists beyond the landing page: a simulated order engine, portfolio accounting, swing and intraday scanners, a Python backtester, 21 interactive pattern templates, and three Guess the Chart modes.
+Tradedia combines Indian equity paper trading, technical stock screening, individual stock analysis, and interactive chart education in a single web application. Substantial functionality exists beyond the landing page: a simulated order engine, portfolio accounting, swing and intraday scanners, a Python backtester, 21 interactive pattern templates, and three Guess the Chart modes.
 
 Its strongest supported proposition is **learn a chart concept, examine an algorithmic setup, and practise a decision without placing a real securities order**. The education module can operate independently of external market feeds because its charts are generated locally.
 
@@ -23,9 +23,9 @@ The implementation is not yet sufficient evidence for claims of production readi
 
 A credible partnership discussion can start with an honestly labelled product demonstration and an education pilot proposal. A market-connected commercial pilot should first resolve data provenance, access control, payment integrity, and validation claims.
 
-## 2. What is NiftyLens?
+## 2. What is Tradedia?
 
-NiftyLens is a browser application for people learning to interpret Indian stock charts and practise equity trading. It serves four connected activities:
+Tradedia is a browser application for people learning to interpret Indian stock charts and practise equity trading. It serves four connected activities:
 
 1. **Learn:** explore chart-pattern explanations and generated examples.
 2. **Predict:** choose a direction before a generated chart continuation is revealed.
@@ -472,9 +472,9 @@ The opportunities below are proposals inferred from the implemented product and 
 |---|---|---|---|
 | Upstox | Authenticated real-time market feed using WebSocket and Protobuf, with connection/subscription limits. [Official Market Data Feed V3](https://upstox.com/developer/api-documentation/v3/get-market-data-feed/) | Educational onboarding pilot; explore approved quote/stream access for research and simulation | Written permission for intended display/simulation use, entitlement model and symbol limits; implement authentication, instrument mapping, decoding, reconnect and freshness handling. Current config fields are not an adapter. |
 | Groww | SDK quote/LTP/OHLC facilities; quote payload includes depth, circuits and market fields. [Official live-data documentation](https://groww.in/trade-api/docs/python-sdk/live-data) | Beginner education and chart practice; assess permitted market data to replace generated quotes/depth | Confirm application approval, user authentication, end-user display rights and simulation scope; build a provider adapter and accurate instrument mapping. |
-| Angel One | Official SmartAPI Python SDK includes authentication, historical candle and WebSocket examples. [Official SmartAPI SDK](https://github.com/angel-one/smartapi-python) | Education pilot and feasibility study for authenticated chart/research data | Confirm commercial scope, redistribution and simulation permission, session handling and relevant API limits; no SmartAPI integration exists in NiftyLens. |
+| Angel One | Official SmartAPI Python SDK includes authentication, historical candle and WebSocket examples. [Official SmartAPI SDK](https://github.com/angel-one/smartapi-python) | Education pilot and feasibility study for authenticated chart/research data | Confirm commercial scope, redistribution and simulation permission, session handling and relevant API limits; no SmartAPI integration exists in Tradedia. |
 | FYERS | Official API documentation describes history, quotes, depth and market-status endpoints. [Official market-data documentation](https://fyers.in/api-docs/ai/skills/market-data) | Analytics/education pilot; evaluate historical candles and market status for more consistent research | Confirm rights, retention, user entitlements and simulation scope; implement API authentication, history pagination and data quality checks. |
-| TrueData | Publishes real-time/historical API offerings and explicit use restrictions. [Official API product and terms](https://www.truedata.in/products/marketdataapi) | A suitability discussion for permitted analytics modules, if any; synthetic education can be demonstrated separately | Its published terms exclude gaming, virtual trading and simulation and limit ordinary subscriber use. Do not assume an ordinary API purchase can power NiftyLens paper trading; obtain written clarification on any allowable arrangement. |
+| TrueData | Publishes real-time/historical API offerings and explicit use restrictions. [Official API product and terms](https://www.truedata.in/products/marketdataapi) | A suitability discussion for permitted analytics modules, if any; synthetic education can be demonstrated separately | Its published terms exclude gaming, virtual trading and simulation and limit ordinary subscriber use. Do not assume an ordinary API purchase can power Tradedia paper trading; obtain written clarification on any allowable arrangement. |
 | Global Datafeeds | Offers real-time, historical, snapshot, delayed and end-of-day APIs. [Official APIs and terms](https://globaldatafeeds.in/apis/) | Assess permitted research/chart data and any separately authorized educational arrangement | Published terms exclude gaming/virtual trading/simulation and ask such applicants to obtain approvals first. Seek written scope clarification; do not assume general API access permits the product's simulation or public display. |
 
 The last two rows report suppliers' published terms, not an independent legal conclusion. Their restrictions are material to partner selection and should be discussed before presenting them as likely simulation-feed providers.
@@ -516,7 +516,7 @@ Tests exist for order/accounting behavior, market calendars, quiz generation/eva
 
 Recommended description:
 
-> NiftyLens is an Indian equity learning and practice platform combining interactive chart exercises, rule-based stock research and virtual trading.
+> Tradedia is an Indian equity learning and practice platform combining interactive chart exercises, rule-based stock research and virtual trading.
 
 Supported messages are “21 interactive pattern templates,” “BUY/SELL chart exercises with explained outcomes,” “nine swing and three intraday strategy implementations,” and “virtual delivery, intraday and margin-funded trading mechanics.” Clearly label generated education, estimated trading costs and any simulated demonstration data.
 
@@ -528,17 +528,17 @@ For broker discussions, lead with education and practice, followed by an explici
 
 ### A. 100-word product introduction
 
-NiftyLens is an Indian stock market learning and practice platform that combines virtual equity trading, technical stock screening, company analysis, and interactive chart education. Users can explore market setups, simulate orders, review portfolios, and practise directional decisions through Guess the Chart. Its implemented learning library contains 21 pattern templates, while its analytics backend evaluates rule based swing and intraday strategies. The product offers Free, Beginner, and Advanced access tiers. NiftyLens could support educational partnerships and carefully scoped data integrations, subject to stronger operational controls and appropriate permissions. Its current implementation does not establish validated profitability or approved commercial market access.
+Tradedia is an Indian stock market learning and practice platform that combines virtual equity trading, technical stock screening, company analysis, and interactive chart education. Users can explore market setups, simulate orders, review portfolios, and practise directional decisions through Guess the Chart. Its implemented learning library contains 21 pattern templates, while its analytics backend evaluates rule based swing and intraday strategies. The product offers Free, Beginner, and Advanced access tiers. Tradedia could support educational partnerships and carefully scoped data integrations, subject to stronger operational controls and appropriate permissions. Its current implementation does not establish validated profitability or approved commercial market access.
 
 ### B. 250-word product overview
 
-NiftyLens brings stock market education, technical analysis, and trading practice into one browser application focused on Indian equities. Users can discover stocks, maintain watchlists, inspect charts, review algorithmic setups, and practise orders using virtual capital. The paper trading engine supports delivery positions, intraday long and short positions, margin funding simulation, multiple order types, estimated charges, and portfolio tracking.
+Tradedia brings stock market education, technical analysis, and trading practice into one browser application focused on Indian equities. Users can discover stocks, maintain watchlists, inspect charts, review algorithmic setups, and practise orders using virtual capital. The paper trading engine supports delivery positions, intraday long and short positions, margin funding simulation, multiple order types, estimated charges, and portfolio tracking.
 
 The analytics service evaluates nine swing strategies and three intraday strategies using technical indicators, chart conditions, and historical price data. Individual stock analysis presents BUY, WAIT, or AVOID assessments with reference entry levels, targets, stops, explanations, and financial information. These outputs are produced by rules rather than an integrated artificial intelligence service, and historical statistics require further validation before performance claims are made.
 
 Interactive education is a differentiator. The learning library contains 21 pattern templates. Guess the Chart asks users to choose BUY or SELL before revealing a generated continuation, then explains the outcome. Practice, Survival, and a local Tournament mode provide different exercises, with browser based history and progress measures. These scenarios are synthetic, not recordings of market sessions.
 
-Free, Beginner, and Advanced plans structure access to capital, analysis, learning, and practice features. Potential partnerships include educational pilots and appropriately authorized data integrations. Before a commercial market connected rollout, NiftyLens needs clearer data provenance, stronger account and payment enforcement, reliable state synchronization, and reproducible analytics validation. Broker connectivity, redistribution permission, production reliability, and measurable improvements in learning or investment outcomes have not been established by the inspected implementation or this review.
+Free, Beginner, and Advanced plans structure access to capital, analysis, learning, and practice features. Potential partnerships include educational pilots and appropriately authorized data integrations. Before a commercial market connected rollout, Tradedia needs clearer data provenance, stronger account and payment enforcement, reliable state synchronization, and reproducible analytics validation. Broker connectivity, redistribution permission, production reliability, and measurable improvements in learning or investment outcomes have not been established by the inspected implementation or this review.
 
 ### C. Complete feature checklist
 
@@ -646,4 +646,4 @@ Legend: **F = Fully implemented**, **P = Partially implemented**, **M = UI only 
 
 ### D. Partnership pitch summary
 
-NiftyLens offers a working codebase for interactive chart education, algorithmic research and virtual equity practice. A brokerage could explore an education pilot that helps users move from understanding a pattern to making and reviewing a simulated decision. A suitable data partner could help establish accurate, permissioned inputs for an agreed analytics or simulation use case. The immediate proposal should be a scoped pilot with honest data labels, defined permissions, secure account/payment controls and agreed measurements—not a claim of proven trading performance or an already approved integration.
+Tradedia offers a working codebase for interactive chart education, algorithmic research and virtual equity practice. A brokerage could explore an education pilot that helps users move from understanding a pattern to making and reviewing a simulated decision. A suitable data partner could help establish accurate, permissioned inputs for an agreed analytics or simulation use case. The immediate proposal should be a scoped pilot with honest data labels, defined permissions, secure account/payment controls and agreed measurements—not a claim of proven trading performance or an already approved integration.

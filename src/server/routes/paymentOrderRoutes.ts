@@ -33,10 +33,10 @@ async function getOrCreateRazorpayPlan(
       period: billingCycle,
       interval: 1,
       item: {
-        name: `Nifty Lens ${planLabel} (${cycleLabel})`,
+        name: `Tradedia ${planLabel} (${cycleLabel})`,
         amount: amountInPaise,
         currency: 'INR',
-        description: `Nifty Lens ${planLabel} ${cycleLabel} recurring subscription`,
+        description: `Tradedia ${planLabel} ${cycleLabel} recurring subscription`,
       },
     }),
   });

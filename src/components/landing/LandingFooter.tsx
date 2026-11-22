@@ -8,7 +8,7 @@ return (
             <div
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="cursor-pointer shrink-0"
-              title="Nifty Lens Homepage"
+              title="Tradedia Homepage"
             >
               <BrandLogo />
             </div>
@@ -37,7 +37,7 @@ return (
 
           <div className="space-y-2 text-[11px] leading-relaxed text-[#5B7066] dark:text-[#7F9C8E]">
             <p>
-              <strong>Disclaimer:</strong> Nifty Lens is an educational stock screening, rule-based technical chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and quantitative insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
+              <strong>Disclaimer:</strong> Tradedia is an educational stock screening, rule-based technical chart analysis, pattern learning, and paper trading platform created strictly for informational and strategy backtesting purposes. Historical backtesting and quantitative insights do not guarantee future profits. No real securities, equities, derivatives, commodities, or currencies are purchased or sold. All financial balances, portfolio holdings, orders, and gains or losses displayed are 100% simulated paper credits.
             </p>
             <p>
               This platform is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, sub-broker, portfolio manager, or investment adviser. Nothing on this website constitutes investment advice, financial guidance, tax advisory, or a recommendation to buy or sell any financial instrument.
@@ -45,7 +45,7 @@ return (
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-emerald-900/10 dark:border-[#20332A] text-[11px]">
-            <div>© {new Date().getFullYear()} Nifty Lens. NSE Stock Screener, Paper Trading &amp; Chart Pattern Studio.</div>
+            <div>© {new Date().getFullYear()} Tradedia. One place to learn trading — Paper Trading, Stock Screener &amp; Chart Patterns.</div>
             <div className="flex flex-wrap items-center justify-center gap-4 font-semibold">
               <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
                 Terms of Service

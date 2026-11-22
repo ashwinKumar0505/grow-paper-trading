@@ -1,4 +1,4 @@
-# NiftyLens — Frontend, Security & Paper Trading Production Readiness Report
+# Tradedia — Frontend, Security & Paper Trading Production Readiness Report
 
 **Repository:** `/Users/ashwinkumar/grow-paper-trading`  
 **Branch:** `fix-analysed-code`  
@@ -8,14 +8,14 @@
 
 ## 1. Executive Summary
 
-This report documents the end-to-end production-readiness refactoring of the NiftyLens React frontend, Node.js/Express server, Firebase Authentication & Firestore security rules, Razorpay payment/subscription/webhook integration, paper-trading ledger, screener API adapter, and Guess the Chart learning module.
+This report documents the end-to-end production-readiness refactoring of the Tradedia React frontend, Node.js/Express server, Firebase Authentication & Firestore security rules, Razorpay payment/subscription/webhook integration, paper-trading ledger, screener API adapter, and Guess the Chart learning module.
 
-Every P0/P1 vulnerability and misleading-data behavior identified during the audit and in `NIFTYLENS_PRODUCT_ANALYSIS.md` was verified against the live codebase, remediated in code, and covered by automated unit and integration tests:
+Every P0/P1 vulnerability and misleading-data behavior identified during the audit and in `TRADEDIA_PRODUCT_ANALYSIS.md` was verified against the live codebase, remediated in code, and covered by automated unit and integration tests:
 
 1. **Zero Fabricated Financial Fallbacks (P0)**: Removed all production fallbacks that manufactured stock prices, historical candles, 5-level market depth, fundamental ratios, quarterly/annual financial statements (`"NSE Consolidated Filings"`), swing/intraday trading signals, or stock analysis scores when an API failed. Authentic cached data is now displayed with its original timestamp and an explicit stale-data warning; when no authentic cache exists, an explicit unavailable/error state with a retry button is shown.
 2. **Reusable Market-Data Status Model & Provider Abstraction**: Introduced a unified `MarketDataStatus` (`LIVE`, `DELAYED`, `HISTORICAL`, `STALE`, `UNAVAILABLE`, `SYNTHETIC_EDUCATIONAL`) and decoupled Express from direct Yahoo Finance calls via a `MarketDataProvider` interface (`ProviderRegistry`) with separate domain policies for `stock_analytics`, `paper_trading`, `historical_replay`, and `educational_synthetic`.
 3. **Authentication, Email OTP & Firestore Security (P0)**: Enforced Bearer token verification (`createRequireAuth`) across all private Express endpoints, deriving user identity strictly from verified tokens. Replaced browser-created `email_*` identities with a server-authoritative Email OTP flow featuring CSPRNG generation, salted `scrypt` hashing, 10-minute expiry, max 5 attempts lockout, 30-second server-side resend cooldown, IP/account rate limiting, replay prevention, and canonical identity resolution. Rewrote `firestore.rules` to deny-by-default, removing `email_*`/`user_*`/`google_*` prefix wildcards, locking down `users_by_email`, and blocking client mutation of server-controlled subscription, payment, and balance fields.
-4. **Razorpay Payment, Webhook & Subscription Entitlement Security (P0)**: Removed all demo payment bypasses (`order_demo_*`, `pay_demo_*`, `sub_demo_*`, `NiftyLensDemoKey`). Enforced server-authoritative pricing, payment intent binding to the authenticated user, HMAC-SHA256 signature verification, amount/currency validation, cross-account hijack prevention, payment-ID idempotency, superseded subscription cancellation on Beginner-to-Advanced upgrades, raw-body verified webhook processing for all 8 lifecycle events, and backend entitlement enforcement with signed service-to-service tokens for the Python backend.
+4. **Razorpay Payment, Webhook & Subscription Entitlement Security (P0)**: Removed all demo payment bypasses (`order_demo_*`, `pay_demo_*`, `sub_demo_*`, `TradediaDemoKey`). Enforced server-authoritative pricing, payment intent binding to the authenticated user, HMAC-SHA256 signature verification, amount/currency validation, cross-account hijack prevention, payment-ID idempotency, superseded subscription cancellation on Beginner-to-Advanced upgrades, raw-body verified webhook processing for all 8 lifecycle events, and backend entitlement enforcement with signed service-to-service tokens for the Python backend.
 5. **Server-Authoritative Paper Trading Ledger & Historical Replay (P0/P1)**: Replaced the client-trusted `/api/paper-trading/sync` endpoint and volatile in-memory map with a durable, per-account locked server ledger (`DurableStore`, `tradingLedger.ts`). Moved pending-order evaluation and 15:20 IST intraday square-off to the server without fabricating fill prices at `entryPrice` during data outages (`squareOffPendingSymbols`). Built an isolated `HistoricalReplaySession` with its own simulation clock and strict look-ahead prevention. Fixed wallet top-up clamping on account restoration and monthly capital refresh accounting.
 6. **Guess the Chart & Feature Label Alignment (P1)**: Scoped quiz history and stats per account (`uid` vs `guest`), synced authenticated progress to `/api/quiz/progress` and Firestore `users/{uid}/quiz_progress/main`, reconciled `stats.balance === startingBalance + netProfit`, replaced `$` labels with `₹` INR formatting, enforced `quizAllowHistoryDrawer`, unlocked the 8 Beginner templates on Free tier, labeled Tournament as a single-player 10-round challenge, and aligned all landing/pricing/screener copy (`21` patterns, `2-year` historical backtests, rule-based technical insights).
 
@@ -102,7 +102,7 @@ Every P0/P1 vulnerability and misleading-data behavior identified during the aud
 
 | Payment / Entitlement Area | Prior Vulnerability | Remediation | Status |
 | :--- | :--- | :--- | :--- |
-| **Demo Payment Bypasses** | Server and client accepted `order_demo_*`, `sub_demo_*`, `pay_demo_*`, and `NiftyLensDemoKey` to activate paid Beginner/Advanced plans and +₹1L wallet top-ups without payment. | Removed all demo fallbacks from `paymentRoutes.ts`, `razorpayService.ts`, and `useRazorpayCheckout.ts`. Missing or demo credentials fail safely with `503 PAYMENT_GATEWAY_UNCONFIGURED`. Test keys (`rzp_test_*`) are blocked in production, and live keys (`rzp_live_*`) are blocked outside production. | **Fixed and tested** |
+| **Demo Payment Bypasses** | Server and client accepted `order_demo_*`, `sub_demo_*`, `pay_demo_*`, and `TradediaDemoKey` to activate paid Beginner/Advanced plans and +₹1L wallet top-ups without payment. | Removed all demo fallbacks from `paymentRoutes.ts`, `razorpayService.ts`, and `useRazorpayCheckout.ts`. Missing or demo credentials fail safely with `503 PAYMENT_GATEWAY_UNCONFIGURED`. Test keys (`rzp_test_*`) are blocked in production, and live keys (`rzp_live_*`) are blocked outside production. | **Fixed and tested** |
 | **Server-Authoritative Pricing & Verification** | `/api/payments/verify` did not check whether the order/subscription belonged to the caller, did not validate amount/currency, and was not idempotent. | `create-order` and `create-subscription` record a durable `DurablePaymentIntent` bound to `req.authUser.uid` with server-computed `expectedAmountPaise`. `verifyAndActivatePayment` verifies the HMAC-SHA256 signature, blocks cross-account payment hijack (`403`), validates amount and currency, enforces system-wide `paymentId` idempotency (`processedPayments`), and persists entitlement/wallet changes transactionally under `store.withLock`. | **Fixed and tested** |
 | **Webhook Reconciliation** | Webhook handler parsed JSON instead of verifying raw bytes, allowed unsigned webhooks if secret was missing, had no deduplication or out-of-order protection, and only handled 3 events. | `processRazorpayWebhook` verifies `X-Razorpay-Signature` against `req.rawBody`, rejects unverifiable webhooks (`503`/`400`), deduplicates via `processedWebhooks[dedupKey]`, tracks `lastSubscriptionEventTs` to ignore out-of-order older `subscription.*` events, and handles `payment.captured`, `payment.failed`, `subscription.activated`, `subscription.charged`/`renewed`, `subscription.pending`/`halted`, `subscription.cancelled`, `subscription.completed`/`expired`, and `refund.processed`/`payment.refunded`. | **Fixed and tested** |
 | **Beginner -> Advanced Upgrade** | Upgrading from Beginner to Advanced created a new subscription without cancelling the existing Beginner subscription, risking double billing, and UI copy implied proration. | `computeAuthoritativePrice` records `previousSubscriptionId` on differential upgrades, and `verifyAndActivatePayment` cancels the superseded Razorpay subscription upon verification. Checkout and FAQ copy explicitly describe the credit as a flat tier price differential (`Advanced − Beginner`). | **Fixed and tested** |
@@ -126,7 +126,7 @@ Every P0/P1 vulnerability and misleading-data behavior identified during the aud
 
 | Quiz / Learning Area | Prior Issue | Remediation | Status |
 | :--- | :--- | :--- | :--- |
-| **Cross-Account Quiz Leakage** | Quiz stats, trade history, and survival streaks used global `localStorage` keys (`tradeplaybook_india_quiz_stats_v1`, `tradeplaybook_india_stats_v1`), leaking Account A's progress into Account B or Guest. | Created `src/features/quiz/utils/quizStorage.ts` scoping all keys by `uid` (`niftylens_quiz_stats_v2_${scope}` where `scope` is `user.uid` or `'guest'`), migrating legacy keys at most once and deleting unscoped keys. Added authenticated server sync (`GET/PUT /api/quiz/progress`) and Firestore sync (`users/{uid}/quiz_progress/main`). | **Fixed and tested** |
+| **Cross-Account Quiz Leakage** | Quiz stats, trade history, and survival streaks used global `localStorage` keys (`tradeplaybook_india_quiz_stats_v1`, `tradeplaybook_india_stats_v1`), leaking Account A's progress into Account B or Guest. | Created `src/features/quiz/utils/quizStorage.ts` scoping all keys by `uid` (`tradedia_quiz_stats_v2_${scope}` where `scope` is `user.uid` or `'guest'`), migrating legacy keys at most once and deleting unscoped keys. Added authenticated server sync (`GET/PUT /api/quiz/progress`) and Firestore sync (`users/{uid}/quiz_progress/main`). | **Fixed and tested** |
 | **`stats.balance` Drift** | `useQuizTrade.ts` updated `netProfit`, `wins`, and `losses` in Quiz mode without updating `stats.balance`, leaving `balance` stuck at `10000`. | Fixed `useQuizTrade.ts` and `reconcileUserStats` so `stats.balance` always equals `Math.max(0, startingBalance + netProfit)`. | **Fixed and tested** |
 | **Currency & Feature Gating Mismatches** | Quiz components displayed `$` (`+$1,200`, `$10k -> $25k`) alongside `₹`, left History Drawer open on all tiers despite `quizAllowHistoryDrawer: false` on Free/Beginner, and unlocked Intermediate patterns in the first 8 Free slots. | Replaced all `$` labels in Quiz components with `₹` INR formatting (`formatINR`), gated History Drawer behind `planConfig.quizAllowHistoryDrawer`, updated `usePatternLesson.ts` to unlock the 8 `Beginner`-difficulty patterns on Free tier, labeled Tournament as a single-player 10-round challenge, and added `Synthetic Educational Chart` badges in `ChartHeader.tsx`, `PatternDemonstration.tsx`, and `LandingChallengePreview.tsx`. | **Fixed and tested** |
 
@@ -158,7 +158,7 @@ Configure the following environment variables in production before launch:
 # Runtime & CORS
 NODE_ENV=production
 PORT=3000
-ALLOWED_ORIGINS=https://niftylens.in,https://www.niftylens.in
+ALLOWED_ORIGINS=https://tradedia.in,https://www.tradedia.in
 
 # Authentication & Session Security
 AUTH_SESSION_SECRET=<32+ byte high-entropy random secret>
@@ -169,7 +169,7 @@ FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END
 
 # Email OTP Delivery (Resend)
 RESEND_API_KEY=re_<production_resend_api_key>
-OTP_FROM_EMAIL="NiftyLens <auth@niftylens.in>"
+OTP_FROM_EMAIL="Tradedia <auth@tradedia.in>"
 
 # Razorpay Production Credentials
 RAZORPAY_KEY_ID=rzp_live_<production_key_id>
@@ -182,7 +182,7 @@ RAZORPAY_PLAN_ADVANCED_YEARLY=plan_<id>
 
 # Service-to-Service Screener Entitlement Secret (shared with Python FastAPI backend)
 SCREENER_SERVICE_SECRET=<32+ byte shared HMAC secret>
-VITE_SCREENER_API_URL=https://api.niftylens.in/api/v1
+VITE_SCREENER_API_URL=https://api.tradedia.in/api/v1
 
 # Market-Data Provider & Authorization Policy
 MARKET_DATA_PROVIDER_ANALYTICS=<licensed_provider_id>
@@ -194,7 +194,7 @@ AUTHORIZE_HISTORICAL_REPLAY_PROVIDER=true
 ENABLE_LIVE_PAPER_TRADING=true
 
 # Durable Server Ledger Storage Path
-NIFTYLENS_STORAGE_PATH=/var/lib/niftylens/niftylens-store.json
+TRADEDIA_STORAGE_PATH=/var/lib/tradedia/tradedia-store.json
 ```
 
 ---
@@ -238,5 +238,5 @@ NIFTYLENS_STORAGE_PATH=/var/lib/niftylens/niftylens-store.json
 | :--- | :--- | :--- |
 | **Commercial NSE Market-Data Feed Adapter** | **Blocked by external dependency** | Yahoo Finance unofficial endpoints are restricted for commercial redistribution and paper-trading execution. The codebase now includes `MarketDataProvider`, `ProviderRegistry`, and `marketDataPolicy.ts` (which blocks Yahoo Finance in `NODE_ENV=production` by default). Before commercial launch, obtain an authorized data license (e.g., TrueData, NSE authorized vendor, or broker API where permitted by terms) and register its adapter in `ProviderRegistry`. |
 | **Python Screener Backend Coordination** | **Fixed but not runtime verified** | The Express server now issues signed short-lived entitlement tokens (`GET /api/screener/entitlement-token`) and `src/features/screener/api/client.js` attaches `Authorization: Bearer <token>` and handles the new provenance/methodology fields. End-to-end runtime verification with the separate Python FastAPI repository (`/Users/ashwinkumar/trade-bot/backend`) should be performed once both services are deployed together. |
-| **Multi-Instance Distributed Database for `DurableStore`** | **Fixed and tested** (Single-Node) / **Partially fixed** (Multi-Node Horizontal Scaling) | `DurableStore` replaces volatile in-memory maps with atomic file persistence (`writeFileSync` + `renameSync`) and per-account async mutex locking (`withLock`). For single-instance deployment with a persistent volume (`NIFTYLENS_STORAGE_PATH`), this is durable and race-free. If scaling horizontally across multiple stateless container replicas, back `DurableStore` with Firebase Admin Firestore transactions or PostgreSQL/Redis. |
+| **Multi-Instance Distributed Database for `DurableStore`** | **Fixed and tested** (Single-Node) / **Partially fixed** (Multi-Node Horizontal Scaling) | `DurableStore` replaces volatile in-memory maps with atomic file persistence (`writeFileSync` + `renameSync`) and per-account async mutex locking (`withLock`). For single-instance deployment with a persistent volume (`TRADEDIA_STORAGE_PATH`), this is durable and race-free. If scaling horizontally across multiple stateless container replicas, back `DurableStore` with Firebase Admin Firestore transactions or PostgreSQL/Redis. |
 | **Firebase Emulator Live Rule Execution** | **Fixed and tested** (Static Policy & Structural Verification) | `firestore.rules` has been rewritten to deny-by-default and verified via automated policy assertions in `src/utils/securityAndAuth.test.ts`. Running against a live local Java Firebase Firestore Emulator (`firebase emulators:exec`) requires the Firebase CLI + Java runtime in the CI pipeline. |

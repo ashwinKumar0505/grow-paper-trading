@@ -35,7 +35,7 @@ export function useQuizState() {
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(() => {
     try {
       const saved =
-        localStorage.getItem(`niftylens_quiz_diff_${scope}`) ||
+        localStorage.getItem(`tradedia_quiz_diff_${scope}`) ||
         localStorage.getItem('tradepulse_difficulty');
       return ['All', 'Beginner', 'Intermediate', 'Advanced'].includes(saved || '')
         ? (saved as DifficultyLevel)
@@ -132,7 +132,7 @@ export function useQuizState() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(`niftylens_quiz_diff_${scope}`, difficulty);
+      localStorage.setItem(`tradedia_quiz_diff_${scope}`, difficulty);
     } catch {}
   }, [scope, difficulty]);
 

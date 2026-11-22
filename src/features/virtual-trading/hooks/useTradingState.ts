@@ -180,7 +180,7 @@ export function useTradingState(){
   // Theme (Default to dark mode across the application)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
-      const savedTheme = localStorage.getItem('niftylens_theme_v1');
+      const savedTheme = localStorage.getItem('tradedia_theme_v1');
       if (savedTheme === 'light') return false;
       if (savedTheme === 'dark') return true;
       return true;

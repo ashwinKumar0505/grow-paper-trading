@@ -30,11 +30,11 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onSignOut })
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-bold text-[#15241D] dark:text-white truncate">
-                {user.name || 'Nifty Lens Trader'}
+                {user.name || 'Tradedia Trader'}
               </h1>
               <span className="inline-flex items-center gap-1 rounded-full bg-[#10B981]/15 px-2.5 py-0.5 text-xs font-semibold text-[#008F6B] dark:text-emerald-400">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                {user.authProvider === 'google' ? 'Google' : 'Email OTP'}
+                {user.authProvider === 'google' ? 'Google' : 'Email'}
               </span>
             </div>
 
@@ -42,7 +42,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onSignOut })
               <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
                 <Mail className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">
-                  {user.email || (user.phone ? `+91 ${user.phone}` : 'Nifty Lens Account')}
+                  {user.email || (user.phone ? `+91 ${user.phone}` : 'Tradedia Account')}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1.5 shrink-0">

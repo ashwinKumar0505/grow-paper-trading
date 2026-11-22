@@ -77,16 +77,20 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
     }
   });
 
-  router.post('/auth/google-session', authRateLimiter, requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  const handleFirebaseSession = (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.authUser!;
+      const requestedProvider =
+        req.body?.authProvider === 'email' || req.body?.authProvider === 'google'
+          ? (req.body.authProvider as 'google' | 'email')
+          : authUser.authProvider;
       const userAccount = resolveOrCreateCanonicalUser(
         {
           preferredUid: authUser.uid,
           email: authUser.email,
           name: typeof req.body?.name === 'string' ? req.body.name : authUser.name,
           avatar: typeof req.body?.avatar === 'string' ? req.body.avatar : undefined,
-          authProvider: 'google',
+          authProvider: requestedProvider,
         },
         store
       );
@@ -94,7 +98,7 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
         uid: userAccount.uid,
         email: userAccount.email,
         name: userAccount.name,
-        authProvider: 'google',
+        authProvider: requestedProvider,
       });
       const firebaseCustomToken = tryCreateFirebaseCustomToken(userAccount.uid, userAccount.email);
       const ledger = getOrCreateTradingLedger(userAccount.uid, store);
@@ -115,9 +119,12 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
         },
       });
     } catch (err) {
-      res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'Failed to establish Google session.') });
+      res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'Failed to establish Firebase session.') });
     }
-  });
+  };
+
+  router.post('/auth/firebase-session', authRateLimiter, requireAuth, handleFirebaseSession);
+  router.post('/auth/google-session', authRateLimiter, requireAuth, handleFirebaseSession);
 
   router.post('/auth/logout', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const authUser = req.authUser!;

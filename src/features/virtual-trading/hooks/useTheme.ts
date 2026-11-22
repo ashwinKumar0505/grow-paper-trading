@@ -11,7 +11,7 @@ export function useTheme({ isDarkMode, setIsDarkMode }: Options) {
       document.documentElement.classList.remove('dark');
     }
     try {
-      localStorage.setItem('niftylens_theme_v1', isDarkMode ? 'dark' : 'light');
+      localStorage.setItem('tradedia_theme_v1', isDarkMode ? 'dark' : 'light');
     } catch {}
   }, [isDarkMode]);
 

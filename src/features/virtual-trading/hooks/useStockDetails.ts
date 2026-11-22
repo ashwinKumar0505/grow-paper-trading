@@ -83,9 +83,9 @@ export function useStockDetails() {
 
   // Dynamic SEO Page Title for active stock
   useEffect(() => {
-    const originalTitle = 'Nifty Lens – NSE/BSE Stock Paper Trading Simulator';
+    const originalTitle = 'Tradedia – One Place to Learn Trading | Paper Trading Simulator';
     const safePrice = Number(stock.price || 0);
-    document.title = `${stock.name} (${stock.symbol}) ₹${safePrice.toFixed(2)} – Nifty Lens`;
+    document.title = `${stock.name} (${stock.symbol}) ₹${safePrice.toFixed(2)} – Tradedia`;
     return () => {
       document.title = originalTitle;
     };

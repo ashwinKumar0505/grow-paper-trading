@@ -62,7 +62,7 @@ function emitScreenerApiStatus(event) {
 function getAuthHeaders() {
   try {
     if (typeof localStorage === 'undefined') return {};
-    const token = localStorage.getItem('niftylens_auth_token_v1');
+    const token = localStorage.getItem('tradedia_auth_token_v1');
     return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
     return {};

@@ -10,7 +10,7 @@ import {
 import { sound } from '../../features/quiz/utils/sound';
 
 export const MAX_GUEST_PREVIEWS = 2;
-const GUEST_COUNT_KEY = 'niftylens_landing_preview_count_v1';
+const GUEST_COUNT_KEY = 'tradedia_landing_preview_count_v1';
 
 function readGuestCount(): number {
   try {

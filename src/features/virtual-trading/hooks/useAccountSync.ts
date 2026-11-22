@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { exchangeGoogleServerSession } from '../../../components/auth/authModalService';
+import { exchangeFirebaseServerSession } from '../../../components/auth/authModalService';
 import { getActiveBearerToken } from '../../../lib/authSession';
 import { auth, onAuthStateChanged } from '../../../lib/firebase';
 import { normalizeUsageQuota } from '../../../lib/subscription';
@@ -88,19 +88,25 @@ export function useAccountSync({
     };
   }, [user?.uid]);
 
-  // Restore Google session on reload/restart, preferring authoritative backend over Firestore fallback
+  // Restore Firebase session (Google or Email/Password) on reload/restart, preferring authoritative backend over Firestore fallback
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (!fbUser) return;
+      if (!fbUser || !fbUser.emailVerified) return;
+      const provider: 'google' | 'email' = fbUser.providerData.some((p) => p.providerId === 'google.com')
+        ? 'google'
+        : 'email';
+      const fallbackName =
+        fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Tradedia Trader');
       try {
         let token = await getActiveBearerToken();
         if (!token) {
           const idToken = await fbUser.getIdToken();
-          await exchangeGoogleServerSession({
+          await exchangeFirebaseServerSession({
             idToken,
             fallbackUid: fbUser.uid,
             displayName: fbUser.displayName,
             photoURL: fbUser.photoURL,
+            authProvider: provider,
           });
           token = (await getActiveBearerToken()) || idToken;
         }
@@ -108,9 +114,9 @@ export function useAccountSync({
         const serverAccount = await fetchAuthoritativeAccountProfile(token);
         if (serverAccount) {
           applyServerAccount(serverAccount, {
-            fallbackName: fbUser.displayName || 'Google Trader',
+            fallbackName,
             fallbackEmail: fbUser.email || '',
-            fallbackProvider: 'google',
+            fallbackProvider: provider,
             fallbackAvatar: fbUser.photoURL || undefined,
           });
           return;
@@ -124,9 +130,9 @@ export function useAccountSync({
           buildRestoredUserProfileAndPortfolio({
             uid: fbUser.uid,
             remote: data,
-            fallbackName: fbUser.displayName || 'Google Trader',
+            fallbackName,
             fallbackEmail: fbUser.email || '',
-            fallbackProvider: 'google',
+            fallbackProvider: provider,
             fallbackAvatar: fbUser.photoURL || undefined,
           });
 

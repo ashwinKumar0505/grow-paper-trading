@@ -6,7 +6,7 @@ import { INITIAL_STOCKS, INITIAL_INDICES } from '../src/data/mockStocks.ts';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const current = process.env.APP_URL || 'http://127.0.0.1:4173';
 const baseline = process.env.BASELINE_URL;
-const output = process.env.BROWSER_ARTIFACTS || '/private/tmp/niftylens-browser';
+const output = process.env.BROWSER_ARTIFACTS || '/private/tmp/tradedia-browser';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true,
   ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
@@ -24,7 +24,7 @@ async function open(base, route, viewport, theme, tier = 'advanced') {
   await page.addInitScript(({ theme, tier }) => {
     let seed = 123456;
     Math.random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-    localStorage.setItem('niftylens_theme_v1', theme);
+    localStorage.setItem('tradedia_theme_v1', theme);
     if (tier) localStorage.setItem('mypaper_user_v2', JSON.stringify({ name: 'Browser Test',
       email: 'browser-test@example.invalid', initialCash: 100000, createdAt: Date.now(),
       subscriptionTier: tier, subscriptionStatus: 'active', subscriptionBillingCycle: 'yearly',

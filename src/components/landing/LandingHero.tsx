@@ -16,6 +16,11 @@ return (
           {/* Left Column: 45% width on desktop for text and CTAs */}
           <div className="w-full lg:w-[45%] space-y-6 text-left">
 
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#00B386] dark:text-[#00D09C]">
+              <GraduationCap className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Tradedia · One place to learn trading</span>
+            </p>
+
             <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black  text-[#00B386] dark:text-[#00D09C]  tracking-tight leading-[1.08]">
               Real time Paper Trading.{' '}
               <span className="text-[#15241D] dark:text-white">
@@ -96,7 +101,7 @@ return (
           <div className="w-full lg:w-[55%] flex items-center justify-center">
             <FloatingIllustration
               src="/images/landing/hero-trading.png"
-              alt="Nifty Lens 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Paper Trading portfolio, and Interactive Learning"
+              alt="Tradedia 3D laptop dashboard showcasing Indian Stock Market charts, Smart Stock Screener with backtested strategies, Paper Trading portfolio, and Interactive Learning"
               loading="eager"
               fetchPriority="high"
               glowVariant="emerald-blue"

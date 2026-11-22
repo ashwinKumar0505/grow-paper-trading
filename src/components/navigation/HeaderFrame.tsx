@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { BrandLogo } from '../BrandLogo';
 import { AppLink, usePathname } from '../../lib/navigation';
 
-/** Shared Nifty Lens header frame with green-accented styling across every route. */
+/** Shared Tradedia header frame with green-accented styling across every route. */
 export function HeaderFrame({
   navigation,
   utilities,
@@ -31,7 +31,7 @@ export function HeaderFrame({
       <div className="mx-auto flex h-16 w-full max-w-[1920px] items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
         <AppLink
           href="/"
-          aria-label="Nifty Lens home"
+          aria-label="Tradedia home"
           className="shrink-0 rounded-lg"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >

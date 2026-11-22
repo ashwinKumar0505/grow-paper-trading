@@ -118,7 +118,7 @@ export async function launchRazorpayCheckout(params: LaunchRazorpayParams): Prom
 
   const baseOptions = {
     key: params.keyId,
-    name: 'Nifty Lens',
+    name: 'Tradedia',
     description: params.description,
     prefill: {
       name: params.userName,

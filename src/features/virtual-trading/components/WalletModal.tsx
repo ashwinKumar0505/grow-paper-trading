@@ -22,7 +22,7 @@ export const WalletModal: React.FC = () => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
       role="dialog"
       aria-modal="true"
-      aria-label="Nifty Lens Paper Wallet"
+      aria-label="Tradedia Paper Wallet"
     >
       <div className="fixed inset-0" onClick={() => setIsWalletModalOpen(false)} />
 

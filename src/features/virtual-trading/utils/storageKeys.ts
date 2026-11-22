@@ -1,7 +1,7 @@
 import type { Watchlist } from '../../../types/market';
 
 export const LOCAL_STORAGE_KEY = 'groww_paper_trading_data_v1';
-export const USAGE_QUOTA_KEY = 'niftylens_usage_quota_v1';
+export const USAGE_QUOTA_KEY = 'tradedia_usage_quota_v1';
 export const WALLET_TXS_STORAGE_KEY = 'groww_paper_wallet_txs_v1';
 
 export const DEFAULT_WATCHLISTS: Watchlist[] = [

@@ -9,6 +9,13 @@ export interface RazorpayCredentials {
   isTestKey: boolean;
 }
 
+/**
+ * Placeholder key IDs that must never activate the payment gateway.
+ * `NiftyLensDemoKey` is the pre-rebrand placeholder and stays blocked so old
+ * environment files cannot re-enable demo payments after the Tradedia rename.
+ */
+const DEMO_KEY_MARKERS = ['TradediaDemoKey', 'NiftyLensDemoKey'] as const;
+
 export function resolveRazorpayCredentials(
   env: Record<string, string | undefined> = process.env
 ): { ok: true; creds: RazorpayCredentials } | { ok: false; status: number; code: string; message: string } {
@@ -16,7 +23,7 @@ export function resolveRazorpayCredentials(
   const keySecret = (env.RAZORPAY_KEY_SECRET || '').trim();
   const webhookSecret = (env.RAZORPAY_WEBHOOK_SECRET || '').trim();
 
-  if (!keyId || !keySecret || keyId.includes('NiftyLensDemoKey') || keyId.includes('demo')) {
+  if (!keyId || !keySecret || DEMO_KEY_MARKERS.some((marker) => keyId.includes(marker)) || keyId.includes('demo')) {
     return {
       ok: false,
       status: 503,

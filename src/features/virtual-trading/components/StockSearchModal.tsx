@@ -183,7 +183,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
             <span>Use <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↑</kbd> <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">↓</kbd> to navigate</span>
             <span><kbd className="px-1 py-0.5 bg-gray-200 dark:bg-[#282D3B] rounded text-gray-600 dark:text-gray-400">ENTER</kbd> to open stock</span>
           </div>
-          <span className="font-semibold text-[#00D09C]">Nifty Lens</span>
+          <span className="font-semibold text-[#00D09C]">Tradedia</span>
         </div>
       </div>
     </div>

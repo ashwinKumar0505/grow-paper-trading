@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrandLogo } from './BrandLogo';
-import { X, AlertCircle } from 'lucide-react';
-import { AuthEmailOtpForm } from './auth/AuthEmailOtpForm';
+import { X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AuthEmailPasswordForm } from './auth/AuthEmailPasswordForm';
 import { GoogleAuthButton } from './auth/GoogleAuthButton';
 import { useAuthModal } from './auth/useAuthModal';
 
@@ -12,22 +12,24 @@ export const AuthModal: React.FC = () => {
     setAuthModalMode,
     isSignUp,
     isGoogleLoading,
-    isOtpLoading,
+    isEmailLoading,
     name,
     setName,
     email,
     setEmail,
+    password,
+    setPassword,
     errorMsg,
-    otpStep,
-    setOtpStep,
-    otpCode,
-    setOtpCode,
+    infoMsg,
+    verificationPendingEmail,
     resendTimer,
     canResend,
     handleGoogleAuth,
-    handleSendOtp,
-    handleResendOtp,
-    handleVerifyOtp,
+    handleEmailSubmit,
+    handleResendVerification,
+    handleProceedToSignIn,
+    handleBackToForm,
+    handleForgotPassword,
   } = useAuthModal();
 
   if (!isAuthModalOpen) return null;
@@ -68,7 +70,7 @@ export const AuthModal: React.FC = () => {
               type="button"
               onClick={() => {
                 setAuthModalMode('signup');
-                setOtpStep('input_email');
+                handleBackToForm();
               }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 isSignUp
@@ -82,7 +84,7 @@ export const AuthModal: React.FC = () => {
               type="button"
               onClick={() => {
                 setAuthModalMode('signin');
-                setOtpStep('input_email');
+                handleBackToForm();
               }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 !isSignUp
@@ -102,6 +104,13 @@ export const AuthModal: React.FC = () => {
           </div>
         )}
 
+        {infoMsg && (
+          <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-xl flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{infoMsg}</span>
+          </div>
+        )}
+
         <div className="space-y-4">
           <GoogleAuthButton isLoading={isGoogleLoading} onClick={handleGoogleAuth} />
 
@@ -114,22 +123,23 @@ export const AuthModal: React.FC = () => {
             </div>
           </div>
 
-          <AuthEmailOtpForm
+          <AuthEmailPasswordForm
             isSignUp={isSignUp}
             name={name}
             setName={setName}
             email={email}
             setEmail={setEmail}
-            otpStep={otpStep}
-            setOtpStep={setOtpStep}
-            otpCode={otpCode}
-            setOtpCode={setOtpCode}
+            password={password}
+            setPassword={setPassword}
+            verificationPendingEmail={verificationPendingEmail}
             resendTimer={resendTimer}
             canResend={canResend}
-            isLoading={isOtpLoading}
-            onSendOtp={handleSendOtp}
-            onResendOtp={handleResendOtp}
-            onVerifyOtp={handleVerifyOtp}
+            isLoading={isEmailLoading}
+            onSubmit={handleEmailSubmit}
+            onResendVerification={handleResendVerification}
+            onProceedToSignIn={handleProceedToSignIn}
+            onBackToForm={handleBackToForm}
+            onForgotPassword={handleForgotPassword}
           />
         </div>
 

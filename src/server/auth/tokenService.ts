@@ -155,12 +155,16 @@ export async function verifyBearerToken(
       if (!verifier.verify(cert, parts[2], 'base64url')) return null;
     }
 
+    const firebaseClaim = payload.firebase as { sign_in_provider?: unknown } | undefined;
+    const authProvider: 'google' | 'email' =
+      firebaseClaim?.sign_in_provider === 'password' ? 'email' : 'google';
+
     const canonical = resolveOrCreateCanonicalUser(
       {
         preferredUid: sub,
         email,
         name: String(payload.name || email.split('@')[0]),
-        authProvider: 'google',
+        authProvider,
         avatar: typeof payload.picture === 'string' ? payload.picture : undefined,
       },
       store,
@@ -171,7 +175,7 @@ export async function verifyBearerToken(
       uid: canonical.uid,
       email: canonical.email,
       name: canonical.name,
-      authProvider: 'google',
+      authProvider,
       tokenId: `fb_${sub}_${expSec}`,
       expiresAt: expSec * 1000,
     };

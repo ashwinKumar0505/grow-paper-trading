@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 
-const AUTH_TOKEN_KEY = 'niftylens_auth_token_v1';
+const AUTH_TOKEN_KEY = 'tradedia_auth_token_v1';
 
 export function getStoredSessionToken(): string | null {
   try {

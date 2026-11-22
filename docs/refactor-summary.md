@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-The comprehensive frontend, security, Razorpay payment/webhook, market-data provenance, chart/screener integration, and paper-trading production-readiness refactoring on branch `fix-analysed-code` has been completed in accordance with `AGENTS.md`, `NIFTYLENS_PRODUCT_ANALYSIS.md`, and `docs/refactor-plan.md`.
+The comprehensive frontend, security, Razorpay payment/webhook, market-data provenance, chart/screener integration, and paper-trading production-readiness refactoring on branch `fix-analysed-code` has been completed in accordance with `AGENTS.md`, `TRADEDIA_PRODUCT_ANALYSIS.md`, and `docs/refactor-plan.md`.
 
 Every backend module, Express router, market-data provider adapter, storage module, entitlement engine, frontend hook, API client, and test file created or refactored during this work has been split into reusable modules of **at most 200 total lines** (and `<= 200` nonblank/non-comment lines).
 
@@ -131,3 +131,15 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
    - Production deployment requires setting `AUTH_SESSION_SECRET`, `FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL`, `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY`, `RESEND_API_KEY`, `OTP_FROM_EMAIL`, `RAZORPAY_KEY_ID` (`rzp_live_*`), `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `SCREENER_SERVICE_SECRET`, and `ALLOWED_ORIGINS`.
 3. **Firestore Rules Deployment**:
    - The hardened `firestore.rules` file in the repository root must be deployed to the production Firebase project (`firebase deploy --only firestore:rules`).
+
+---
+
+## 6. Rebrand: Nifty Lens → Tradedia (2026-11-22, branch `change-name`)
+
+- **What changed**: Every user-facing "Nifty Lens"/"NiftyLens" string (landing, header, footer, legal pages, auth gates, pricing, screener, paper-trading desk, Razorpay checkout name/description, OTP email subject/body, server log, `.env.example`) now says **Tradedia**. Contact emails on legal pages now use `@tradedia.in`. `package.json` name is now `tradedia`.
+- **Logo**: `BrandLogo` now renders `public/images/landing/logo-96.png` (downscaled from the new `logo.png`, 887px / 640 KB) with a "Trade**dia**" wordmark. Added `logo-48.png`, `logo-180.png`, `logo-512.png` for favicon, Apple touch icon and social previews.
+- **SEO / positioning**: `index.html` title, description, keywords, author, application-name, OpenGraph and Twitter metadata now position Tradedia as "One Place to Learn Trading"; added `og:image`/`twitter:image`. Default document titles, footers and a hero eyebrow use the same tagline.
+- **Follow-up rename (same day)**: browser storage keys `niftylens_*` → `tradedia_*` (moved once at startup by `src/lib/legacyStorageMigration.ts`, imported first in `main.tsx`, so sessions, theme, usage quota and quiz progress survive); server settings `TRADEDIA_STORAGE_PATH` / `TRADEDIA_BACKEND_CACHE_DIR` (legacy `NIFTYLENS_*` names still read as fallback); store file `.data/tradedia-store.json` (an existing `niftylens-store.json` is renamed automatically on first start); Razorpay placeholder `TradediaDemoKey` (legacy `NiftyLensDemoKey` still blocked, both covered by tests); `NIFTYLENS_PRODUCT_ANALYSIS.md` → `TRADEDIA_PRODUCT_ANALYSIS.md` and both reports rebranded.
+- **Still unchanged**: Firebase project ID `nifty-lens-87f02` (cannot be renamed); dev-only fallback secrets `niftylens_dev_*` in `authService.ts` and `screenerAndQuizEntitlements.ts` (the screener secret must match the Python backend fallback, which was not accessible to verify).
+- **Checks**: `npm run lint` (`tsc --noEmit`, ESLint not configured): PASS · `npm test`: 69/69 PASS · `npm run build`: PASS. No browser/manual check was run.
+- **Risks**: `tradedia.in` emails assume that domain is owned and set up; `og:image` uses a relative URL (social crawlers prefer absolute URLs once the production domain is known); `OTP_FROM_EMAIL` in deployed environments must be updated separately.

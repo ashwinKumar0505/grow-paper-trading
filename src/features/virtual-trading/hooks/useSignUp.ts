@@ -112,7 +112,7 @@ export function useSignUp({
     const initialTx: WalletTransaction = {
       id: 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
       type: 'DEPOSIT', amount: clampedCash,
-      description: `Free Starter Account credit (${data.authProvider === 'google' ? 'Google' : 'Email OTP'} verified)`,
+      description: `Free Starter Account credit (${data.authProvider === 'google' ? 'Google' : 'Email'} verified)`,
       timestamp: now,
     };
     const starterWatchlist = {

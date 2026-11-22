@@ -52,10 +52,10 @@ export default function TradingWorkspace() {
               }}
               className="font-bold text-gray-800 dark:text-gray-200 hover:text-[#00D09C] transition-colors cursor-pointer"
             >
-              Nifty Lens
+              Tradedia
             </button>
             <span>·</span>
-            <span>Stock Screener, Paper Trading & Chart Pattern Lab</span>
+            <span>One place to learn trading</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] font-medium">
             <AppLink href="/terms" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">

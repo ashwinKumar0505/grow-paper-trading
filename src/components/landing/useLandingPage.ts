@@ -45,8 +45,8 @@ export function useLandingPage() {
 
   const faqs = [
     {
-      q: 'What are the 3 tools included inside Nifty Lens?',
-      a: 'Nifty Lens brings together three connected tools in one place: (1) Paper Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹50,00,000 in virtual capital, (2) Rule-Based Stock Screener & Stock Analysis to find Swing and Intraday technical setups across Nifty 500 using chart analysis and backtested strategies, and (3) Interactive Learning & Guess the Chart to master 21 candlestick patterns and step through synthetic educational chart scenarios.',
+      q: 'What are the 3 tools included inside Tradedia?',
+      a: 'Tradedia brings together three connected tools in one place: (1) Paper Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹50,00,000 in virtual capital, (2) Rule-Based Stock Screener & Stock Analysis to find Swing and Intraday technical setups across Nifty 500 using chart analysis and backtested strategies, and (3) Interactive Learning & Guess the Chart to master 21 candlestick patterns and step through synthetic educational chart scenarios.',
     },
     {
       q: 'How does the Stock Screener evaluate stocks?',
@@ -66,7 +66,7 @@ export function useLandingPage() {
     },
     {
       q: 'Is any real money or SEBI brokerage account involved?',
-      a: 'No. Nifty Lens is strictly for educational learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, historical backtests or technical insights never guarantee future profits, and nothing on the platform is investment advice.',
+      a: 'No. Tradedia is strictly for educational learning, screening research, and risk-free paper trading simulation. All trades use virtual cash, historical backtests or technical insights never guarantee future profits, and nothing on the platform is investment advice.',
     },
   ];
 

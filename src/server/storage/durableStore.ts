@@ -8,6 +8,27 @@ import {
 
 export * from './durableTypes';
 
+/**
+ * Resolves the on-disk store path. `TRADEDIA_STORAGE_PATH` is the current
+ * setting; `NIFTYLENS_STORAGE_PATH` is the pre-rebrand name and is still read
+ * so existing deployments keep pointing at their persistent volume. When the
+ * default location is used and only the legacy `niftylens-store.json` exists,
+ * it is renamed in place so no saved accounts or ledgers are lost.
+ */
+function resolveDefaultStorePath(): string {
+  const configured = process.env.TRADEDIA_STORAGE_PATH ?? process.env.NIFTYLENS_STORAGE_PATH;
+  if (configured) return configured;
+  const dataDir = path.resolve(process.cwd(), '.data');
+  const current = path.join(dataDir, 'tradedia-store.json');
+  const legacy = path.join(dataDir, 'niftylens-store.json');
+  try {
+    if (!fs.existsSync(current) && fs.existsSync(legacy)) fs.renameSync(legacy, current);
+  } catch {
+    // If the rename fails, start from the current path; the legacy file is left untouched.
+  }
+  return current;
+}
+
 export class DurableStore {
   private state: StoreSchema;
   private filePath: string | null;
@@ -17,9 +38,7 @@ export class DurableStore {
     const isTest = process.env.NODE_ENV === 'test' || options?.inMemoryOnly;
     this.filePath = isTest
       ? options?.filePath ?? null
-      : options?.filePath ??
-        process.env.NIFTYLENS_STORAGE_PATH ??
-        path.resolve(process.cwd(), '.data', 'niftylens-store.json');
+      : options?.filePath ?? resolveDefaultStorePath();
     this.state = this.loadFromDisk();
   }
 

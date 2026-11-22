@@ -12,11 +12,11 @@ export function LearningSection({ onStartTrading }: { onStartTrading: () => void
               Three Integrated Applications · One Green Workspace
             </p>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              Everything you need in <span className="text-[#00B386] dark:text-[#00D09C]">Nifty Lens</span>.
+              Everything you need in <span className="text-[#00B386] dark:text-[#00D09C]">Tradedia</span>.
             </h2>
           </div>
           <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-[#9ab0a5]">
-            Practice risk-free orders on the Nifty Lens virtual desk, scan Nifty 500 stocks for actionable technical setups, and master chart patterns through interactive lessons and quizzes.
+            Practice risk-free orders on the Tradedia virtual desk, scan Nifty 500 stocks for actionable technical setups, and master chart patterns through interactive lessons and quizzes.
           </p>
         </div>
 

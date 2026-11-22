@@ -21,7 +21,7 @@ return (
             <div className="lg:col-span-6 order-2 lg:order-1">
               <FloatingIllustration
                 src="/images/landing/virtual-trading.png"
-                alt="Nifty Lens Paper Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
+                alt="Tradedia Paper Trading 3D illustration showing NIFTY 50 and SENSEX tickers, ₹1,00,000 Virtual Portfolio with +4.25% return, watchlist, and Intraday/Swing order execution"
                 loading="lazy"
                 glowVariant="emerald"
                 delayMs={400}

@@ -148,3 +148,54 @@ test('protected Express route middleware enforces bearer token and derives ident
   }
   assert.equal(blockedCount, 1);
 });
+
+test('Firebase email/password bearer token rejects unverified emails and accepts verified emails as email provider', async () => {
+  const store = new DurableStore({ inMemoryOnly: true });
+  const prevEmulator = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const prevProject = process.env.FIREBASE_PROJECT_ID;
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
+  process.env.FIREBASE_PROJECT_ID = 'test-project-id';
+
+  try {
+    const now = 1_750_000_000_000;
+    const expSec = Math.floor(now / 1000) + 3600;
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+
+    const unverifiedPayload = Buffer.from(
+      JSON.stringify({
+        sub: 'fb_unverified_1',
+        email: 'unverified@example.com',
+        email_verified: false,
+        aud: 'test-project-id',
+        iss: 'https://securetoken.google.com/test-project-id',
+        exp: expSec,
+        firebase: { sign_in_provider: 'password' },
+      })
+    ).toString('base64url');
+    const unverifiedResult = await verifyBearerToken(`${header}.${unverifiedPayload}.`, store, now);
+    assert.equal(unverifiedResult, null);
+
+    const verifiedPayload = Buffer.from(
+      JSON.stringify({
+        sub: 'fb_verified_1',
+        email: 'verified.email@example.com',
+        name: 'Email Trader',
+        email_verified: true,
+        aud: 'test-project-id',
+        iss: 'https://securetoken.google.com/test-project-id',
+        exp: expSec,
+        firebase: { sign_in_provider: 'password' },
+      })
+    ).toString('base64url');
+    const verifiedResult = await verifyBearerToken(`${header}.${verifiedPayload}.`, store, now);
+    assert.ok(verifiedResult);
+    assert.equal(verifiedResult.email, 'verified.email@example.com');
+    assert.equal(verifiedResult.authProvider, 'email');
+    assert.equal(verifiedResult.name, 'Email Trader');
+  } finally {
+    if (prevEmulator === undefined) delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    else process.env.FIREBASE_AUTH_EMULATOR_HOST = prevEmulator;
+    if (prevProject === undefined) delete process.env.FIREBASE_PROJECT_ID;
+    else process.env.FIREBASE_PROJECT_ID = prevProject;
+  }
+});

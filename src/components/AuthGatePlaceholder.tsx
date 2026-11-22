@@ -18,13 +18,13 @@ interface AuthGatePlaceholderProps {
 
 const FEATURE_COPY = {
   screener: {
-    eyebrow: 'NIFTYLENS QUANTITATIVE STOCK SCREENER',
+    eyebrow: 'TRADEDIA QUANTITATIVE STOCK SCREENER',
     title: 'Sign in to access Technical Screeners & Chart Analysis',
     description:
       'Unlock our Nifty 500 Swing & Intraday Screener powered by historical backtested patterns, multi-indicator chart analysis, and technical pivot, resistance, and risk-level projections.',
   },
   trade: {
-    eyebrow: 'NIFTYLENS PAPER TRADING PLATFORM',
+    eyebrow: 'TRADEDIA PAPER TRADING PLATFORM',
     title: 'Sign in to access the Paper Trading Desk',
     description:
       'Practice your technical strategies risk-free with up to ₹10,00,000 in virtual capital, Delivery (CNC) and 5x Intraday (MIS) orders, and live NSE session charts.',
@@ -36,10 +36,10 @@ const FEATURE_COPY = {
       'Test your pattern-reading instincts across Unlimited Practice, 3-Life Survival, and 10-Round Challenge modes while tracking your accuracy and streaks.',
   },
   profile: {
-    eyebrow: 'NIFTYLENS ACCOUNT & SUBSCRIPTION',
+    eyebrow: 'TRADEDIA ACCOUNT & SUBSCRIPTION',
     title: 'Sign in to view your Profile & Subscription',
     description:
-      'Manage your Nifty Lens membership, view billing & renewal details, and check your virtual capital limits.',
+      'Manage your Tradedia membership, view billing & renewal details, and check your virtual capital limits.',
   },
 };
 
@@ -68,7 +68,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
           {/* One Account Unlocks All 3 Modules */}
           <div className="space-y-3 pt-1">
             <div className="text-xs font-extrabold uppercase tracking-wider text-[#5B7066] dark:text-[#7F9C8E]">
-              One free Nifty Lens account unlocks:
+              One free Tradedia account unlocks:
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-[#E2EAE6] dark:border-[#20332A] bg-[#F6F9F7] dark:bg-[#16241E] p-3.5 space-y-1">
@@ -139,7 +139,7 @@ export const AuthGatePlaceholder: React.FC<AuthGatePlaceholderProps> = ({ featur
           </div>
         </div>
 
-        {/* Right Column: Custom Nifty Lens Illustration */}
+        {/* Right Column: Custom Tradedia Illustration */}
         <div className="lg:col-span-5">
           <AuthGateIllustration />
         </div>

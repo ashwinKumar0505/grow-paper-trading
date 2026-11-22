@@ -14,19 +14,19 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">1. Acceptance of Terms</h2>
             <p>
-              By accessing or subscribing to Nifty Lens (&ldquo;Platform&rdquo;), you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, please discontinue use of the Platform.
+              By accessing or subscribing to Tradedia (&ldquo;Platform&rdquo;), you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, please discontinue use of the Platform.
             </p>
           </section>
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">2. Nature of Service (Educational &amp; Simulation Only)</h2>
             <p>
-              Nifty Lens provides a virtual paper trading simulator, quantitative technical chart screeners, and interactive chart-pattern education modules. All virtual portfolios, balances (₹1,00,000 to ₹50,00,000), order executions, and P&amp;L reports are 100% simulated. No real money, securities, or exchange-traded contracts are bought or sold on Nifty Lens.
+              Tradedia provides a virtual paper trading simulator, quantitative technical chart screeners, and interactive chart-pattern education modules. All virtual portfolios, balances (₹1,00,000 to ₹50,00,000), order executions, and P&amp;L reports are 100% simulated. No real money, securities, or exchange-traded contracts are bought or sold on Tradedia.
             </p>
           </section>
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Not Financial Advice</h2>
             <p>
-              Nifty Lens is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, investment adviser, or research analyst. Technical screener outputs, pivot levels, and historical backtests are strictly for educational research and do not constitute investment advice or a solicitation to buy or sell any security.
+              Tradedia is not registered with the Securities and Exchange Board of India (SEBI) as a stock broker, investment adviser, or research analyst. Technical screener outputs, pivot levels, and historical backtests are strictly for educational research and do not constitute investment advice or a solicitation to buy or sell any security.
             </p>
           </section>
           <section className="space-y-2">
@@ -66,7 +66,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Data Retention &amp; Deletion</h2>
             <p>
-              You may request deletion of your account and associated simulation data at any time by contacting our support team at <span className="font-semibold text-[#00B386] dark:text-[#00D09C]">support@niftylens.in</span>.
+              You may request deletion of your account and associated simulation data at any time by contacting our support team at <span className="font-semibold text-[#00B386] dark:text-[#00D09C]">support@tradedia.in</span>.
             </p>
           </section>
         </>
@@ -77,7 +77,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">1. Subscription Cancellations</h2>
             <p>
-              You can cancel your recurring monthly or yearly Nifty Lens subscription at any time. Upon cancellation, your premium software features will remain active until the end of your current billing cycle, and you will not be charged for the subsequent period.
+              You can cancel your recurring monthly or yearly Tradedia subscription at any time. Upon cancellation, your premium software features will remain active until the end of your current billing cycle, and you will not be charged for the subsequent period.
             </p>
           </section>
           <section className="space-y-2">
@@ -90,7 +90,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Processing Time</h2>
             <p>
-              Approved refunds are initiated within 48 hours and credited back to the original payment method via Razorpay within 5–7 business days. To request a refund, email <span className="font-semibold text-[#00B386] dark:text-[#00D09C]">support@niftylens.in</span> with your Razorpay Payment ID.
+              Approved refunds are initiated within 48 hours and credited back to the original payment method via Razorpay within 5–7 business days. To request a refund, email <span className="font-semibold text-[#00B386] dark:text-[#00D09C]">support@tradedia.in</span> with your Razorpay Payment ID.
             </p>
           </section>
         </>
@@ -99,12 +99,12 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
       {kind === 'disclaimer' && (
         <>
           <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
-            <strong>Important Statutory Notice:</strong> Nifty Lens is an educational simulation and technical charting tool. It is NOT a SEBI-registered Research Analyst, Investment Adviser, or Stock Broker.
+            <strong>Important Statutory Notice:</strong> Tradedia is an educational simulation and technical charting tool. It is NOT a SEBI-registered Research Analyst, Investment Adviser, or Stock Broker.
           </div>
           <section className="space-y-2">
             <h2 className="text-base font-bold text-[#15241D] dark:text-white">1. No Investment Advice or Recommendations</h2>
             <p>
-              All quantitative screeners, technical indicator filters, candlestick pattern detections, and backtest metrics displayed on Nifty Lens are automated mathematical calculations based on historical price and volume data. They do not represent personalized investment advice or buy/sell recommendations.
+              All quantitative screeners, technical indicator filters, candlestick pattern detections, and backtest metrics displayed on Tradedia are automated mathematical calculations based on historical price and volume data. They do not represent personalized investment advice or buy/sell recommendations.
             </p>
           </section>
           <section className="space-y-2">
@@ -133,7 +133,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
               For subscription help, Razorpay billing queries, or technical issues:
             </p>
             <p className="text-sm font-semibold text-[#00B386] dark:text-[#00D09C]">
-              support@niftylens.in
+              support@tradedia.in
             </p>
             <p className="text-[11px] text-[#5B7066] dark:text-[#7F9C8E]">
               Response time: Within 24 business hours (Mon–Sat, 9:30 AM – 6:30 PM IST)
@@ -146,10 +146,10 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
               <span>Compliance &amp; Grievance Officer</span>
             </div>
             <p className="text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-              Nifty Lens Educational Technologies (India)
+              Tradedia Educational Technologies (India)
             </p>
             <p className="text-sm font-semibold text-[#00B386] dark:text-[#00D09C]">
-              compliance@niftylens.in
+              compliance@tradedia.in
             </p>
             <p className="text-[11px] text-[#5B7066] dark:text-[#7F9C8E]">
               Bengaluru, Karnataka, India

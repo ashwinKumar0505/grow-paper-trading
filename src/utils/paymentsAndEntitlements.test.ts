@@ -26,8 +26,10 @@ test('Razorpay credential guard rejects missing keys, demo keys, and test/live e
   assert.equal(missing.ok, false);
   if (!missing.ok) assert.equal(missing.status, 503);
 
-  const demo = resolveRazorpayCredentials({ RAZORPAY_KEY_ID: 'rzp_test_NiftyLensDemoKey', RAZORPAY_KEY_SECRET: 'any_secret' });
+  const demo = resolveRazorpayCredentials({ RAZORPAY_KEY_ID: 'rzp_test_TradediaDemoKey', RAZORPAY_KEY_SECRET: 'any_secret' });
   assert.equal(demo.ok, false);
+  const legacyDemo = resolveRazorpayCredentials({ RAZORPAY_KEY_ID: 'rzp_test_NiftyLensDemoKey', RAZORPAY_KEY_SECRET: 'any_secret' });
+  assert.equal(legacyDemo.ok, false);
 
   const testInProd = resolveRazorpayCredentials({ NODE_ENV: 'production', RAZORPAY_KEY_ID: 'rzp_test_Key123', RAZORPAY_KEY_SECRET: 'prod_secret' });
   assert.equal(testInProd.ok, false);

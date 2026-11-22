@@ -38,14 +38,14 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         <div className="px-4 py-3 border-b border-emerald-900/10 dark:border-[#20332A] space-y-1">
           <div className="flex items-center justify-between gap-2">
             <span className="font-bold text-sm text-[#15241D] dark:text-white truncate">
-              {user.name || 'Nifty Lens Trader'}
+              {user.name || 'Tradedia Trader'}
             </span>
             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${tierBadgeClass}`}>
               {subscriptionTier}
             </span>
           </div>
           <div className="text-xs text-[#5B7066] dark:text-[#9AB0A5] truncate">
-            {user.email || (user.phone ? `+91 ${user.phone}` : 'Nifty Lens Account')}
+            {user.email || (user.phone ? `+91 ${user.phone}` : 'Tradedia Account')}
           </div>
         </div>
 

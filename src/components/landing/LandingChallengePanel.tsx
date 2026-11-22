@@ -49,7 +49,7 @@ export function LandingChallengePanel({
             Unlock Full Guess the Chart Access
           </h4>
           <p className="text-xs sm:text-sm leading-relaxed text-[#9AB0A5]">
-            Create a free Nifty Lens account to continue practicing with daily chart challenges, 3-Life Survival mode, and the 10-Round Cash Challenge.
+            Create a free Tradedia account to continue practicing with daily chart challenges, 3-Life Survival mode, and the 10-Round Cash Challenge.
           </p>
         </div>
 

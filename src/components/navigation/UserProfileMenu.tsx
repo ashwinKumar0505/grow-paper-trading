@@ -62,7 +62,7 @@ export const UserProfileMenu: React.FC = () => {
           onClick={() =>
             openUpgradeModal({
               requiredTier: subscriptionTier === 'free' ? 'beginner' : 'advanced',
-              featureName: 'Upgrade Your Nifty Lens Membership',
+              featureName: 'Upgrade Your Tradedia Membership',
             })
           }
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#00B386] to-[#00D09C] text-[#04261C] font-extrabold text-[11px] shadow-xs hover:opacity-95 transition-opacity cursor-pointer"

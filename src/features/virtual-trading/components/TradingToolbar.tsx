@@ -60,7 +60,7 @@ export const TradingToolbar: React.FC = () => {
               <button
                 onClick={() => setIsWalletModalOpen(true)}
                 className="flex items-center gap-2 px-2 py-0.5 text-left cursor-pointer group"
-                title="Nifty Lens Virtual Wallet Balance (Click to manage)"
+                title="Tradedia Virtual Wallet Balance (Click to manage)"
               >
                 <Wallet className="w-4 h-4 text-[#00D09C] shrink-0" />
                 <div>

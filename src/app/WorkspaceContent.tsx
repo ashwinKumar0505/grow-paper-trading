@@ -49,7 +49,7 @@ export const WorkspaceContent: React.FC = () => {
       <Suspense
         fallback={
           <LoadingState className="p-12 text-center text-slate-500 dark:text-[#9ab0a5]">
-            Loading Nifty Lens Stock Screener…
+            Loading Tradedia Stock Screener…
           </LoadingState>
         }
       >
@@ -90,7 +90,7 @@ export const WorkspaceContent: React.FC = () => {
       <main className="p-12 text-center">
         <h1 className="text-3xl font-bold">Page not found</h1>
         <AppLink href="/" className="mt-6 inline-block text-[#00B386] dark:text-[#00D09C] font-semibold">
-          Return to Nifty Lens
+          Return to Tradedia
         </AppLink>
       </main>
     );

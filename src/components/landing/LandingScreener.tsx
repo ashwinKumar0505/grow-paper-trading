@@ -112,7 +112,7 @@ export function LandingScreener({}: Props) {
           <div className="lg:col-span-6">
             <FloatingIllustration
               src="/images/landing/stock-screener.png"
-              alt="Nifty Lens AI Stock Screener 3D illustration displaying Swing Trading, Intraday Trading, and Stock Analyser panels with technical indicators, breakout chart analysis, confidence score, and backtesting results"
+              alt="Tradedia AI Stock Screener 3D illustration displaying Swing Trading, Intraday Trading, and Stock Analyser panels with technical indicators, breakout chart analysis, confidence score, and backtesting results"
               loading="lazy"
               glowVariant="blue-cyan"
               delayMs={200}

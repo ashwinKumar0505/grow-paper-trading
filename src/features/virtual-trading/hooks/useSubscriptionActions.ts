@@ -83,7 +83,7 @@ export function useSubscriptionActions({
     const subscriptionId = orderId?.startsWith('sub_') ? orderId : undefined;
 
     const currentUser = user || {
-      uid: `user_demo_${now}`, name: 'Nifty Lens Trader', email: 'demo@niftylens.in',
+      uid: `user_demo_${now}`, name: 'Tradedia Trader', email: 'demo@tradedia.in',
       authProvider: 'email' as const, initialCash: targetPlan.defaultStartingCash, createdAt: now,
     };
 

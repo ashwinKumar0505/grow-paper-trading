@@ -33,7 +33,7 @@ export default function ResearchDisclaimer() {
       </div>
       {expanded && (
         <div className="sc-disclaimer-more">
-          Nifty Lens Stock Screener is intended for educational and research purposes only. Confidence scores, entry
+          Tradedia Stock Screener is intended for educational and research purposes only. Confidence scores, entry
           zones, targets, and stop-loss levels are derived from historical price patterns and technical indicators —
           past backtested performance does not guarantee future returns. Always conduct your own due diligence and
           consider your risk tolerance before placing any trade.

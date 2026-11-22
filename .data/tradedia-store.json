@@ -22,17 +22,44 @@
         "lastAutoResetMonth": "2026-11"
       },
       "createdAt": 1795250697093,
-      "updatedAt": 1795284857761,
+      "updatedAt": 1795330443273,
       "razorpayPaymentId": "pay_U2uxdrAqqD2U3J",
       "razorpayOrderId": "sub_U2ux5Zlghq5RQo",
       "razorpaySubscriptionId": "sub_U2ux5Zlghq5RQo"
+    },
+    "SIPqqmeN4Ha4gESO1BdS1cfHgR32": {
+      "uid": "SIPqqmeN4Ha4gESO1BdS1cfHgR32",
+      "email": "jjashwin05@gmail.com",
+      "name": "Ashwin kumar",
+      "authProvider": "email",
+      "subscriptionTier": "free",
+      "subscriptionBillingCycle": "free",
+      "subscriptionStatus": "active",
+      "subscriptionUpdatedAt": 1795332131301,
+      "subscriptionExpiresAt": null,
+      "subscriptionAutoPay": false,
+      "paidTopUpCredit": 0,
+      "usageQuota": {
+        "dateKey": "2026-11-22",
+        "analysisSearchesCount": 0,
+        "quizQuestionsCount": 0,
+        "lastPortfolioResetMonth": "2026-11",
+        "portfolioResetsThisMonth": 0,
+        "lastAutoResetMonth": "2026-11"
+      },
+      "createdAt": 1795332131301,
+      "updatedAt": 1795332132119
     }
   },
   "emailIndex": {
-    "ashwinku50@gmail.com": "sRHPteR060hsY2c94umd4XJsHvu1"
+    "ashwinku50@gmail.com": "sRHPteR060hsY2c94umd4XJsHvu1",
+    "jjashwin05@gmail.com": "SIPqqmeN4Ha4gESO1BdS1cfHgR32"
   },
   "otpRecords": {},
-  "revokedTokens": {},
+  "revokedTokens": {
+    "tok_4d85908d0ae73da9479049a4": 1795855497249,
+    "tok_cd12a66f6d9c18a200d301ec": 1795936932112
+  },
   "paymentIntents": {
     "sub_U2uXhsG75lyp8L": {
       "intentId": "sub_U2uXhsG75lyp8L",
@@ -335,7 +362,47 @@
       "lastAutoResetMonth": "2026-11",
       "updatedAt": 1795284299400,
       "processingLockUntil": 0,
-      "processingInstanceId": "inst_50359_095141c9"
+      "processingInstanceId": "inst_58751_4b9b6900"
+    },
+    "SIPqqmeN4Ha4gESO1BdS1cfHgR32": {
+      "userId": "SIPqqmeN4Ha4gESO1BdS1cfHgR32",
+      "version": 1,
+      "balance": 100000,
+      "initialBalance": 100000,
+      "paidTopUpCredit": 0,
+      "holdings": [],
+      "positions": [],
+      "orders": [],
+      "executions": [],
+      "executedOrderKeys": [],
+      "walletTransactions": [
+        {
+          "id": "TX-612E665E",
+          "type": "DEPOSIT",
+          "amount": 100000,
+          "description": "Initial virtual capital (Free Starter)",
+          "timestamp": 1795332131429
+        }
+      ],
+      "watchlists": [
+        {
+          "id": "default",
+          "name": "My Watchlist",
+          "symbols": [
+            "RELIANCE",
+            "TCS",
+            "HDFCBANK",
+            "TATAMOTORS",
+            "ZOMATO",
+            "INFY"
+          ]
+        }
+      ],
+      "squareOffPendingSymbols": [],
+      "lastAutoResetMonth": "2026-11",
+      "updatedAt": 1795332131429,
+      "processingLockUntil": 0,
+      "processingInstanceId": "inst_60344_28e9cc6a"
     }
   },
   "quizProgress": {
@@ -498,6 +565,16 @@
         "tier": "beginner",
         "billingCycle": "monthly",
         "amountPaise": 29900
+      }
+    },
+    {
+      "id": "aud_1795332131301_lst788",
+      "timestamp": 1795332131301,
+      "userId": "SIPqqmeN4Ha4gESO1BdS1cfHgR32",
+      "category": "AUTH",
+      "action": "ACCOUNT_CREATED",
+      "details": {
+        "authProvider": "email"
       }
     }
   ]

@@ -5,7 +5,8 @@ import { NSE_SYMBOL_CATALOG } from './symbolCatalog';
 import type { ProviderChartPayload } from './types';
 
 const BACKEND_CACHE_ROOT =
-  process.env.NIFTYLENS_BACKEND_CACHE_DIR ||
+  process.env.TRADEDIA_BACKEND_CACHE_DIR ||
+  process.env.NIFTYLENS_BACKEND_CACHE_DIR || // legacy name, kept so existing deployments keep working
   path.resolve(process.cwd(), '../grow-paper-trading-backend/backend/data_cache/raw_ohlcv');
 
 export async function mapWithConcurrency<T, R>(

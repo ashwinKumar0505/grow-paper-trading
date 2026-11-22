@@ -25,7 +25,7 @@ function makeTempStorePath(prefix: string): string {
 }
 
 test('wallet top-ups and manual resets persist on disk across server restarts and sync without resetting to 1L', async () => {
-  const filePath = makeTempStorePath('niftylens_wallet_persist');
+  const filePath = makeTempStorePath('tradedia_wallet_persist');
   const now = Date.parse('2026-03-04T05:30:00.000Z');
   try {
     const store1 = new DurableStore({ filePath });

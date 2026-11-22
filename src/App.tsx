@@ -13,28 +13,28 @@ function AppContent() {
       window.history.replaceState(null, '', pathname + window.location.search + window.location.hash);
     }
     document.title = pathname.startsWith('/screener')
-      ? 'Stock Screener & Quantitative Analysis | Nifty Lens'
+      ? 'Stock Screener & Quantitative Analysis | Tradedia'
       : pathname === '/learn' || pathname === '/pattern-library'
-      ? 'Learn Chart Patterns | Nifty Lens'
+      ? 'Learn Chart Patterns | Tradedia'
       : pathname.startsWith('/quiz')
-      ? 'Guess the Chart Quiz | Nifty Lens'
+      ? 'Guess the Chart Quiz | Tradedia'
       : pathname === '/trade'
-      ? 'Paper Trading Desk | Nifty Lens'
+      ? 'Paper Trading Desk | Tradedia'
       : pathname === '/pricing'
-      ? 'Pricing & Membership Packages | Nifty Lens'
+      ? 'Pricing & Membership Packages | Tradedia'
       : pathname === '/profile'
-      ? 'My Profile | Nifty Lens'
+      ? 'My Profile | Tradedia'
       : pathname === '/terms'
-      ? 'Terms of Service | Nifty Lens'
+      ? 'Terms of Service | Tradedia'
       : pathname === '/privacy'
-      ? 'Privacy Policy | Nifty Lens'
+      ? 'Privacy Policy | Tradedia'
       : pathname === '/refund-policy'
-      ? 'Cancellation & Refund Policy | Nifty Lens'
+      ? 'Cancellation & Refund Policy | Tradedia'
       : pathname === '/disclaimer'
-      ? 'SEBI & Market Risk Disclaimer | Nifty Lens'
+      ? 'SEBI & Market Risk Disclaimer | Tradedia'
       : pathname === '/contact'
-      ? 'Contact & Support | Nifty Lens'
-      : 'Nifty Lens – NSE Stock Screener, Paper Trading & Chart Learning';
+      ? 'Contact & Support | Tradedia'
+      : 'Tradedia – One Place to Learn Trading | Paper Trading, Screener & Chart Patterns';
   }, [pathname]);
 
   if (pathname === '/') {

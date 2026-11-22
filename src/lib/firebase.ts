@@ -3,6 +3,11 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User as FirebaseUser,
@@ -64,6 +69,11 @@ export const db: Firestore = firestoreDatabaseId
 
 export {
   signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile,
   firebaseSignOut,
   onAuthStateChanged,
   doc,

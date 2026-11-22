@@ -5,7 +5,7 @@
 Working on branch `fix-analysed-code` in `/Users/ashwinkumar/grow-paper-trading`.
 Stack: React 19, TypeScript, Vite 8, Tailwind CSS 4, Node.js/Express backend (`server.ts` / `src/server/app.ts`), Firebase Authentication & Firestore (`firestore.rules`), Razorpay checkout & webhooks, and paper-trading engine (`src/utils/orderEngine.ts` + `src/server/trading/*`).
 
-The objective is to resolve all production-readiness, security, data-provenance, payment-verification, paper-trading ledger, chart/screener integration, and feature-label issues identified in `NIFTYLENS_PRODUCT_ANALYSIS.md` while keeping every refactored application file at `<= 200` lines in accordance with `AGENTS.md`.
+The objective is to resolve all production-readiness, security, data-provenance, payment-verification, paper-trading ledger, chart/screener integration, and feature-label issues identified in `TRADEDIA_PRODUCT_ANALYSIS.md` while keeping every refactored application file at `<= 200` lines in accordance with `AGENTS.md`.
 
 ## 2. Production-Readiness Stages & Progress
 
@@ -39,3 +39,7 @@ The objective is to resolve all production-readiness, security, data-provenance,
 ## 3. Justified Files Over 200 Nonblank/Non-Comment Lines
 
 Every backend service, route, provider, storage engine, entitlement module, frontend hook, API adapter, and test suite written or refactored in this pass is `<= 200` total lines. The only remaining files over 200 lines in the repository are pre-existing cohesive financial engines, canvas/SVG renderers, and static datasets documented in `docs/refactor-summary.md`.
+
+## 4. Rebrand to Tradedia (2026-11-22)
+
+- [x] Replaced user-facing Nifty Lens branding with Tradedia, swapped in the new logo (`public/images/landing/logo*.png`), and updated SEO metadata around "One Place to Learn Trading". Follow-up: storage keys, server setting names, store file, demo-key check and report documents renamed with backward-compatible migration/fallbacks. Details and risks are in `docs/refactor-summary.md` §6. lint/test/build: PASS.

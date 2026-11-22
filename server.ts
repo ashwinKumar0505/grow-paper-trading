@@ -36,7 +36,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`NiftyLens server running on port ${PORT}`);
+    console.log(`Tradedia server running on port ${PORT}`);
   });
 }
 

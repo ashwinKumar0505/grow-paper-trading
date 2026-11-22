@@ -31,7 +31,7 @@ return (
             <div className="lg:col-span-6 order-2 lg:order-1">
               <FloatingIllustration
                 src="/images/landing/interactive-learning.png"
-                alt="Nifty Lens Interactive Learning 3D illustration featuring Learn Chart Patterns, Bullish Engulfing breakdown, Chart Pattern Library, Guess the Chart quiz, and Chart Replay"
+                alt="Tradedia Interactive Learning 3D illustration featuring Learn Chart Patterns, Bullish Engulfing breakdown, Chart Pattern Library, Guess the Chart quiz, and Chart Replay"
                 loading="lazy"
                 glowVariant="indigo-emerald"
                 delayMs={300}

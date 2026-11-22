@@ -7,7 +7,7 @@ export const AuthGateIllustration: React.FC = () => {
       <div className="flex items-center justify-between text-xs text-[#9AB0A5] mb-4">
         <span className="inline-flex items-center gap-1.5 font-bold text-[#00D09C]">
           <ShieldCheck className="w-4 h-4" />
-          Nifty Lens Member Workspace
+          Tradedia Member Workspace
         </span>
         <span className="rounded-md bg-[#00D09C]/15 px-2 py-0.5 text-[10px] font-mono font-bold text-[#00D09C]">
           NSE · NIFTY 500
@@ -19,7 +19,7 @@ export const AuthGateIllustration: React.FC = () => {
         viewBox="0 0 360 230"
         className="w-full h-auto rounded-xl bg-[#091510] border border-[#1D3A2D] p-3"
         role="img"
-        aria-label="Nifty Lens Screener, Paper Trading and Chart Analysis Illustration"
+        aria-label="Tradedia Screener, Paper Trading and Chart Analysis Illustration"
       >
         <defs>
           <linearGradient id="authAreaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -103,7 +103,7 @@ export const AuthGateIllustration: React.FC = () => {
       <div className="mt-4 flex items-center justify-between text-[11px] text-[#9AB0A5]">
         <span className="flex items-center gap-1.5">
           <Lock className="w-3.5 h-3.5 text-[#00D09C]" />
-          Instant Google or Email OTP Sign-In
+          Instant Google or Email Sign-In
         </span>
         <span className="font-semibold text-white">100% Free Sandbox</span>
       </div>

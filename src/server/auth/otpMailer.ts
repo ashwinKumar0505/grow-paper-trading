@@ -6,7 +6,7 @@ export async function deliverOtpEmailViaResend(params: {
   store: DurableStore;
 }): Promise<{ status: number; success: boolean; message: string }> {
   const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.OTP_FROM_EMAIL || 'NiftyLens <onboarding@resend.dev>';
+  const fromEmail = process.env.OTP_FROM_EMAIL || 'Tradedia <onboarding@resend.dev>';
   if (!resendApiKey) {
     delete params.store.getState().otpRecords[params.email];
     params.store.persist();
@@ -27,8 +27,8 @@ export async function deliverOtpEmailViaResend(params: {
       body: JSON.stringify({
         from: fromEmail,
         to: [params.email],
-        subject: 'Your NiftyLens verification code',
-        html: `<div style="font-family:sans-serif;padding:16px"><h2>NiftyLens Verification</h2><p>Your 6-digit OTP code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${params.code}</p><p>This code expires in 10 minutes. Never share this code with anyone.</p></div>`,
+        subject: 'Your Tradedia verification code',
+        html: `<div style="font-family:sans-serif;padding:16px"><h2>Tradedia Verification</h2><p>Your 6-digit OTP code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${params.code}</p><p>This code expires in 10 minutes. Never share this code with anyone.</p></div>`,
       }),
     });
     if (!emailRes.ok) {
