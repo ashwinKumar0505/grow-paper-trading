@@ -26,6 +26,7 @@ export default function RecommendationTable({
   selectedSymbol,
   onSelectSignal,
   isRefreshing = false,
+  muteCompleted = false,
 }) {
   const isSwing = mode === 'swing';
   const sortable = Boolean(onSort);
@@ -98,6 +99,7 @@ export default function RecommendationTable({
                 mode={mode}
                 selected={selectedSymbol === sig.symbol}
                 onSelect={onSelectSignal}
+                muteCompleted={muteCompleted}
               />
             ))}
           </tbody>
@@ -112,6 +114,7 @@ export default function RecommendationTable({
             signal={sig}
             mode={mode}
             onSelect={onSelectSignal}
+            muteCompleted={muteCompleted}
           />
         ))}
       </div>

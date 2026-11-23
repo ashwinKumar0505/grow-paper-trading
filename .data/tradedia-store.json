@@ -72,7 +72,7 @@
         "lastAutoResetMonth": "2026-11"
       },
       "createdAt": 1795343065625,
-      "updatedAt": 1795420482841,
+      "updatedAt": 1795431476550,
       "razorpayPaymentId": "pay_U3XOvZRbNV4vQl",
       "razorpayOrderId": "sub_U3XMklziat0qpw",
       "razorpaySubscriptionId": "sub_U3XMklziat0qpw"
@@ -501,26 +501,40 @@
     },
     "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
       "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
-      "version": 3,
-      "balance": 4728823.09,
+      "version": 4,
+      "balance": 4996369.32,
       "initialBalance": 5000000,
       "paidTopUpCredit": 0,
       "holdings": [],
-      "positions": [
+      "positions": [],
+      "orders": [
         {
-          "id": "POS-L6DQG2",
+          "id": "0688252538",
           "symbol": "RELIANCE",
           "stockName": "Reliance Industries Ltd.",
-          "action": "BUY",
+          "action": "SELL",
+          "product": "INTRADAY",
+          "orderType": "MARKET",
+          "exchange": "NSE",
           "quantity": 1000,
-          "entryPrice": 1355.3,
-          "marginBlocked": 271060,
-          "leverage": 5,
-          "timestamp": 1795419948714,
-          "exchange": "NSE"
-        }
-      ],
-      "orders": [
+          "filledQuantity": 1000,
+          "remainingQuantity": 0,
+          "price": 1352.2,
+          "avgPrice": 1352.2,
+          "executionPrice": 1352.2,
+          "status": "EXECUTED",
+          "timestamp": 1795425068818,
+          "placedAt": 1795425068818,
+          "executedAt": 1795425068818,
+          "totalAmount": 1352200,
+          "marginUsed": 0,
+          "charges": 413.77,
+          "note": "Squared off 1000 qty",
+          "idempotencyKey": "ord_RELIANCE_SELL_1795425068769_1000",
+          "quoteFreshness": "LIVE",
+          "realizedPnl": -3513.77,
+          "grossRealizedPnl": -3100
+        },
         {
           "id": "9487433317",
           "symbol": "RELIANCE",
@@ -548,6 +562,19 @@
       ],
       "executions": [
         {
+          "executionId": "EXE-A27F8A2E03",
+          "orderId": "0688252538",
+          "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+          "symbol": "RELIANCE",
+          "action": "SELL",
+          "product": "INTRADAY",
+          "quantity": 1000,
+          "fillPrice": 1352.2,
+          "charges": 413.77,
+          "realizedPnl": -3513.77,
+          "timestamp": 1795425068818
+        },
+        {
           "executionId": "EXE-3A6DAFFCA7",
           "orderId": "9487433317",
           "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
@@ -561,7 +588,8 @@
         }
       ],
       "executedOrderKeys": [
-        "ord_RELIANCE_BUY_1795419948576_1000"
+        "ord_RELIANCE_BUY_1795419948576_1000",
+        "ord_RELIANCE_SELL_1795425068769_1000"
       ],
       "walletTransactions": [
         {
@@ -595,9 +623,9 @@
       ],
       "squareOffPendingSymbols": [],
       "lastAutoResetMonth": "2026-11",
-      "updatedAt": 1795419948714,
+      "updatedAt": 1795425068818,
       "processingLockUntil": 0,
-      "processingInstanceId": "inst_87550_35bd8e5c"
+      "processingInstanceId": "inst_202_d00a732c"
     }
   },
   "quizProgress": {
@@ -739,29 +767,53 @@
     "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
       "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
       "quizStats": {
-        "totalQuestions": 0,
+        "totalQuestions": 1,
         "correctAnswers": 0,
         "currentStreak": 0,
         "bestStreak": 0,
-        "recentResults": []
+        "recentResults": [
+          false
+        ]
       },
       "survivalBestStreak": 0,
       "survivalBestScore": 0,
       "tournamentCompletedCount": 0,
       "tournamentBestBalance": 10000,
       "stats": {
-        "balance": 10000,
+        "balance": 9911.69,
         "startingBalance": 10000,
-        "totalTrades": 0,
+        "totalTrades": 1,
         "wins": 0,
-        "losses": 0,
+        "losses": 1,
         "winRate": 0,
         "currentStreak": 0,
         "bestStreak": 0,
-        "netProfit": 0,
-        "tradeHistory": []
+        "netProfit": -88.31,
+        "tradeHistory": [
+          {
+            "id": "trade_1795431518573",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795431509506_qkafq",
+            "assetSymbol": "LT",
+            "assetName": "Larsen & Toubro",
+            "timeframe": "5-minute candles",
+            "patternName": "Bullish Rectangle Consolidation",
+            "patternCategory": "Continuation",
+            "direction": "SELL",
+            "entryPrice": 3619.23,
+            "exitPrice": 3938.85,
+            "priceChangePct": 8.831160219162637,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": -88.31160219162638,
+            "pnlPct": -8.831160219162637,
+            "isWin": false,
+            "timestamp": 1795431518574,
+            "explanation": "After a decisive upward rally, price pauses in a well-defined horizontal trading box bounded by parallel support and resistance lines. Buyers absorb all sellers at the floor while continually knocking on the ceiling until a breakout occurs."
+          }
+        ]
       },
-      "updatedAt": 1795344676351
+      "updatedAt": 1795431519316
     }
   },
   "auditLog": [
@@ -838,6 +890,23 @@
         "quantity": 1000,
         "executionPrice": 1355.3,
         "balanceAfter": 4728823.09
+      }
+    },
+    {
+      "id": "aud_1795425068818_cikgxm",
+      "timestamp": 1795425068818,
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "category": "TRADING_LEDGER",
+      "action": "ORDER_EXECUTED",
+      "details": {
+        "orderId": "0688252538",
+        "symbol": "RELIANCE",
+        "action": "SELL",
+        "product": "INTRADAY",
+        "orderType": "MARKET",
+        "quantity": 1000,
+        "executionPrice": 1352.2,
+        "balanceAfter": 4996369.32
       }
     }
   ]

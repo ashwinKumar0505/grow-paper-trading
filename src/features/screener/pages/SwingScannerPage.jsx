@@ -8,7 +8,9 @@ import ScreenerLayout from '../components/ScreenerLayout';
 import { ScreenerStatsGrid } from '../components/ScreenerStatsGrid';
 import StockAnalysisDrawer from '../components/StockAnalysisDrawer';
 import { SwingResultsSection } from '../components/SwingResultsSection';
+import { Hint } from '../components/ui';
 import { shortDate } from '../utils/format';
+import { hasDifferentActionableSession, SWING_EOD_TOOLTIP } from '../utils/signalPresentation';
 import { useSwingScanner } from '../hooks/useSwingScanner';
 
 export default function SwingScannerPage({ marketStatus }) {
@@ -19,6 +21,13 @@ export default function SwingScannerPage({ marketStatus }) {
     selectedSignal, setSelectedSignal, data, runScan, sectors, counts, rows,
     onSort, resetFilters, visibleRows, lockedCount, nextTier, nextPlan, stats,
   } = model;
+
+  const hasActionableSession = hasDifferentActionableSession(
+    data?.data_as_of_date,
+    data?.actionable_session_date
+  );
+  const asOfShort = data?.data_as_of_date ? shortDate(data.data_as_of_date) : '';
+  const actionableShort = hasActionableSession ? shortDate(data?.actionable_session_date) : '';
 
   return (
     <ScreenerLayout
@@ -76,10 +85,21 @@ export default function SwingScannerPage({ marketStatus }) {
         <MarketStatusBadge
           marketStatus={marketStatus}
           lastUpdatedIso={scan?.savedAt}
+          contextNote={
+            hasActionableSession ? (
+              <>
+                EOD signals from <strong>{asOfShort}</strong> · Valid for{' '}
+                <strong>{actionableShort}</strong> session
+              </>
+            ) : null
+          }
           extra={
             data ? (
-              <span className="sc-freshness-tag">
-                Prices as of <strong>{shortDate(data.data_as_of_date)}</strong>
+              <span className="sc-freshness-tag sc-freshness-with-hint">
+                <span>
+                  Prices as of <strong>{asOfShort}</strong>
+                </span>
+                <Hint text={SWING_EOD_TOOLTIP} align="right" />
               </span>
             ) : null
           }
@@ -169,7 +189,13 @@ export default function SwingScannerPage({ marketStatus }) {
       <StockAnalysisDrawer
         signal={selectedSignal}
         mode="swing"
-        asOfLabel={data?.data_as_of_date ? `Prices as of ${shortDate(data.data_as_of_date)}` : undefined}
+        asOfLabel={
+          asOfShort
+            ? hasActionableSession
+              ? `EOD close ${asOfShort} · Valid for ${actionableShort} session`
+              : `Prices as of ${asOfShort}`
+            : undefined
+        }
         onClose={() => setSelectedSignal(null)}
       />
     </ScreenerLayout>

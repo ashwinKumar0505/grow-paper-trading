@@ -47,9 +47,9 @@ export function Segmented({ options, value, onChange, size = 'md' }) {
   );
 }
 
-export function Hint({ text }) {
+export function Hint({ text, align = 'center' }) {
   return (
-    <span className="hint" tabIndex={0} aria-label={text}>
+    <span className={`hint ${align === 'right' ? 'hint-align-right' : ''}`} tabIndex={0} aria-label={text}>
       <Info size={13} />
       <span className="hint-bubble">{text}</span>
     </span>

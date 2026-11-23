@@ -15,6 +15,7 @@ export default function MarketStatusBadge({
   marketStatus,
   lastUpdatedIso,
   sessionDateLabel,
+  contextNote,
   extra,
 }) {
   const rawPhase = marketStatus?.session_phase;
@@ -46,6 +47,8 @@ export default function MarketStatusBadge({
             <span>Session: <strong>{sessionDateLabel}</strong></span>
           </span>
         )}
+
+        {contextNote && <span className="sc-status-context-note">{contextNote}</span>}
 
         {lastUpdatedIso ? (
           <span className="sc-status-meta">

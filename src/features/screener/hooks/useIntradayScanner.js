@@ -10,26 +10,39 @@ import {
   extractSectors,
   filterIntradaySignals,
 } from '../utils/screenerHelpers';
-import { INTRADAY_STATUS } from '../utils/terms';
+import { isIntradayLiveSession, isIntradaySignalOpen } from '../utils/signalPresentation';
 
 export function useIntradayScanner(marketStatus) {
   const { planConfig, openUpgradeModal, addToast } = useTrading();
   const [scan, setScan] = useState(() => loadCachedScan(CACHE_KEYS.intraday, CACHE_TTL_MS.intraday));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilterState] = useState(() =>
+    isIntradayLiveSession(marketStatus, scan?.data) ? 'OPEN' : 'ALL'
+  );
   const [minConfidence, setMinConfidence] = useState(50);
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [now, setNow] = useState(Date.now());
   const loadingRef = useRef(false);
+  const hasManualStatusSelectionRef = useRef(false);
 
   const isLocked = planConfig.intradayAccess === 'locked';
   const data = isLocked ? null : scan?.data;
   const staleWarning = !isLocked ? scan?.staleWarning || '' : '';
   const effectiveMarketStatus = marketStatus || data?.market_status;
-  const isMarketOpen = effectiveMarketStatus?.is_market_open ?? false;
+  const isMarketOpen = isIntradayLiveSession(marketStatus, data);
   const interval = (effectiveMarketStatus?.intraday_refresh_interval_seconds || 300) * 1000;
+
+  const setStatusFilter = (nextStatus) => {
+    hasManualStatusSelectionRef.current = true;
+    setStatusFilterState(nextStatus);
+  };
+
+  useEffect(() => {
+    if (hasManualStatusSelectionRef.current) return;
+    setStatusFilterState(isMarketOpen ? 'OPEN' : 'ALL');
+  }, [isMarketOpen]);
 
   const fetchSignals = async (forceRefresh = false) => {
     if (isLocked) {
@@ -106,12 +119,13 @@ export function useIntradayScanner(marketStatus) {
   );
 
   const resetFilters = () => {
+    hasManualStatusSelectionRef.current = true;
     setMinConfidence(50);
-    setStatusFilter('ALL');
+    setStatusFilterState('ALL');
     setSectorFilter('ALL');
   };
 
-  const closed = (data?.signals || []).filter((s) => INTRADAY_STATUS[s.signal_status]?.group === 'closed');
+  const closed = (data?.signals || []).filter((s) => !isIntradaySignalOpen(s));
   const wins = closed.filter((s) => (s.pnl_pct ?? 0) > 0).length;
   const mm = Math.floor(secondsLeft / 60);
   const ss = String(secondsLeft % 60).padStart(2, '0');

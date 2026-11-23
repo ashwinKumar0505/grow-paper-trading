@@ -67,10 +67,14 @@ export function adaptIntradayResponse(raw) {
         ? raw.stocks_scanned
         : signals.length;
 
-  const isActive = (s) =>
-    s.signal_status === 'LIVE_ACTIVE_ENTRY' ||
-    s.signal_status === 'PROJECTED_EXIT_PENDING' ||
-    s.signal_status === 'OPEN_ACTIVE';
+  const isActive = (s) => {
+    if (typeof s.is_projected_exit === 'boolean') return s.is_projected_exit;
+    return (
+      s.signal_status === 'LIVE_ACTIVE_ENTRY' ||
+      s.signal_status === 'PROJECTED_EXIT_PENDING' ||
+      s.signal_status === 'OPEN_ACTIVE'
+    );
+  };
 
   return {
     ...raw,

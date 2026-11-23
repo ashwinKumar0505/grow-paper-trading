@@ -1,8 +1,16 @@
 import React from 'react';
 import { ChevronRight, CheckCircle2, Eye, XCircle, Timer, Zap, Clock } from 'lucide-react';
 import { Badge, ConfidenceMeter } from './ui';
+import { IntradayEntrySubtext, SignalEntryCell, SwingLivePriceMeta } from './SignalEntryCell';
 import { fmtPrice, fmtPct, shortDate, shortTime } from '../utils/format';
-import { simplifyTerm, patternIsForming, SWING_STATUS, INTRADAY_STATUS } from '../utils/terms';
+import { simplifyTerm, patternIsForming, SWING_STATUS } from '../utils/terms';
+import {
+  formatSwingEntrySubLabel,
+  getIntradayLiveRiskReward,
+  getSwingLiveEntryDisplay,
+  isIntradaySignalOpen,
+  resolveIntradayStatus,
+} from '../utils/signalPresentation';
 
 const INTRADAY_ICON = {
   positive: CheckCircle2,
@@ -18,22 +26,26 @@ export function StockRecommendationRow({
   mode = 'swing',
   selected = false,
   onSelect,
+  muteCompleted = false,
 }) {
   const isSwing = mode === 'swing';
   const statusObj = isSwing
     ? SWING_STATUS[signal.signal_type] || SWING_STATUS.PROJECTED_SETUP
-    : INTRADAY_STATUS[signal.signal_status] || { label: signal.status_badge_text || 'Signal', tone: 'neutral' };
+    : resolveIntradayStatus(signal);
 
   const strat = simplifyTerm(isSwing ? signal.primary_strategy : signal.strategy_name);
   const entry = isSwing ? signal.suggested_buy_price : signal.entry_price;
   const target = isSwing ? signal.target_sell_price : signal.target_exit_price;
   const sl = signal.stop_loss;
-  const isClosed = !isSwing && statusObj.group === 'closed';
+  const isClosed = !isSwing && !isIntradaySignalOpen(signal);
   const rr = Number(signal.risk_reward_ratio || 0);
+  const liveRr = !isSwing ? getIntradayLiveRiskReward(signal) : null;
 
   return (
     <tr
-      className={`row-click sc-row ${selected ? 'is-selected' : ''}`}
+      className={`row-click sc-row ${selected ? 'is-selected' : ''} ${
+        isClosed && muteCompleted ? 'is-completed-row' : ''
+      }`}
       onClick={() => onSelect(signal)}
       tabIndex={0}
       onKeyDown={(e) => {
@@ -72,14 +84,7 @@ export function StockRecommendationRow({
           )}
         </div>
       </td>
-      <td className="num">
-        <div className="cell-main">{fmtPrice(entry)}</div>
-        <div className="cell-sub">
-          {isSwing
-            ? `${signal.buy_date_is_confirmed ? 'From ' : 'Wait till '}${shortDate(signal.suggested_buy_date)}`
-            : `at ${shortTime(signal.entry_time_ist)}`}
-        </div>
-      </td>
+      <SignalEntryCell signal={signal} isSwing={isSwing} entry={entry} />
       <td className="num">
         <div className="cell-main text-up">{fmtPrice(target)}</div>
         <div className="cell-sub">
@@ -121,6 +126,7 @@ export function StockRecommendationRow({
       </td>
       <td className="num">
         <span className={`rr ${rr >= 2 ? 'rr-good' : rr >= 1.5 ? 'rr-ok' : ''}`}>{rr.toFixed(1)}x</span>
+        {liveRr != null && <div className="cell-sub sc-live-rr">Now {liveRr.toFixed(1)}x</div>}
       </td>
       <td className="col-action">
         <span className="row-toggle" aria-hidden="true"><ChevronRight size={17} /></span>
@@ -129,18 +135,30 @@ export function StockRecommendationRow({
   );
 }
 
-export function StockRecommendationMobileCard({ signal, mode = 'swing', onSelect }) {
+export function StockRecommendationMobileCard({
+  signal,
+  mode = 'swing',
+  onSelect,
+  muteCompleted = false,
+}) {
   const isSwing = mode === 'swing';
   const statusObj = isSwing
     ? SWING_STATUS[signal.signal_type] || SWING_STATUS.PROJECTED_SETUP
-    : INTRADAY_STATUS[signal.signal_status] || { label: signal.status_badge_text || 'Signal', tone: 'neutral' };
+    : resolveIntradayStatus(signal);
   const strat = simplifyTerm(isSwing ? signal.primary_strategy : signal.strategy_name);
   const entry = isSwing ? signal.suggested_buy_price : signal.entry_price;
   const target = isSwing ? signal.target_sell_price : signal.target_exit_price;
+  const isClosed = !isSwing && !isIntradaySignalOpen(signal);
   const rr = Number(signal.risk_reward_ratio || 0);
+  const liveMeta = isSwing ? getSwingLiveEntryDisplay(signal) : null;
+  const liveRr = !isSwing ? getIntradayLiveRiskReward(signal) : null;
 
   return (
-    <button type="button" className="sc-mob-card" onClick={() => onSelect(signal)}>
+    <button
+      type="button"
+      className={`sc-mob-card ${isClosed && muteCompleted ? 'is-completed-card' : ''}`}
+      onClick={() => onSelect(signal)}
+    >
       <div className="sc-mob-top">
         <div className="stock-cell">
           <div className="stock-avatar">{signal.symbol.slice(0, 2)}</div>
@@ -153,11 +171,23 @@ export function StockRecommendationMobileCard({ signal, mode = 'swing', onSelect
       </div>
 
       <div className="sc-mob-metrics">
-        <div><span>Entry</span><strong>{fmtPrice(entry)}</strong></div>
+        <div>
+          <span>Entry</span>
+          <strong>{fmtPrice(entry)}</strong>
+          <small className="sc-mob-sub">
+            {isSwing ? formatSwingEntrySubLabel(signal) : <IntradayEntrySubtext signal={signal} />}
+          </small>
+        </div>
         <div><span>Target</span><strong className="text-up">{fmtPrice(target)}</strong></div>
         <div><span>Stop-Loss</span><strong className="text-down">{fmtPrice(signal.stop_loss)}</strong></div>
-        <div><span>R : R</span><strong>{rr.toFixed(1)}x</strong></div>
+        <div>
+          <span>R : R</span>
+          <strong>{rr.toFixed(1)}x</strong>
+          {liveRr != null && <small className="sc-mob-sub">Now {liveRr.toFixed(1)}x</small>}
+        </div>
       </div>
+
+      {isSwing && liveMeta && <SwingLivePriceMeta liveMeta={liveMeta} compact />}
 
       <div className="sc-mob-foot">
         <ConfidenceMeter score={signal.confidence_score} compact />

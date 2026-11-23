@@ -18,7 +18,7 @@ export const BrandLogo: React.FC<LogoProps> = ({
     >
       {/* Tradedia app icon (downscaled from public/images/landing/logo.png) */}
       <img
-        src="/images/landing/logo-96.png"
+        src="/images/landing/logo-96.png?v=3"
         alt=""
         aria-hidden="true"
         width={36}

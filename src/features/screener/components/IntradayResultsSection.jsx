@@ -82,24 +82,67 @@ export function IntradayResultsSection({
           </Button>
         </div>
       ) : visibleRows.length === 0 ? (
-        <div className="empty">
-          <div className="empty-icon muted">
-            <SearchX size={24} />
+        statusFilter === 'OPEN' && counts.ALL > 0 ? (
+          <div className="empty">
+            <div className="empty-icon muted">
+              <Zap size={24} />
+            </div>
+            <h4>No active setups right now</h4>
+            <p>
+              All {counts.ALL} {counts.ALL === 1 ? 'setup' : 'setups'} from earlier in this session{' '}
+              {counts.ALL === 1 ? 'has' : 'have'} already closed.
+            </p>
+            <Button
+              variant="unstyled"
+              size="unstyled"
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setStatusFilter('ALL')}
+            >
+              No active setups right now — View {counts.ALL} earlier session{' '}
+              {counts.ALL === 1 ? 'outcome' : 'outcomes'}
+            </Button>
           </div>
-          <h4>No trades match these filters</h4>
-          <p>Try lowering the minimum confidence or resetting your active filters.</p>
-          <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={resetFilters}>
-            Reset filters
-          </Button>
-        </div>
+        ) : (data?.signals?.length || 0) === 0 ? (
+          <div className="empty">
+            <div className="empty-icon muted">
+              <Zap size={24} />
+            </div>
+            <h4>No active setups right now</h4>
+            <p>
+              {isMarketOpen
+                ? 'No 15-minute setups have triggered yet in today’s session.'
+                : 'No 15-minute setups were recorded in the last trading session.'}
+            </p>
+          </div>
+        ) : (
+          <div className="empty">
+            <div className="empty-icon muted">
+              <SearchX size={24} />
+            </div>
+            <h4>No trades match these filters</h4>
+            <p>Try lowering the minimum confidence or resetting your active filters.</p>
+            <Button variant="unstyled" size="unstyled" type="button" className="btn btn-outline btn-sm" onClick={resetFilters}>
+              Reset filters
+            </Button>
+          </div>
+        )
       ) : (
-        <RecommendationTable
-          signals={visibleRows}
-          mode="intraday"
-          selectedSymbol={selectedSignal?.symbol}
-          onSelectSignal={setSelectedSignal}
-          isRefreshing={loading}
-        />
+        <>
+          <p className="sc-table-caption">
+            {isMarketOpen
+              ? 'Tracks all 15-min setups triggered since 9:15 AM today. Use Open for active setups or Closed for earlier session outcomes.'
+              : 'Tracks all 15-min setups from the last trading session. Use Open for unclosed setups or Closed for earlier session outcomes.'}
+          </p>
+          <RecommendationTable
+            signals={visibleRows}
+            mode="intraday"
+            selectedSymbol={selectedSignal?.symbol}
+            onSelectSignal={setSelectedSignal}
+            isRefreshing={loading}
+            muteCompleted={statusFilter === 'ALL' || statusFilter === 'CLOSED'}
+          />
+        </>
       )}
     </section>
   );

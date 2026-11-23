@@ -1,9 +1,4 @@
-import { INTRADAY_STATUS } from './terms';
-
-const INTRADAY_STATUS_MAP = INTRADAY_STATUS as Record<
-  string,
-  { label: string; tone: string; group?: string }
->;
+import { isIntradaySignalOpen } from './signalPresentation';
 
 export type ConfidencePreset = 'all' | '70' | '80' | '90';
 
@@ -38,6 +33,9 @@ export interface SwingSignal {
   buy_price_note?: string;
   reasoning?: string[];
   risk_notes?: string[];
+  live_price?: number | null;
+  live_price_change_from_signal_pct?: number | null;
+  live_entry_status?: 'IN_ENTRY_ZONE' | 'EXTENDED' | 'TARGET_HIT' | 'STOP_BREACHED' | string | null;
 }
 
 export interface IntradaySignal {
@@ -59,6 +57,10 @@ export interface IntradaySignal {
   signal_status: string;
   status_badge_text?: string;
   pnl_pct?: number | null;
+  is_projected_exit?: boolean | null;
+  entry_freshness?: 'FRESH' | 'IN_PROGRESS' | string | null;
+  minutes_since_entry?: number | null;
+  live_risk_reward_ratio?: number | null;
 }
 
 export function extractSectors(signals: Array<{ sector?: string }> = []): string[] {
@@ -133,9 +135,9 @@ export function filterIntradaySignals(
     list = list.filter((s) => s.sector === sectorFilter);
   }
   if (statusFilter === 'OPEN') {
-    list = list.filter((s) => INTRADAY_STATUS_MAP[s.signal_status]?.group === 'open');
+    list = list.filter((s) => isIntradaySignalOpen(s));
   } else if (statusFilter === 'CLOSED') {
-    list = list.filter((s) => INTRADAY_STATUS_MAP[s.signal_status]?.group === 'closed');
+    list = list.filter((s) => !isIntradaySignalOpen(s));
   } else if (statusFilter === 'TARGET') {
     list = list.filter((s) => s.signal_status === 'COMPLETED_TARGET_HIT');
   }
@@ -150,11 +152,10 @@ export function computeIntradayCounts(
   const list = signals.filter(
     (s) => s.confidence_score >= minConfidence && (sectorFilter === 'ALL' || s.sector === sectorFilter)
   );
-  const grp = (s: IntradaySignal) => INTRADAY_STATUS_MAP[s.signal_status]?.group;
   return {
     ALL: list.length,
-    OPEN: list.filter((s) => grp(s) === 'open').length,
-    CLOSED: list.filter((s) => grp(s) === 'closed').length,
+    OPEN: list.filter((s) => isIntradaySignalOpen(s)).length,
+    CLOSED: list.filter((s) => !isIntradaySignalOpen(s)).length,
     TARGET: list.filter((s) => s.signal_status === 'COMPLETED_TARGET_HIT').length,
   };
 }

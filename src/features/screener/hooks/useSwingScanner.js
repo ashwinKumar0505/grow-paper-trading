@@ -15,6 +15,7 @@ import {
   extractSectors,
   filterSwingSignals,
 } from '../utils/screenerHelpers';
+import { hasDifferentActionableSession, SWING_EOD_TOOLTIP } from '../utils/signalPresentation';
 
 const SCAN_MIN_CONFIDENCE = 50;
 
@@ -157,9 +158,13 @@ export function useSwingScanner() {
           icon: Clock,
           label: 'Data as of',
           value: shortDate(data.data_as_of_date),
-          sub: scan?.savedAt
-            ? `${scan.isStale ? 'Stale snapshot · ' : ''}Screened ${timeAgo(scan.savedAt)}`
-            : 'Latest snapshot',
+          sub: hasDifferentActionableSession(data.data_as_of_date, data.actionable_session_date)
+            ? `Valid for ${shortDate(data.actionable_session_date)} session`
+            : scan?.savedAt
+              ? `${scan.isStale ? 'Stale snapshot · ' : ''}Screened ${timeAgo(scan.savedAt)}`
+              : 'Latest snapshot',
+          hint: SWING_EOD_TOOLTIP,
+          hintAlign: 'right',
         },
       ]
     : [];

@@ -167,3 +167,19 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - **Historical Corporate-Action Adjustment Policy**: Empirically confirmed Upstox V3 historical candles are `SPLIT_ADJUSTED_ONLY` (not dividend-adjusted like Yahoo `auto_adjust=True`). Python OHLCV analytics/backtests intentionally fail closed under default `PRICE_ADJUSTMENT_POLICY=SPLIT_AND_DIVIDEND_ADJUSTED` until you confirm switching to `PRICE_ADJUSTMENT_POLICY=SPLIT_ADJUSTED_ONLY`.
   - **Commercial Redistribution & Paper-Trading Licensing**: Both services default commercial/redistribution authorization flags (`UPSTOX_COMMERCIAL_REDISTRIBUTION_AUTHORIZED`, `UPSTOX_PAPER_TRADING_AUTHORIZED`, `UPSTOX_COMMERCIAL_REDISTRIBUTION_APPROVED`) to `false` until permitted data-use rights are confirmed.
   - **No Upstox Backtest Artifact Yet**: `/api/v1/backtest/report` truthfully returns `UNVALIDATED` under `upstox` until an Upstox-backed walk-forward backtest run is executed.
+
+---
+
+## 8. Swing & Intraday Screener Live-Market UX Clarity (2026-11-23, branch `upstox-implementation`)
+
+- **Scope Completed**:
+  - **Shared presentation helpers (`src/features/screener/utils/signalPresentation.ts`, `src/features/screener/utils/terms.js`, `src/features/screener/utils/screenerHelpers.ts`, `src/features/screener/api/adapters.js`)**: Added optional-field-safe helpers for EOD session comparison (`actionable_session_date`), Swing close sub-labels (`20 Nov close`), live entry status pills (`IN_ENTRY_ZONE`, `EXTENDED`, `TARGET_HIT`, `STOP_BREACHED`), Intraday live-session detection (`scanner_state` + `market_status` fallback), open/closed resolution (`is_projected_exit` + status fallback), recency pills (`FRESH` / `IN_PROGRESS` + `minutes_since_entry`), `live_risk_reward_ratio`, and safe `status_badge_text` fallback for unrecognized statuses.
+  - **Swing Screener (`SwingScannerPage.jsx`, `useSwingScanner.js`, `MarketStatusBadge.jsx`, `ScreenerStatsGrid.jsx`, `SignalEntryCell.jsx`, `StockRecommendationRow.jsx`, `DrawerTradePlan.jsx`, `ui.jsx`, `App.css`)**: Added EOD daily-candle confirmation info tooltips on both the status strip `Prices as of` badge and `Data as of` stat card, optional `EOD signals from X · Valid for Y session` context note when `actionable_session_date` differs from `data_as_of_date`, clarified entry sub-label (`20 Nov close`), and conditional live price (`Now ₹... (+X.X%)`) + color-coded entry status pill when `live_price` is present.
+  - **Intraday Signals (`useIntradayScanner.js`, `IntradayResultsSection.jsx`, `RecommendationTable.jsx`, `StockRecommendationRow.jsx`, `StockAnalysisDrawer.jsx`)**: Defaulted status tab to `Open` during live market hours (`ACTIVE_SCANNING` / `is_market_open === true`) and `All` when market is closed (`PAUSED_MARKET_CLOSED`), preserved manual tab selection across auto-refreshes, added one-click empty-open CTA (`"No active setups right now — View X earlier session outcomes"`), added `Fresh` / `Running · Xm ago` recency pills and optional `Now X.Xx` live R:R subtext on open setups, muted completed rows on `All`/`Closed` tabs, and added helper caption above the table.
+  - **Zero extra API calls**: No additional fetches, polling loops, or per-row requests were added on either page. All updated TS/TSX/JS/JSX files remain `<= 200` non-blank/non-comment lines.
+- **Verification Executed**:
+  - `npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `npm test` (`node --import tsx --test src/utils/*.test.ts`): **PASS** (87/87 passed, including 9 new unit & React SSR render tests covering legacy payloads, enhanced payloads, market open/closed states, empty-open CTA, muted completed rows, and unknown status fallbacks).
+  - `npm run build` (`vite build`): **PASS**.
+- **Checks Not Executed**:
+  - Manual interactive browser / Chrome DevTools Network-tab check was not executed in this environment.

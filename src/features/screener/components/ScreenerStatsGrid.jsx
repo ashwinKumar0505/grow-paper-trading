@@ -1,13 +1,13 @@
 import React from 'react';
 import { Hint } from './ui';
 
-export function ScreenerStatCard({ label, value, sub, tone, icon: Icon, hint }) {
+export function ScreenerStatCard({ label, value, sub, tone, icon: Icon, hint, hintAlign }) {
   return (
     <div className={`sc-stat-card ${tone ? `tone-${tone}` : ''}`}>
       <div className="sc-stat-label">
         {Icon && <Icon size={14} className="sc-stat-icon" />}
         <span>{label}</span>
-        {hint && <Hint text={hint} />}
+        {hint && <Hint text={hint} align={hintAlign} />}
       </div>
       <div className="sc-stat-value">{value}</div>
       {sub && <div className="sc-stat-sub">{sub}</div>}

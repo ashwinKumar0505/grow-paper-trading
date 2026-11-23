@@ -38,8 +38,32 @@ export const SWING_STATUS = {
   PROJECTED_SETUP: { label: 'Watchlist setup', tone: 'warning', help: 'Promising chart structure, but wait for breakout confirmation before acting.' },
 };
 
+export const SWING_LIVE_ENTRY_STATUS = {
+  IN_ENTRY_ZONE: {
+    label: 'In entry zone',
+    tone: 'positive',
+    help: 'Live price is still near the reference EOD close and within the actionable entry zone.',
+  },
+  EXTENDED: {
+    label: 'Extended',
+    tone: 'warning',
+    help: 'Moved significantly above signal close; avoid chasing.',
+  },
+  TARGET_HIT: {
+    label: 'Target reached',
+    tone: 'info',
+    help: 'Live price has already reached or exceeded the reference target level.',
+  },
+  STOP_BREACHED: {
+    label: 'Below stop',
+    tone: 'negative',
+    help: 'Live price has moved below the reference stop-loss level.',
+  },
+};
+
 export const INTRADAY_STATUS = {
   LIVE_ACTIVE_ENTRY: { label: 'Active signal', tone: 'info', group: 'open' },
+  OPEN_ACTIVE: { label: 'Active signal', tone: 'info', group: 'open' },
   PROJECTED_EXIT_PENDING: { label: 'Setup open', tone: 'warning', group: 'open' },
   COMPLETED_TARGET_HIT: { label: 'Target reached', tone: 'positive', group: 'closed' },
   COMPLETED_GAP_TARGET: { label: 'Gap target hit', tone: 'positive', group: 'closed' },

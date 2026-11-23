@@ -1,6 +1,12 @@
 import React from 'react';
 import { Target } from 'lucide-react';
-import { fmtPrice, fmtPct, shortDate, shortTime } from '../utils/format';
+import { fmtPrice, fmtPct, shortDate } from '../utils/format';
+import {
+  formatSwingEntrySubLabel,
+  getIntradayLiveRiskReward,
+  getSwingLiveEntryDisplay,
+} from '../utils/signalPresentation';
+import { IntradayEntrySubtext, SwingLivePriceMeta } from './SignalEntryCell';
 
 export function DrawerTradePlan({
   isSwing,
@@ -12,6 +18,9 @@ export function DrawerTradePlan({
   slPct,
   rr,
 }) {
+  const liveMeta = isSwing ? getSwingLiveEntryDisplay(signal) : null;
+  const liveRr = !isSwing ? getIntradayLiveRiskReward(signal) : null;
+
   return (
     <section className="sc-drawer-section">
       <h4 className="sc-drawer-sec-title">
@@ -22,10 +31,9 @@ export function DrawerTradePlan({
           <span>{isSwing ? 'Recommended Entry' : 'Entry Price'}</span>
           <strong>{fmtPrice(entryPrice)}</strong>
           <small>
-            {isSwing
-              ? `${signal.buy_date_is_confirmed ? 'From ' : 'Wait till '}${shortDate(signal.suggested_buy_date)}`
-              : `at ${shortTime(signal.entry_time_ist)}`}
+            {isSwing ? formatSwingEntrySubLabel(signal) : <IntradayEntrySubtext signal={signal} />}
           </small>
+          {isSwing && liveMeta && <SwingLivePriceMeta liveMeta={liveMeta} compact />}
         </div>
         <div className="sc-drawer-level">
           <span>Target Price</span>
@@ -43,7 +51,13 @@ export function DrawerTradePlan({
         <div className="sc-drawer-level">
           <span>Reward : Risk</span>
           <strong className={rr >= 2 ? 'text-up' : ''}>{rr != null ? `${Number(rr).toFixed(1)}x` : '—'}</strong>
-          <small>{rr != null ? `₹${Number(rr).toFixed(1)} per ₹1 risk` : '—'}</small>
+          <small>
+            {liveRr != null
+              ? `Now ${liveRr.toFixed(1)}x live`
+              : rr != null
+                ? `₹${Number(rr).toFixed(1)} per ₹1 risk`
+                : '—'}
+          </small>
         </div>
       </div>
       {signal.buy_price_note && <p className="sc-drawer-note">{signal.buy_price_note}</p>}

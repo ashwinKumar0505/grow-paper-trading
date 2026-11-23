@@ -11,8 +11,9 @@ import {
 import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { useTrading } from '../../../context/TradingContext';
 import { Badge, ConfidenceMeter } from './ui';
-import { fmtPrice, fmtPct, shortDate } from '../utils/format';
-import { simplifyTerm, SWING_STATUS, INTRADAY_STATUS } from '../utils/terms';
+import { fmtPrice } from '../utils/format';
+import { simplifyTerm, SWING_STATUS } from '../utils/terms';
+import { resolveIntradayStatus } from '../utils/signalPresentation';
 import { DrawerTradePlan } from './DrawerTradePlan';
 import { DrawerWhySection } from './DrawerWhySection';
 
@@ -39,10 +40,7 @@ export default function StockAnalysisDrawer({
 
   const isSwing = mode === 'swing';
   const swingStatus = SWING_STATUS[signal.signal_type] || SWING_STATUS.PROJECTED_SETUP;
-  const intraStatus = INTRADAY_STATUS[signal.signal_status] || {
-    label: signal.status_badge_text || 'Signal',
-    tone: 'neutral',
-  };
+  const intraStatus = resolveIntradayStatus(signal);
   const statusObj = isSwing ? swingStatus : intraStatus;
 
   const entryPrice = isSwing ? signal.suggested_buy_price : signal.entry_price;
