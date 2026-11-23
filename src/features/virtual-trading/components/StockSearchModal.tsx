@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { navigate } from '../../../lib/navigation';
+import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { Stock } from '../../../types/market';
 import { StockSearchResultItem } from './StockSearchResultItem';
 import { StockSearchApiResultItem } from './StockSearchApiResultItem';
@@ -65,7 +65,7 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({ isOpen, onCl
   const handleSelectStock = (stock: Stock) => {
     setSelectedStock(stock);
     setCurrentTab('stock-detail');
-    navigate('/trade');
+    navigate(buildTradeStockPath(stock.symbol));
     onClose();
   };
 

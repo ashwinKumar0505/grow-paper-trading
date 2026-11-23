@@ -15,7 +15,25 @@ export function canonicalPath(path: string) {
     '/pattern-library': '/learn',
     '/screener/stock-analysis': '/screener/analysis',
   };
+  if (normalized.startsWith('/stocks/')) {
+    return `/trade/${normalized.slice('/stocks/'.length)}`;
+  }
   return aliases[normalized] || normalized;
+}
+
+export function getTradeStockSymbolFromPath(pathname: string): string | null {
+  if (!pathname.startsWith('/trade/')) return null;
+  const raw = pathname.slice('/trade/'.length).split('/')[0];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw).trim().toUpperCase() || null;
+  } catch {
+    return raw.trim().toUpperCase() || null;
+  }
+}
+
+export function buildTradeStockPath(symbol: string): string {
+  return `/trade/${encodeURIComponent(symbol.trim().toUpperCase())}`;
 }
 
 export function usePathname() {

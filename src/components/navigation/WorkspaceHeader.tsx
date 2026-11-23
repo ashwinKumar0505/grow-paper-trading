@@ -9,7 +9,7 @@ export function WorkspaceHeader() {
   const pathname = usePathname();
   const { setCurrentTab } = useTrading();
   const isScreener = pathname.startsWith('/screener');
-  const isTrade = pathname === '/trade';
+  const isTrade = pathname === '/trade' || pathname.startsWith('/trade/');
   const isLearn = pathname === '/learn';
   const isQuiz = pathname === '/quiz' || pathname === '/quiz/play';
   const isPricing = pathname === '/pricing';

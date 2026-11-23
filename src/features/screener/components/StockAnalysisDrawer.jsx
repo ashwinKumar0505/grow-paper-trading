@@ -8,7 +8,7 @@ import {
   Eye,
   Clock,
 } from 'lucide-react';
-import { navigate } from '../../../lib/navigation';
+import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { useTrading } from '../../../context/TradingContext';
 import { Badge, ConfidenceMeter } from './ui';
 import { fmtPrice, fmtPct, shortDate } from '../utils/format';
@@ -69,7 +69,7 @@ export default function StockAnalysisDrawer({
     }
     selectStockBySymbol(signal.symbol);
     onClose();
-    navigate('/trade');
+    navigate(buildTradeStockPath(signal.symbol));
   };
 
   const handleFullAnalysis = () => {

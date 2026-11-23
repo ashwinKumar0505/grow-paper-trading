@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { AppLink } from '../../../lib/navigation';
+import { AppLink, getTradeStockSymbolFromPath, usePathname } from '../../../lib/navigation';
 import { ExploreView } from './ExploreView';
 import { HoldingsView } from './HoldingsView';
 import { IndicesTicker } from './IndicesTicker';
@@ -12,15 +12,35 @@ import { TradingToolbar } from './TradingToolbar';
 import { WatchlistView } from './WatchlistView';
 
 const MainContent: React.FC = () => {
-  const { currentTab } = useTrading();
+  const { currentTab, selectedStock, selectStockBySymbol } = useTrading();
+  const pathname = usePathname();
+  const routeSymbol = getTradeStockSymbolFromPath(pathname);
+  const lastSyncedRouteSymbol = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!routeSymbol) {
+      lastSyncedRouteSymbol.current = null;
+      return;
+    }
+    if (selectedStock.symbol.toUpperCase() !== routeSymbol && lastSyncedRouteSymbol.current !== routeSymbol) {
+      lastSyncedRouteSymbol.current = routeSymbol;
+      void selectStockBySymbol(routeSymbol);
+    }
+  }, [routeSymbol, selectedStock.symbol, selectStockBySymbol]);
+
+  const activeTab = routeSymbol
+    ? 'stock-detail'
+    : currentTab === 'stock-detail'
+    ? 'explore'
+    : currentTab;
 
   return (
     <main className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 min-w-0">
-      {currentTab === 'explore' && <ExploreView />}
-      {currentTab === 'stock-detail' && <StockDetailView />}
-      {currentTab === 'holdings' && <HoldingsView />}
-      {currentTab === 'watchlist' && <WatchlistView />}
-      {currentTab === 'orders' && <OrdersView />}
+      {activeTab === 'explore' && <ExploreView />}
+      {activeTab === 'stock-detail' && <StockDetailView />}
+      {activeTab === 'holdings' && <HoldingsView />}
+      {activeTab === 'watchlist' && <WatchlistView />}
+      {activeTab === 'orders' && <OrdersView />}
     </main>
   );
 };

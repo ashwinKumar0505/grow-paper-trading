@@ -56,12 +56,12 @@
       "name": "J.J. Ashwin kumar",
       "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL-pG1nP8YHDocRFwcKnS6wIYqIkYQ6DWfYflBfhCB0nrTgk1AB=s96-c",
       "authProvider": "google",
-      "subscriptionTier": "free",
-      "subscriptionBillingCycle": "free",
+      "subscriptionTier": "advanced",
+      "subscriptionBillingCycle": "monthly",
       "subscriptionStatus": "active",
-      "subscriptionUpdatedAt": 1795343065625,
-      "subscriptionExpiresAt": null,
-      "subscriptionAutoPay": false,
+      "subscriptionUpdatedAt": 1795419679670,
+      "subscriptionExpiresAt": 1798011679670,
+      "subscriptionAutoPay": true,
       "paidTopUpCredit": 0,
       "usageQuota": {
         "dateKey": "2026-11-22",
@@ -72,7 +72,10 @@
         "lastAutoResetMonth": "2026-11"
       },
       "createdAt": 1795343065625,
-      "updatedAt": 1795344711755
+      "updatedAt": 1795420482841,
+      "razorpayPaymentId": "pay_U3XOvZRbNV4vQl",
+      "razorpayOrderId": "sub_U3XMklziat0qpw",
+      "razorpaySubscriptionId": "sub_U3XMklziat0qpw"
     }
   },
   "emailIndex": {
@@ -311,6 +314,50 @@
       "currency": "INR",
       "status": "created",
       "createdAt": 1795284299507
+    },
+    "sub_U3XMe70iVFcS7n": {
+      "intentId": "sub_U3XMe70iVFcS7n",
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "userEmail": "ashwin.gps@gmail.com",
+      "tier": "advanced",
+      "billingCycle": "yearly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 669900,
+      "fullPriceINR": 6699,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795419514438
+    },
+    "sub_U3XMklziat0qpw": {
+      "intentId": "sub_U3XMklziat0qpw",
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "userEmail": "ashwin.gps@gmail.com",
+      "tier": "advanced",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 69900,
+      "fullPriceINR": 699,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "verified",
+      "createdAt": 1795419521636,
+      "razorpayPaymentId": "pay_U3XOvZRbNV4vQl",
+      "verifiedAt": 1795419679670
+    },
+    "sub_U3XPXjIBAlwfN5": {
+      "intentId": "sub_U3XPXjIBAlwfN5",
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "userEmail": "ashwin.gps@gmail.com",
+      "tier": "advanced",
+      "billingCycle": "monthly",
+      "paymentType": "subscription",
+      "expectedAmountPaise": 69900,
+      "fullPriceINR": 699,
+      "creditAppliedINR": 0,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795419680242
     }
   },
   "processedPayments": {
@@ -318,6 +365,11 @@
       "intentId": "sub_U2ux5Zlghq5RQo",
       "userId": "sRHPteR060hsY2c94umd4XJsHvu1",
       "verifiedAt": 1795284299400
+    },
+    "pay_U3XOvZRbNV4vQl": {
+      "intentId": "sub_U3XMklziat0qpw",
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "verifiedAt": 1795419679670
     }
   },
   "processedWebhooks": {},
@@ -338,6 +390,24 @@
         "createdAt": 1795284299400,
         "receiptUrl": null,
         "description": "Beginner Package (monthly)"
+      }
+    ],
+    "ltL3mt5huOdzDYyj2mtYzd6RJxd2": [
+      {
+        "id": "pay_U3XOvZRbNV4vQl",
+        "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+        "paymentId": "pay_U3XOvZRbNV4vQl",
+        "orderId": "sub_U3XMklziat0qpw",
+        "subscriptionId": "sub_U3XMklziat0qpw",
+        "planName": "Advanced Package",
+        "tier": "advanced",
+        "billingCycle": "monthly",
+        "amountINR": 699,
+        "currency": "INR",
+        "status": "captured",
+        "createdAt": 1795419679670,
+        "receiptUrl": null,
+        "description": "Advanced Package (monthly)"
       }
     ]
   },
@@ -431,16 +501,76 @@
     },
     "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
       "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
-      "version": 1,
-      "balance": 100000,
-      "initialBalance": 100000,
+      "version": 3,
+      "balance": 4728823.09,
+      "initialBalance": 5000000,
       "paidTopUpCredit": 0,
       "holdings": [],
-      "positions": [],
-      "orders": [],
-      "executions": [],
-      "executedOrderKeys": [],
+      "positions": [
+        {
+          "id": "POS-L6DQG2",
+          "symbol": "RELIANCE",
+          "stockName": "Reliance Industries Ltd.",
+          "action": "BUY",
+          "quantity": 1000,
+          "entryPrice": 1355.3,
+          "marginBlocked": 271060,
+          "leverage": 5,
+          "timestamp": 1795419948714,
+          "exchange": "NSE"
+        }
+      ],
+      "orders": [
+        {
+          "id": "9487433317",
+          "symbol": "RELIANCE",
+          "stockName": "Reliance Industries Ltd.",
+          "action": "BUY",
+          "product": "INTRADAY",
+          "orderType": "MARKET",
+          "exchange": "NSE",
+          "quantity": 1000,
+          "filledQuantity": 1000,
+          "remainingQuantity": 0,
+          "price": 1355.3,
+          "avgPrice": 1355.3,
+          "executionPrice": 1355.3,
+          "status": "EXECUTED",
+          "timestamp": 1795419948714,
+          "placedAt": 1795419948714,
+          "executedAt": 1795419948714,
+          "totalAmount": 1355300,
+          "marginUsed": 271060,
+          "charges": 116.91,
+          "idempotencyKey": "ord_RELIANCE_BUY_1795419948576_1000",
+          "quoteFreshness": "LIVE"
+        }
+      ],
+      "executions": [
+        {
+          "executionId": "EXE-3A6DAFFCA7",
+          "orderId": "9487433317",
+          "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+          "symbol": "RELIANCE",
+          "action": "BUY",
+          "product": "INTRADAY",
+          "quantity": 1000,
+          "fillPrice": 1355.3,
+          "charges": 116.91,
+          "timestamp": 1795419948714
+        }
+      ],
+      "executedOrderKeys": [
+        "ord_RELIANCE_BUY_1795419948576_1000"
+      ],
       "walletTransactions": [
+        {
+          "id": "TX-DD916D71",
+          "type": "DEPOSIT",
+          "amount": 4900000,
+          "description": "Advanced Package upgrade virtual capital boost (+₹49,00,000)",
+          "timestamp": 1795419679670
+        },
         {
           "id": "TX-2225BC92",
           "type": "DEPOSIT",
@@ -465,9 +595,9 @@
       ],
       "squareOffPendingSymbols": [],
       "lastAutoResetMonth": "2026-11",
-      "updatedAt": 1795343065916,
+      "updatedAt": 1795419948714,
       "processingLockUntil": 0,
-      "processingInstanceId": "inst_74660_8b76c91e"
+      "processingInstanceId": "inst_87550_35bd8e5c"
     }
   },
   "quizProgress": {
@@ -677,6 +807,37 @@
       "action": "ACCOUNT_CREATED",
       "details": {
         "authProvider": "google"
+      }
+    },
+    {
+      "id": "aud_1795419679670_kys3a0",
+      "timestamp": 1795419679670,
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "category": "PAYMENT",
+      "action": "SUBSCRIPTION_VERIFIED",
+      "details": {
+        "intentId": "sub_U3XMklziat0qpw",
+        "paymentId": "pay_U3XOvZRbNV4vQl",
+        "tier": "advanced",
+        "billingCycle": "monthly",
+        "amountPaise": 69900
+      }
+    },
+    {
+      "id": "aud_1795419948714_9orv4m",
+      "timestamp": 1795419948714,
+      "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
+      "category": "TRADING_LEDGER",
+      "action": "ORDER_EXECUTED",
+      "details": {
+        "orderId": "9487433317",
+        "symbol": "RELIANCE",
+        "action": "BUY",
+        "product": "INTRADAY",
+        "orderType": "MARKET",
+        "quantity": 1000,
+        "executionPrice": 1355.3,
+        "balanceAfter": 4728823.09
       }
     }
   ]

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { navigate } from '../../../lib/navigation';
+import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { Stock } from '../../../types/market';
 
 export function useStockExplorer() {
@@ -62,7 +62,7 @@ export function useStockExplorer() {
   const handleStockClick = (stock: Stock) => {
     setSelectedStock(stock);
     setCurrentTab('stock-detail');
-    navigate('/trade');
+    navigate(buildTradeStockPath(stock.symbol));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -5,7 +5,7 @@ Lock,
 RefreshCw
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import { navigate } from '../../../lib/navigation';
+import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { Segmented } from './ui';
 
 const POPULAR = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'LT', 'TATAMOTORS'];
@@ -63,7 +63,7 @@ export function AnalysisViewControls({ selectStockBySymbol, planConfig, openUpgr
                   return;
                 }
                 selectStockBySymbol(a.symbol);
-                navigate('/trade');
+                navigate(buildTradeStockPath(a.symbol));
               }}
               title="Open this stock in Paper Trading Desk"
             >

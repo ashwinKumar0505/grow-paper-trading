@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTrading } from '../../context/TradingContext';
 import { INITIAL_STOCKS } from '../../data/mockStocks';
-import { navigate } from '../../lib/navigation';
+import { buildTradeStockPath, navigate } from '../../lib/navigation';
 import { type PaidBillingCycle } from '../../utils/pricing';
 export function useLandingPage() {
 
@@ -38,7 +38,7 @@ export function useLandingPage() {
     } else {
       selectStockBySymbol(sym);
     }
-    navigate('/trade');
+    navigate(buildTradeStockPath(sym));
   };
 
   const tickerList = stocks && stocks.length > 0 ? stocks : INITIAL_STOCKS;

@@ -1,3 +1,4 @@
+import { navigate } from '../../../lib/navigation';
 import type { StockDetailsModel } from '../hooks/useStockDetails';
 type Props = Pick<StockDetailsModel, 'setCurrentTab' | 'holdings' | 'exitPosition' | 'stock' | 'currentHolding' | 'currentPositions'>;
 
@@ -14,7 +15,10 @@ export function StockPositionBanner({ setCurrentTab, holdings, exitPosition, sto
                   </span>
                 </div>
                 <button
-                  onClick={() => setCurrentTab('holdings')}
+                  onClick={() => {
+                    setCurrentTab('holdings');
+                    navigate('/trade');
+                  }}
                   className="text-xs font-semibold text-[#00B386] hover:underline cursor-pointer"
                 >
                   View in Portfolio &rarr;

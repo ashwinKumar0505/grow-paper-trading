@@ -80,12 +80,13 @@ export const WorkspaceContent: React.FC = () => {
     );
   }
 
-  // 3. Virtual Trading Desk requires login (uses the same common placeholder)
-  if (pathname === '/trade' && !user) {
+  // 3. Virtual Trading Desk & individual stock detail pages (/trade, /trade/:symbol) require login
+  const isTradeRoute = pathname === '/trade' || pathname.startsWith('/trade/');
+  if (isTradeRoute && !user) {
     return <AuthGatePlaceholder feature="trade" />;
   }
 
-  if (pathname !== '/trade') {
+  if (!isTradeRoute) {
     return (
       <main className="p-12 text-center">
         <h1 className="text-3xl font-bold">Page not found</h1>

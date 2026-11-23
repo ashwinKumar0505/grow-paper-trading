@@ -1,4 +1,5 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { buildTradeStockPath, navigate } from '../../../lib/navigation';
 import { IndexData, Stock, StockFundamentals } from '../../../types/market';
 import type { TradingState } from './useTradingState';
 
@@ -102,6 +103,7 @@ export function useStockSelection({
     if (existing) {
       setSelectedStockState(existing);
       setCurrentTab('stock-detail');
+      navigate(buildTradeStockPath(sym));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -149,6 +151,7 @@ export function useStockSelection({
             });
           }
           setCurrentTab('stock-detail');
+          navigate(buildTradeStockPath(sym));
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } else if (!existing) {

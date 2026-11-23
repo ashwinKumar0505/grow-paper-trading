@@ -1,18 +1,22 @@
 import {
-Bell,
-Bookmark,
-ChevronsUpDown,
-Link2
+  Bell,
+  Bookmark,
+  ChevronsUpDown,
+  LineChart,
+  Link2,
 } from 'lucide-react';
+import { navigate } from '../../../lib/navigation';
 import type { StockDetailsModel } from '../hooks/useStockDetails';
 import { StockChart } from './StockChart';
 type Props = Pick<StockDetailsModel, 'toggleWatchlistStock' | 'addToast' | 'stock' | 'inWatchlist' | 'brandBg'>;
 
 export function StockQuoteCard({ toggleWatchlistStock, addToast, stock, inWatchlist, brandBg }: Props) {
- return <>
+  const isIndex = stock.sector === 'Index';
+
+  return <>
           {/* 1. Unified Stock Header + Chart Section (Matches Groww reference layout) */}
           <div className="bg-white dark:bg-[#1A1D24] rounded-2xl border border-gray-200 dark:border-[#282C37] p-5 sm:p-6 shadow-xs">
-            {/* Top row: Brand Logo on left, Circular Action Icons on right */}
+            {/* Top row: Brand Logo on left, Action buttons on right */}
             <div className="flex items-start justify-between gap-4">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center font-extrabold text-sm text-white shrink-0 shadow-xs select-none"
@@ -21,7 +25,19 @@ export function StockQuoteCard({ toggleWatchlistStock, addToast, stock, inWatchl
                 {stock.symbol.slice(0, 3)}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {!isIndex && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/screener/analysis?symbol=${encodeURIComponent(stock.symbol)}`)}
+                    className="h-9 px-3.5 rounded-full border border-[#00B386]/40 bg-[#00B386]/10 hover:bg-[#00B386] text-[#008F6B] dark:text-[#00D09C] hover:text-white dark:hover:text-[#04261C] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title={`Open ${stock.symbol} in Stock Screener Analysis`}
+                  >
+                    <LineChart className="w-3.5 h-3.5 shrink-0" />
+                    <span>Analyse this stock</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {

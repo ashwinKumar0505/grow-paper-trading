@@ -18,7 +18,7 @@ function AppContent() {
       ? 'Learn Chart Patterns | Tradedia'
       : pathname.startsWith('/quiz')
       ? 'Guess the Chart Quiz | Tradedia'
-      : pathname === '/trade'
+      : pathname === '/trade' || pathname.startsWith('/trade/')
       ? 'Paper Trading Desk | Tradedia'
       : pathname === '/pricing'
       ? 'Pricing & Membership Packages | Tradedia'

@@ -2,6 +2,7 @@ import confetti from 'canvas-confetti';
 import { ArrowRight,CheckCircle2,Clock } from 'lucide-react';
 import React,{ useEffect } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { navigate } from '../../../lib/navigation';
 import { SCHEDULED_ORDER_DISCLAIMER } from '../../../utils/orderEngine';
 
 export const OrderSuccessModal: React.FC = () => {
@@ -34,6 +35,7 @@ export const OrderSuccessModal: React.FC = () => {
   const handlePrimaryNavigation = () => {
     setLastExecutedOrder(null);
     setCurrentTab(isScheduled ? 'orders' : 'holdings');
+    navigate('/trade');
   };
 
   return (

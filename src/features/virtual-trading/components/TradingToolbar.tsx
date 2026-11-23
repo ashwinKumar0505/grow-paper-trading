@@ -1,6 +1,7 @@
 import { Plus, Search, Wallet } from 'lucide-react';
 import React, { useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { getTradeStockSymbolFromPath, usePathname } from '../../../lib/navigation';
 import { StockSearchModal } from './StockSearchModal';
 import { TradingNavTabs } from './TradingNavTabs';
 
@@ -13,6 +14,13 @@ export const TradingToolbar: React.FC = () => {
     intradayPositions,
     setIsWalletModalOpen,
   } = useTrading();
+  const pathname = usePathname();
+  const routeSymbol = getTradeStockSymbolFromPath(pathname);
+  const navTab = routeSymbol
+    ? 'stock-detail'
+    : currentTab === 'stock-detail'
+    ? 'explore'
+    : currentTab;
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const totalPositionsCount = holdings.length + intradayPositions.length;
@@ -23,7 +31,7 @@ export const TradingToolbar: React.FC = () => {
         <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 min-h-14 sm:h-14 py-2 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4">
           {/* Desktop Navigation Links */}
           <TradingNavTabs
-            currentTab={currentTab}
+            currentTab={navTab}
             setCurrentTab={setCurrentTab}
             totalPositionsCount={totalPositionsCount}
           />
@@ -87,7 +95,7 @@ export const TradingToolbar: React.FC = () => {
 
         {/* Mobile Sub Navigation bar */}
         <TradingNavTabs
-          currentTab={currentTab}
+          currentTab={navTab}
           setCurrentTab={setCurrentTab}
           totalPositionsCount={totalPositionsCount}
           mobile
