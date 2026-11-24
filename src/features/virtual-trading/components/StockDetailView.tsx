@@ -1,13 +1,9 @@
-import {
-ArrowLeft,
-Calendar,
-ChevronRight
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import React from 'react';
 import { navigate } from '../../../lib/navigation';
 import { useStockDetails } from '../hooks/useStockDetails';
 import { OrderPanel } from './OrderPanel';
-import { StockDepth } from './StockDepth';
+import { StockAnalysisBanner } from './StockAnalysisBanner';
 import { StockFundamentals } from './StockFundamentals';
 import { StockPerformance } from './StockPerformance';
 import { StockPositionBanner } from './StockPositionBanner';
@@ -41,8 +37,8 @@ export const StockDetailView: React.FC = () => {
           {!isIndex && <StockPositionBanner {...model} />}
 
           <StockPerformance {...model} />
-          {!isIndex && <StockDepth {...model} />}
           {!isIndex && <StockFundamentals {...model} />}
+          {!isIndex && <StockAnalysisBanner stock={stock} />}
         </div>
 
         {/* RIGHT COLUMN: Sticky Groww Order Pad (Desktop) */}

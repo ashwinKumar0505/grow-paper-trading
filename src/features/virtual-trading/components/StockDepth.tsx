@@ -1,18 +1,27 @@
 import { LockedFeatureCard } from '../../../components/LockedFeatureCard';
 import type { StockDetailsModel } from '../hooks/useStockDetails';
-type Props = Pick<StockDetailsModel, 'planConfig' | 'marketDepth'>;
+type Props = Pick<StockDetailsModel, 'planConfig' | 'marketDepth' | 'marketStatus'>;
 
-export function StockDepth({ planConfig, marketDepth }: Props) {
-  const isDepthAvailable = Boolean(marketDepth.available && marketDepth.bids.length > 0);
+export function StockDepth({ planConfig, marketDepth, marketStatus }: Props) {
+  const isDepthAvailable = Boolean(
+    marketDepth.available && (marketDepth.bids.length > 0 || marketDepth.asks.length > 0)
+  );
+  const isFeedConnectedEmpty = !isDepthAvailable && marketDepth.source === 'upstox';
 
   return (
     <div className="bg-white dark:bg-[#1A1D24] rounded-2xl border border-gray-200 dark:border-[#282C37] p-6 shadow-xs space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="font-bold text-base text-gray-900 dark:text-white">
           Market Depth
         </h3>
         <span className="text-xs text-gray-400">
-          {isDepthAvailable ? 'Top 5 Bids & Asks' : 'Level-2 Order Book Unavailable'}
+          {isDepthAvailable
+            ? marketStatus.isOpen
+              ? 'Top 5 Bids & Asks · Live NSE'
+              : 'Top 5 Bids & Asks · Last Session'
+            : isFeedConnectedEmpty
+              ? 'Order Book Empty'
+              : 'Level-2 Order Book Unavailable'}
         </span>
       </div>
 
@@ -26,7 +35,9 @@ export function StockDepth({ planConfig, marketDepth }: Props) {
       ) : !isDepthAvailable ? (
         <div className="rounded-xl border border-dashed border-gray-200 dark:border-[#282C37] bg-gray-50/70 dark:bg-[#14171F] p-5 text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
           <div className="font-semibold text-gray-900 dark:text-white">
-            Authentic Exchange Market Depth Unavailable
+            {isFeedConnectedEmpty
+              ? 'No Active Resting Orders'
+              : 'Authentic Exchange Market Depth Unavailable'}
           </div>
           <p className="leading-relaxed text-gray-500 dark:text-gray-400">
             {marketDepth.reason ||
@@ -63,9 +74,13 @@ export function StockDepth({ planConfig, marketDepth }: Props) {
               <div className="space-y-2">
                 {marketDepth.bids.map((b, i) => (
                   <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
-                    <span className="font-semibold text-[#00B386]">₹{b.price.toFixed(2)}</span>
-                    <span className="text-gray-400">{b.orders}</span>
-                    <span className="text-gray-800 dark:text-gray-200">{b.quantity.toLocaleString('en-IN')}</span>
+                    <span className="font-semibold text-[#00B386]">
+                      {b.price > 0 ? `₹${b.price.toFixed(2)}` : '—'}
+                    </span>
+                    <span className="text-gray-400">{b.orders > 0 ? b.orders : '—'}</span>
+                    <span className="text-gray-800 dark:text-gray-200">
+                      {b.quantity > 0 ? b.quantity.toLocaleString('en-IN') : '—'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -84,9 +99,13 @@ export function StockDepth({ planConfig, marketDepth }: Props) {
               <div className="space-y-2">
                 {marketDepth.asks.map((a, i) => (
                   <div key={i} className="flex justify-between font-mono tabular-nums text-xs">
-                    <span className="font-semibold text-[#EB5B3C]">₹{a.price.toFixed(2)}</span>
-                    <span className="text-gray-400">{a.orders}</span>
-                    <span className="text-gray-800 dark:text-gray-200">{a.quantity.toLocaleString('en-IN')}</span>
+                    <span className="font-semibold text-[#EB5B3C]">
+                      {a.price > 0 ? `₹${a.price.toFixed(2)}` : '—'}
+                    </span>
+                    <span className="text-gray-400">{a.orders > 0 ? a.orders : '—'}</span>
+                    <span className="text-gray-800 dark:text-gray-200">
+                      {a.quantity > 0 ? a.quantity.toLocaleString('en-IN') : '—'}
+                    </span>
                   </div>
                 ))}
               </div>

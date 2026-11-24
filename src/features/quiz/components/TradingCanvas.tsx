@@ -847,20 +847,20 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
   return (
     <div className="relative w-full h-full flex flex-col bg-[#0B0E14] select-none overflow-hidden">
       {/* Top Floating Bar: Telemetry, Legend & Chart Mode Switcher */}
-      <div className="relative shrink-0 px-3 py-2 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="relative shrink-0 px-2.5 sm:px-3 py-1.5 sm:py-2 z-10 flex items-center justify-between gap-1.5 sm:gap-2 pointer-events-none">
         {/* Left: Beginner-friendly Price & Candle info */}
-        <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto min-w-0">
           {displayCandle && (
-            <div className="flex items-center gap-2.5 bg-[#121824]/95 px-3 py-1.5 rounded-lg border border-slate-800 backdrop-blur-md shadow-md text-xs font-mono">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 bg-[#121824]/95 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-slate-800 backdrop-blur-md shadow-md text-[11px] sm:text-xs font-mono truncate">
               {effectiveChartType === 'line' ? (
                 // Simplified Line View for beginners
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="text-slate-400 font-sans font-medium">Price:</span>
-                  <span className="text-slate-100 font-bold font-mono text-sm">
-                    ${displayCandle.close.toFixed(2)}
+                  <span className="text-slate-100 font-bold font-mono text-xs sm:text-sm">
+                    ₹{displayCandle.close.toFixed(2)}
                   </span>
                   <span
-                    className={`font-semibold px-1.5 py-0.5 rounded text-[11px] ${
+                    className={`font-semibold px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] ${
                       isUp ? 'text-emerald-400 bg-emerald-950/60' : 'text-rose-400 bg-rose-950/60'
                     }`}
                   >
@@ -870,24 +870,26 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
                 </div>
               ) : (
                 // Candlestick OHLC View
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-2.5">
                   <span className="text-slate-400 font-medium">C#{displayCandle.time}:</span>
-                  <span>
+                  <span className="hidden sm:inline">
                     <span className="text-slate-500">O:</span> <span className="text-slate-200">{displayCandle.open.toFixed(2)}</span>
                   </span>
-                  <span>
+                  <span className="hidden sm:inline">
                     <span className="text-slate-500">H:</span> <span className="text-emerald-400">{displayCandle.high.toFixed(2)}</span>
                   </span>
-                  <span>
+                  <span className="hidden sm:inline">
                     <span className="text-slate-500">L:</span> <span className="text-rose-400">{displayCandle.low.toFixed(2)}</span>
                   </span>
                   <span>
-                    <span className="text-slate-500">C:</span>{' '}
-                    <span className={isUp ? 'text-emerald-400' : 'text-rose-400'}>{displayCandle.close.toFixed(2)}</span>
+                    <span className="text-slate-500 hidden sm:inline">C: </span>
+                    <span className={isUp ? 'text-emerald-400 font-semibold sm:font-normal' : 'text-rose-400 font-semibold sm:font-normal'}>
+                      ₹{displayCandle.close.toFixed(2)}
+                    </span>
                   </span>
                   <span className={`font-semibold ${isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {isUp ? '+' : ''}
-                    {candleChangePct.toFixed(2)}%
+                    ({isUp ? '+' : ''}
+                    {candleChangePct.toFixed(2)}%)
                   </span>
                 </div>
               )}
@@ -945,16 +947,16 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
 
           {/* Zoom & Pan Controls */}
           {!readOnly && (
-            <div className="flex items-center gap-0.5 bg-[#121824]/95 p-1 rounded-lg border border-slate-800 shadow-md backdrop-blur-md">
+            <div className="flex items-center gap-0.5 bg-[#121824]/95 p-0.5 sm:p-1 rounded-lg border border-slate-800 shadow-md backdrop-blur-md shrink-0">
               <button
                 onClick={handleZoomIn}
                 title="Zoom In (+ or scroll wheel up)"
-                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <span
-                className="text-[11px] font-mono text-slate-300 px-1 font-semibold min-w-[34px] text-center"
+                className="text-[10px] sm:text-[11px] font-mono text-slate-300 px-0.5 sm:px-1 font-semibold min-w-[28px] sm:min-w-[34px] text-center"
                 title="Current Zoom Level"
               >
                 {zoomLevel.toFixed(1)}x
@@ -962,15 +964,15 @@ export const TradingCanvas: React.FC<TradingCanvasProps> = ({
               <button
                 onClick={handleZoomOut}
                 title="Zoom Out (- or scroll wheel down)"
-                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <div className="w-px h-3.5 bg-slate-800 mx-0.5" />
               <button
                 onClick={handleResetZoom}
                 title="Reset Zoom & Pan View (or double-click chart)"
-                className={`p-1.5 rounded transition-colors cursor-pointer flex items-center gap-1 text-[11px] ${
+                className={`p-1 sm:p-1.5 rounded transition-colors cursor-pointer flex items-center gap-1 text-[11px] ${
                   isPannedOrZoomed
                     ? 'text-blue-400 hover:text-blue-300 bg-blue-950/60 border border-blue-800/60 font-semibold'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'

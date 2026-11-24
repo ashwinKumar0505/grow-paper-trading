@@ -80,7 +80,7 @@ export const StockExplorerRow: React.FC<StockExplorerRowProps> = ({
 
       {/* Market Cap */}
       <td className="py-3.5 px-3 text-right hidden md:table-cell text-xs font-semibold text-gray-600 dark:text-gray-300">
-        {stock.fundamentals.marketCap}
+        {stock.fundamentals.marketCap || '—'}
       </td>
 
       {/* Quick Trade / Action */}

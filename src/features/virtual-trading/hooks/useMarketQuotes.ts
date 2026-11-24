@@ -99,7 +99,12 @@ export function useMarketQuotes(
               week52Low: liveStock.week52Low || localStock.week52Low,
               lowerCircuit: liveStock.lowerCircuit ?? roundToTick(prevClose * 0.9),
               upperCircuit: liveStock.upperCircuit ?? roundToTick(prevClose * 1.1),
-              fundamentals: liveStock.fundamentals || localStock.fundamentals,
+              fundamentals: liveStock.fundamentals?.available
+                ? liveStock.fundamentals
+                : localStock.fundamentals?.available
+                  ? localStock.fundamentals
+                  : liveStock.fundamentals || localStock.fundamentals,
+              marketDepth: liveStock.marketDepth ?? localStock.marketDepth,
               sparkline:
                 liveStock.sparkline?.length > 0 ? liveStock.sparkline : localStock.sparkline,
               tickDirection: tickDir,

@@ -11,8 +11,28 @@ export function StockFundamentals({ stock, fundamentals, aboutText }: Props) {
     fundamentals.marketCap ||
       fundamentals.peRatio !== null ||
       fundamentals.pbRatio !== null ||
-      fundamentals.roe !== null
+      fundamentals.roe !== null ||
+      fundamentals.roce != null ||
+      fundamentals.roa != null ||
+      fundamentals.eps !== null ||
+      fundamentals.bookValue !== null ||
+      fundamentals.divYield !== null
   );
+
+  const items = [
+    { label: 'Market Cap', value: fundamentals.marketCap || '—' },
+    { label: 'ROE', value: formatRatio(fundamentals.roe, '%') },
+    { label: 'P/E Ratio (TTM)', value: formatRatio(fundamentals.peRatio) },
+    { label: 'EPS (TTM)', value: formatRatio(fundamentals.eps, '', '₹') },
+    { label: 'P/B Ratio', value: formatRatio(fundamentals.pbRatio) },
+    { label: 'Dividend Yield', value: formatRatio(fundamentals.divYield, '%') },
+    { label: 'Industry P/E', value: formatRatio(fundamentals.industryPe) },
+    { label: 'Book Value', value: formatRatio(fundamentals.bookValue, '', '₹') },
+    ...(fundamentals.roce != null ? [{ label: 'ROCE', value: formatRatio(fundamentals.roce, '%') }] : []),
+    ...(fundamentals.roa != null ? [{ label: 'ROA', value: formatRatio(fundamentals.roa, '%') }] : []),
+    { label: 'Debt to Equity', value: formatRatio(fundamentals.debtToEquity) },
+    { label: 'Exchange', value: stock.exchange || 'NSE' },
+  ];
 
   return (
     <>
@@ -39,18 +59,7 @@ export function StockFundamentals({ stock, fundamentals, aboutText }: Props) {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-xs">
-          {[
-            { label: 'Market Cap', value: fundamentals.marketCap || '—' },
-            { label: 'ROE', value: formatRatio(fundamentals.roe, '%') },
-            { label: 'P/E Ratio (TTM)', value: formatRatio(fundamentals.peRatio) },
-            { label: 'EPS (TTM)', value: formatRatio(fundamentals.eps, '', '₹') },
-            { label: 'P/B Ratio', value: formatRatio(fundamentals.pbRatio) },
-            { label: 'Dividend Yield', value: formatRatio(fundamentals.divYield, '%') },
-            { label: 'Industry P/E', value: formatRatio(fundamentals.industryPe) },
-            { label: 'Book Value', value: formatRatio(fundamentals.bookValue, '', '₹') },
-            { label: 'Debt to Equity', value: formatRatio(fundamentals.debtToEquity) },
-            { label: 'Exchange', value: stock.exchange || 'NSE' },
-          ].map((item) => (
+          {items.map((item) => (
             <div
               key={item.label}
               className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-[#242834]"

@@ -39,7 +39,7 @@ export default function StockAnalysisPage({ marketStatus }) {
         <ScreenerHeader
           eyebrow="Deep-Dive Research · Nifty 500"
           title="Stock Analysis"
-          description="Explore price charts, technical indicators, financial performance, and historical pattern insights for any Nifty 500 company."
+          description="Explore price charts, technical indicators, financial performance, and historical pattern insights with AI Powered."
           methodologyNote="Combines 2-year historical backtested patterns, multi-indicator chart analysis, and quarterly/annual financial trends."
         />
       }

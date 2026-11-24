@@ -197,4 +197,10 @@ export class UpstoxHttpClient {
     );
     return Array.isArray(res?.data) ? res.data : [];
   }
+
+  async getFundamentalPayload<T = unknown>(isin: string, subPath: string): Promise<T | null> {
+    if (!isin) return null;
+    const res = await this.getJson<{ data?: T }>(`/v2/fundamentals/${encodeURIComponent(isin)}/${subPath}`);
+    return res?.data ?? null;
+  }
 }

@@ -22,7 +22,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
   onOpenGuide,
 }) => {
   return (
-    <div className="w-full bg-[var(--quiz-panel)] border-b border-[var(--quiz-border)]/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none shrink-0">
+    <div className="hidden md:flex w-full bg-[var(--quiz-panel)] border-b border-[var(--quiz-border)]/80 px-4 py-2 flex-wrap items-center justify-between gap-3 text-xs select-none shrink-0">
       {/* Left: Setup & Asset Metadata */}
       <div className="flex items-center gap-2.5 flex-wrap">
         <span className="font-mono text-[var(--quiz-muted)] font-semibold">
@@ -33,7 +33,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
           <span className="text-[var(--quiz-text)] font-bold tracking-tight">
             Synthetic Scenario ({scenario.assetSymbol} template)
           </span>
-          <span className="text-[var(--quiz-muted)] text-[11px] hidden sm:inline">
+          <span className="text-[var(--quiz-muted)] text-[11px] hidden lg:inline">
             ({scenario.assetName})
           </span>
         </div>
@@ -59,7 +59,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
             title="Normal Chart: Simple, clean line like Apple Stocks & Robinhood"
             className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
               chartType === 'line'
-                ? 'bg-blue-600 text-[var(--quiz-text)] font-semibold'
+                ? 'bg-blue-600 text-white font-semibold'
                 : 'text-[var(--quiz-muted)] hover:text-[var(--quiz-text)]'
             }`}
           >
@@ -71,7 +71,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
             title="Candle Chart: Classic trading bars with high, low, open, close"
             className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all cursor-pointer ${
               chartType === 'candle'
-                ? 'bg-blue-600 text-[var(--quiz-text)] font-semibold'
+                ? 'bg-blue-600 text-white font-semibold'
                 : 'text-[var(--quiz-muted)] hover:text-[var(--quiz-text)]'
             }`}
           >
@@ -143,7 +143,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
             <button
               onClick={onOpenGuide}
               title="Open 15 Popular Chart Patterns Cheat Sheet & Visual Guide"
-              className="hidden sm:flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer ml-1 shadow-[0_0_8px_rgba(245,158,11,0.15)]"
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer ml-1 shadow-[0_0_8px_rgba(245,158,11,0.15)]"
             >
               <BookOpen className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
               <span>Cheat Sheet</span>

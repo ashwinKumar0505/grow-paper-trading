@@ -72,7 +72,7 @@
         "lastAutoResetMonth": "2026-11"
       },
       "createdAt": 1795343065625,
-      "updatedAt": 1795431476550,
+      "updatedAt": 1795501141775,
       "razorpayPaymentId": "pay_U3XOvZRbNV4vQl",
       "razorpayOrderId": "sub_U3XMklziat0qpw",
       "razorpaySubscriptionId": "sub_U3XMklziat0qpw"
@@ -625,7 +625,7 @@
       "lastAutoResetMonth": "2026-11",
       "updatedAt": 1795425068818,
       "processingLockUntil": 0,
-      "processingInstanceId": "inst_202_d00a732c"
+      "processingInstanceId": "inst_19498_6bd3a7ee"
     }
   },
   "quizProgress": {
@@ -767,11 +767,12 @@
     "ltL3mt5huOdzDYyj2mtYzd6RJxd2": {
       "userId": "ltL3mt5huOdzDYyj2mtYzd6RJxd2",
       "quizStats": {
-        "totalQuestions": 1,
+        "totalQuestions": 2,
         "correctAnswers": 0,
         "currentStreak": 0,
         "bestStreak": 0,
         "recentResults": [
+          false,
           false
         ]
       },
@@ -780,16 +781,37 @@
       "tournamentCompletedCount": 0,
       "tournamentBestBalance": 10000,
       "stats": {
-        "balance": 9911.69,
+        "balance": 9801.71,
         "startingBalance": 10000,
-        "totalTrades": 1,
+        "totalTrades": 2,
         "wins": 0,
-        "losses": 1,
+        "losses": 2,
         "winRate": 0,
         "currentStreak": 0,
         "bestStreak": 0,
-        "netProfit": -88.31,
+        "netProfit": -198.29,
         "tradeHistory": [
+          {
+            "id": "trade_1795443506929",
+            "roundNumber": 1,
+            "scenarioId": "scen_1795443503989_h3ty7",
+            "assetSymbol": "ICICIBANK",
+            "assetName": "ICICI Bank",
+            "timeframe": "1-hour candles",
+            "patternName": "The Trampoline Bounce (Trend Line)",
+            "patternCategory": "Trend Following",
+            "direction": "SELL",
+            "entryPrice": 1360.03,
+            "exitPrice": 1509.61,
+            "priceChangePct": 10.998286802496999,
+            "leverage": 1,
+            "positionSize": 1000,
+            "pnl": -109.98286802496999,
+            "pnlPct": -10.998286802496999,
+            "isWin": false,
+            "timestamp": 1795443506929,
+            "explanation": "In a steady upward trend, the moving trend line (the yellow line) acts like a trampoline. Every time price dips to touch this line, buyers happily jump on it to bounce higher!"
+          },
           {
             "id": "trade_1795431518573",
             "roundNumber": 1,
@@ -813,7 +835,7 @@
           }
         ]
       },
-      "updatedAt": 1795431519316
+      "updatedAt": 1795499686043
     }
   },
   "auditLog": [

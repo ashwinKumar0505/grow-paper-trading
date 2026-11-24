@@ -64,3 +64,14 @@ Every backend service, route, provider, storage engine, entitlement module, fron
 - [ ] **Remaining External Verification**:
   - Interactive Chrome UI verification (blocked: Chrome remote debugging `DevToolsActivePort` not active on host).
   - User decision on `PRICE_ADJUSTMENT_POLICY=SPLIT_ADJUSTED_ONLY` + running an Upstox walk-forward backtest (`run_backtests.py`) to replace `UNVALIDATED` status.
+
+## 6. Quiz Mobile Layout & Stock Details Market Depth / Fundamentals (2026-11-23)
+
+- [x] **Quiz Arena Mobile UX (`MobileQuizBar.tsx`, `MobileQuizOptionsDrawer.tsx`, `QuizApp.tsx`, `QuizToolbar.tsx`, `ChartHeader.tsx`, `TradingCanvas.tsx`, `ActionDock.tsx`, `src/index.css`)**:
+  - Replaced stacked mobile toolbar/chart-header controls (`< md`) with a single slim top bar showing trade/score HUD and an expandable `Options` drawer closed by default (`aria-expanded="false"`), keeping the chart and UP/DOWN buttons front and center while preserving the full desktop (`md+`) toolbar & header layout.
+  - Compacted mobile canvas telemetry + zoom into a single non-wrapping strip (`₹` currency aligned) and tightened mobile `ActionDock` spacing/min-height.
+- [x] **Stock Details Market Depth & Fundamentals (`upstoxTypes.ts`, `upstoxHttpClient.ts`, `upstoxNormalizer.ts`, `upstoxFundamentals.ts`, `upstoxProvider.ts`, `marketRoutes.ts`, `useMarketQuotes.ts`, `useStockSelection.ts`, `useStockDetails.ts`, `StockDepth.tsx`, `StockFundamentals.tsx`)**:
+  - Parsed authentic 5-level NSE bid/ask order book (`depth.buy`, `depth.sell`, `total_buy_quantity`, `total_sell_quantity`) directly from Upstox `/v2/market-quote/quotes` and rendered clean `—` placeholders for empty levels and accurate empty-book messaging when closed.
+  - Removed the Market Depth section from `StockDetailView.tsx` and added `StockAnalysisBanner.tsx` after the `About` card linking directly to `/screener/analysis?symbol=<SYMBOL>`.
+  - Integrated authentic Upstox `/v2/fundamentals/{isin}/key-ratios`, `/profile`, and `/corporate-actions` (cached 6h) in `GET /api/stocks/:symbol` and `UpstoxMarketDataProvider.getFundamentals()` for Market Cap, P/E, Industry P/E, P/B, ROE, ROCE, ROA, EPS, Book Value, trailing 365-day Dividend Yield, and company profile (omitting unprovided `Debt to Equity` rather than fabricating from total liabilities).
+  - Verified live read-only against Upstox (`INFY`, `RELIANCE`, `HDFCBANK`, `TCS`) and automated checks (`npm run lint`, `npm test` 91/91 PASS, `npm run build`).

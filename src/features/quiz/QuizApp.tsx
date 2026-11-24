@@ -2,6 +2,7 @@ import { ActionDock } from './components/ActionDock';
 import { ChartHeader } from './components/ChartHeader';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { LearnChartsPage } from './components/LearnChartsPage';
+import { MobileQuizBar } from './components/MobileQuizBar';
 import { ModeSelectPage } from './components/ModeSelectPage';
 import { OutcomeModal } from './components/OutcomeModal';
 import { PatternGuideModal } from './components/PatternGuideModal';
@@ -39,7 +40,27 @@ export default function QuizApp() {
   // 4. Quiz Arena View
   return (
     <div className="quiz-arena flex flex-col w-full bg-[var(--quiz-bg)] text-[var(--quiz-text)] overflow-hidden font-sans">
-      {/* 1. Global Navigation & Metric Header */}
+      {/* 1a. Compact Mobile Header with Single Expandable Options Drawer (Closed by Default) */}
+      <MobileQuizBar
+        mode={gameMode}
+        difficulty={difficulty}
+        scenario={scenario}
+        tradeNumber={tradeNumber}
+        quizStats={quizStats}
+        survivalState={survivalState}
+        tournamentState={tournamentState}
+        indicatorSettings={indicatorSettings}
+        onToggleIndicator={handleToggleIndicator}
+        chartType={chartType}
+        onToggleChartType={setChartType}
+        onOpenModeSelect={() => setCurrentView('mode-select')}
+        onOpenHistory={handleOpenHistory}
+        onOpenGuide={() => setIsGuideOpen(true)}
+        onGoHome={() => setCurrentView('mode-select')}
+        onOpenLearnCharts={() => setCurrentView('learn-charts')}
+      />
+
+      {/* 1b. Desktop Global Navigation & Metric Header */}
       <QuizToolbar
         mode={gameMode}
         difficulty={difficulty}
@@ -54,7 +75,7 @@ export default function QuizApp() {
         onOpenLearnCharts={() => setCurrentView('learn-charts')}
       />
 
-      {/* 2. Chart Sub-Header with Indicator Controls & Normal vs Candle Switch */}
+      {/* 2. Desktop Chart Sub-Header with Indicator Controls & Normal vs Candle Switch */}
       <ChartHeader
         scenario={scenario}
         tradeNumber={tradeNumber}
@@ -66,7 +87,7 @@ export default function QuizApp() {
       />
 
       {/* 3. Main Chart Canvas Viewport */}
-      <main className="flex-1 w-full relative min-h-[280px]">
+      <main className="flex-1 w-full relative min-h-[260px] sm:min-h-[280px]">
         <TradingCanvas
           candles={scenario.candles}
           setupCount={scenario.setupCount}

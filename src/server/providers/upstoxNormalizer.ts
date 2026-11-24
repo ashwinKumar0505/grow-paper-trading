@@ -1,9 +1,9 @@
-import type { IndexData, Stock } from '../../types/market';
+import type { IndexData, MarketDepthItem, Stock } from '../../types/market';
 import { buildMarketDataMetadata, type MarketStatus } from '../../utils/marketHours';
 import { roundToTick } from '../../utils/orderEngine';
 import { INDICES_CATALOG, NSE_SYMBOL_CATALOG, resolveCanonicalSymbol } from './symbolCatalog';
 import type { StockSearchItem } from './types';
-import type { UpstoxQuoteEntry, UpstoxSearchInstrument } from './upstoxTypes';
+import type { UpstoxDepthLevel, UpstoxQuoteEntry, UpstoxSearchInstrument } from './upstoxTypes';
 
 export function toFinitePositive(val: unknown): number | null {
   const n = typeof val === 'string' && val.trim() !== '' ? Number(val) : typeof val === 'number' ? val : NaN;
@@ -59,6 +59,33 @@ function resolvePreviousClose(entry: UpstoxQuoteEntry, lastPrice: number): numbe
   return ohlcClose !== null ? Number(ohlcClose.toFixed(2)) : lastPrice;
 }
 
+function parseUpstoxDepth(entry: UpstoxQuoteEntry, quoteTs: number): MarketDepthItem | undefined {
+  if (!entry.depth) return undefined;
+  const mapLevels = (levels?: UpstoxDepthLevel[]) =>
+    (Array.isArray(levels) ? levels : []).map((l) => ({
+      price: Number(Math.max(0, Number(l?.price || 0)).toFixed(2)),
+      orders: Math.max(0, Math.round(Number(l?.orders || 0))),
+      quantity: Math.max(0, Math.round(Number(l?.quantity || 0))),
+    }));
+  const bids = mapLevels(entry.depth.buy);
+  const asks = mapLevels(entry.depth.sell);
+  const totalBuyQty = Math.max(bids.reduce((a, b) => a + b.quantity, 0), Math.round(Number(entry.total_buy_quantity || 0)));
+  const totalSellQty = Math.max(asks.reduce((a, b) => a + b.quantity, 0), Math.round(Number(entry.total_sell_quantity || 0)));
+  const hasActiveOrders = totalBuyQty > 0 || totalSellQty > 0 || bids.some((b) => b.price > 0) || asks.some((a) => a.price > 0);
+  return {
+    available: hasActiveOrders,
+    source: 'upstox',
+    reason: hasActiveOrders
+      ? undefined
+      : 'No active resting bids or asks in the NSE order book right now. Live 5-level depth updates automatically during market hours (9:15 AM – 3:30 PM IST).',
+    timestamp: quoteTs,
+    bids,
+    asks,
+    totalBuyQty,
+    totalSellQty,
+  };
+}
+
 export function parseUpstoxQuoteToStock(
   symbol: string,
   entry: UpstoxQuoteEntry,
@@ -106,6 +133,7 @@ export function parseUpstoxQuoteToStock(
       available: false, source: 'unavailable', marketCap: null, peRatio: null, pbRatio: null,
       industryPe: null, debtToEquity: null, roe: null, divYield: null, eps: null, bookValue: null,
     },
+    marketDepth: parseUpstoxDepth(entry, quoteTs),
     about: `${idxCat?.name || cat?.name || options?.fallbackName || upper} is listed on the ${idxCat?.exchange || cat?.exchange || 'NSE'}.`,
     sparkline: options?.sparkline && options.sparkline.length >= 2 ? options.sparkline : [previousClose, price],
     lastUpdated: now,

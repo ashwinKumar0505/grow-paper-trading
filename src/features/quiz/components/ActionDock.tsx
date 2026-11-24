@@ -35,13 +35,13 @@ export const ActionDock: React.FC<ActionDockProps> = ({
   const isSurvival = mode === 'survival';
 
   return (
-    <div className="w-full bg-[var(--quiz-panel)] border-t border-[var(--quiz-border)]/80 px-4 py-3 select-none">
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="w-full bg-[var(--quiz-panel)] border-t border-[var(--quiz-border)]/80 px-3 sm:px-4 py-2 sm:py-3 select-none">
+      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 sm:gap-4">
         {/* Left: Question Prompt */}
         <div className="flex flex-col text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${isSurvival ? 'bg-rose-400' : 'bg-emerald-400'}`}></span>
-            <span className="text-sm font-bold text-[var(--quiz-text)] font-sans">
+            <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full animate-pulse ${isSurvival ? 'bg-rose-400' : 'bg-emerald-400'}`}></span>
+            <span className="text-xs sm:text-sm font-bold text-[var(--quiz-text)] font-sans">
               {isSurvival
                 ? `Survival Mode: Will price go UP or DOWN next?`
                 : isTournament
@@ -49,7 +49,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
                 : 'Will the price go UP or DOWN next?'}
             </span>
           </div>
-          <p className="text-xs text-[var(--quiz-muted)] mt-0.5">
+          <p className="hidden sm:block text-xs text-[var(--quiz-muted)] mt-0.5">
             {isSurvival
               ? `Predict the next ${outcomeCount} candles. Every wrong prediction costs 1 life!`
               : isTournament
@@ -58,9 +58,9 @@ export const ActionDock: React.FC<ActionDockProps> = ({
           </p>
         </div>
 
-        {/* Center: Survival Hearts or Tournament Bet Amount */}
+        {/* Center: Survival Hearts (Desktop only; shown in MobileQuizBar on < md) or Tournament Bet Amount */}
         {isSurvival && (
-          <div className="flex items-center gap-3 bg-[var(--quiz-bg)] px-3.5 py-1.5 rounded-xl border border-[var(--quiz-border)]">
+          <div className="hidden md:flex items-center gap-3 bg-[var(--quiz-bg)] px-3.5 py-1.5 rounded-xl border border-[var(--quiz-border)]">
             <div className="flex items-center gap-1.5 text-xs font-mono">
               <span className="text-[var(--quiz-muted)] font-sans text-[11px]">Lives:</span>
               <div className="flex items-center gap-1">
@@ -78,19 +78,19 @@ export const ActionDock: React.FC<ActionDockProps> = ({
           </div>
         )}
         {isTournament && (
-          <div className="flex items-center gap-3 bg-[var(--quiz-bg)] px-3.5 py-1.5 rounded-xl border border-[var(--quiz-border)]">
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 bg-[var(--quiz-bg)] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl border border-[var(--quiz-border)]">
+            <div className="flex items-center flex-wrap justify-center gap-2 sm:gap-2.5">
               <div className="flex items-center gap-1.5 text-xs font-mono">
                 <span className="text-[var(--quiz-muted)] font-sans text-[11px]">Bet:</span>
                 <span className="text-emerald-700 dark:text-emerald-400 font-bold">₹{positionSize.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 {[500, 1000, 2500, 5000].map((amt) => (
                   <button
                     key={amt}
                     disabled={disabled || amt > userBalance}
                     onClick={() => onChangePositionSize(Math.min(amt, userBalance))}
-                    className={`text-[11px] font-mono px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                    className={`text-[11px] font-mono px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-colors cursor-pointer ${
                       positionSize === amt
                         ? 'bg-[var(--quiz-subtle)] text-[var(--quiz-text)] font-bold border border-[var(--quiz-border)]'
                         : 'text-[var(--quiz-muted)] bg-[var(--quiz-subtle)]/50 hover:bg-[var(--quiz-subtle)] hover:text-[var(--quiz-text)] disabled:opacity-30'
@@ -105,7 +105,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
         )}
 
         {/* Right: Tactile BUY (UP) / SELL (DOWN) Action Buttons */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-center">
+        <div className="flex items-center gap-2.5 sm:gap-3 w-full md:w-auto justify-center">
           {/* UP (BUY) Button */}
           <button
             disabled={disabled}
@@ -114,7 +114,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
           >
             <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
             <span>UP (BUY)</span>
-            <kbd className="hidden sm:inline bg-emerald-700/60 text-emerald-700 dark:text-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ml-1">
+            <kbd className="hidden sm:inline bg-emerald-700/60 text-emerald-100 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ml-1">
               B
             </kbd>
           </button>
@@ -127,7 +127,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({
           >
             <ArrowDownRight className="w-5 h-5 stroke-[2.5]" />
             <span>DOWN (SELL)</span>
-            <kbd className="hidden sm:inline bg-rose-700/60 text-rose-700 dark:text-rose-200 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ml-1">
+            <kbd className="hidden sm:inline bg-rose-700/60 text-rose-100 text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ml-1">
               S
             </kbd>
           </button>

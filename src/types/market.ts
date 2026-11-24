@@ -64,6 +64,8 @@ export interface StockFundamentals {
   industryPe: number | null;
   debtToEquity: number | null;
   roe: number | null;
+  roce?: number | null;
+  roa?: number | null;
   divYield: number | null;
   eps: number | null;
   bookValue: number | null;

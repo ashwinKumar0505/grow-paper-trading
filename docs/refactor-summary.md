@@ -183,3 +183,22 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - `npm run build` (`vite build`): **PASS**.
 - **Checks Not Executed**:
   - Manual interactive browser / Chrome DevTools Network-tab check was not executed in this environment.
+
+---
+
+## 9. Quiz Mobile Layout & Stock Details Market Depth / Fundamentals (2026-11-23)
+
+- **Quiz Mobile Layout**:
+  - Added `src/features/quiz/components/MobileQuizBar.tsx` (128 code lines) and `src/features/quiz/components/MobileQuizOptionsDrawer.tsx` (170 code lines) shown on `< md` viewports, collapsing Chart Style (`Normal`/`Candles`), Guides (`Trend Line`, `Floor & Ceiling`, `Activity (Vol)`, `Momentum (RSI)`), and Quiz Actions (`Mode / Level`, `Learn Charts`, `Patterns`, `History`, `Quit`) into a single `Options` drawer closed by default.
+  - Desktop (`md+`) keeps `QuizToolbar` and `ChartHeader` unchanged; `TradingCanvas` top strip and `ActionDock` were tightened on mobile so the chart canvas and UP/DOWN buttons fit cleanly on one mobile screen.
+- **Stock Details — Market Depth & Fundamentals**:
+  - **Root causes fixed**: (1) `upstoxNormalizer.ts` ignored the 5-level `depth` object returned by Upstox `/v2/market-quote/quotes` and `upstoxProvider.ts` hardcoded `supportsMarketDepth: false` / `supportsFundamentals: false`; (2) `useStockDetails.ts` and `StockDepth.tsx` required `bids.length > 0` and overwrote post-session empty-book responses; (3) `GET /api/stocks/:symbol` never fetched Upstox company fundamentals endpoints (`/v2/fundamentals/{isin}/key-ratios`, `/profile`, `/corporate-actions`).
+  - **Implementation**: Added `src/server/providers/upstoxFundamentals.ts` (180 code lines, 6-hour per-symbol cache), parsed 5-level `depth` in `upstoxNormalizer.ts` (196 code lines), updated `upstoxProvider.ts` (198 code lines) & `marketRoutes.ts` (169 code lines), preserved `fundamentals` & `marketDepth` in `useMarketQuotes.ts` / `useStockSelection.ts` / `useStockDetails.ts`, updated `StockFundamentals.tsx` (including `ROCE`/`ROA` when available and omitting `Debt to Equity` when not provided by Upstox), removed `<StockDepth />` from `StockDetailView.tsx`, and added `src/features/virtual-trading/components/StockAnalysisBanner.tsx` (63 code lines) after the About card linking directly to `/screener/analysis?symbol=<SYMBOL>`.
+- **Verification Executed**:
+  - `npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `npm test` (`node --import tsx --test src/utils/*.test.ts`): **PASS** (91/91 passed, including `src/utils/quizAndStockDetailsRender.test.ts` and updated Upstox depth/fundamentals assertions).
+  - `npm run build` (`vite build`): **PASS**.
+  - Read-only live Upstox provider check (`INFY`, `RELIANCE`, `HDFCBANK`, `TCS`): confirmed real 5-level depth and authentic Market Cap, P/E, P/B, ROE, ROCE, ROA, EPS, Book Value, Dividend Yield, and company profile descriptions.
+- **Checks Not Executed & Notes**:
+  - Interactive mobile browser / Chrome DevTools visual check was not run in this environment.
+  - `Debt to Equity` stays `—` when Upstox `/key-ratios` does not report it (intentionally not approximated from `total_liability / equity`). Outside NSE market hours (9:15 AM – 3:30 PM IST), Market Depth shows resting closing-session orders or an explicit `No Active Resting Orders` state when the exchange book is empty.

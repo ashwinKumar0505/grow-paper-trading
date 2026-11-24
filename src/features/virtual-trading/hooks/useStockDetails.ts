@@ -109,7 +109,7 @@ export function useStockDetails() {
     } in the ${stock.sector || 'Equities'} sector.`;
 
   const marketDepth: MarketDepthItem = useMemo(() => {
-    if (stock.marketDepth?.available && stock.marketDepth.bids.length > 0) {
+    if (stock.marketDepth) {
       return stock.marketDepth;
     }
     return UNAVAILABLE_MARKET_DEPTH;

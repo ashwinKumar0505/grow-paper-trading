@@ -107,13 +107,29 @@ test('Registry defaults to Upstox, preserves explicit Yahoo rollback, and honors
   });
   assert.equal(rollbackRegistry.getProviderForUseCase('stock_analytics').id, 'yahoo_finance');
 
-  const upstoxProv = new UpstoxMarketDataProvider({ env: { UPSTOX_ANALYTICS_TOKEN: 'token-only' } });
+  const upstoxProv = new UpstoxMarketDataProvider({
+    env: { UPSTOX_ANALYTICS_TOKEN: 'token-only' },
+    fetchFn: async () =>
+      makeJsonResponse({
+        status: 'success',
+        data: {
+          'NSE_EQ:RELIANCE': {
+            instrument_token: 'NSE_EQ|INE002A01018',
+            last_price: 1350,
+            ohlc: { open: 1340, high: 1360, low: 1335, close: 1345 },
+            total_buy_quantity: 0,
+            total_sell_quantity: 0,
+            depth: { buy: [{ price: 0, orders: 0, quantity: 0 }], sell: [{ price: 0, orders: 0, quantity: 0 }] },
+          },
+        },
+      }),
+  });
   const caps = upstoxProv.getCapabilities();
   assert.equal(caps.providerId, 'upstox');
   assert.equal(caps.isLicensedForCommercialRedistribution, false);
   assert.equal(caps.isLicensedForPaperTrading, false);
-  assert.equal(caps.supportsMarketDepth, false);
-  assert.equal(caps.supportsFundamentals, false);
+  assert.equal(caps.supportsMarketDepth, true);
+  assert.equal(caps.supportsFundamentals, true);
 
   const depth = await upstoxProv.getMarketDepth('RELIANCE', MARKET_OPEN_TS);
   assert.equal(depth.available, false);

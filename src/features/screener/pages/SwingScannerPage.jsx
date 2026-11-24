@@ -35,7 +35,7 @@ export default function SwingScannerPage({ marketStatus }) {
         <ScreenerHeader
           eyebrow="Multi-Day Setups · Nifty 500"
           title="Swing Technical Screener"
-          description="Explore rule-based multi-day technical setups identified through chart patterns, quantitative indicators, and historical backtesting."
+          description="Explore rule-based multi-day technical setups identified through chart patterns, quantitative indicators, and historical backtesting with AI Powered."
           methodologyNote="Screens Nifty 500 equities using trend alignment, volume confirmation, and 2-year backtested candlestick & breakout patterns."
           illustration={<HeroChartIllustration />}
           actions={

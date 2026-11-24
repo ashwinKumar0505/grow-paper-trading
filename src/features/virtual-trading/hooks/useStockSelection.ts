@@ -53,6 +53,24 @@ function buildIndexStock(idx: IndexData): Stock {
   };
 }
 
+function mergeStockDetails(base: Stock | undefined, incoming: Stock, fallbackSym: string): Stock {
+  const fundamentals = incoming.fundamentals?.available
+    ? incoming.fundamentals
+    : base?.fundamentals?.available
+      ? base.fundamentals
+      : incoming.fundamentals || base?.fundamentals || EMPTY_FUNDAMENTALS;
+  return {
+    ...(base || {}),
+    ...incoming,
+    fundamentals,
+    marketDepth: incoming.marketDepth ?? base?.marketDepth,
+    about:
+      incoming.about ||
+      base?.about ||
+      `${incoming.name || fallbackSym} is listed on the National Stock Exchange of India (NSE).`,
+  };
+}
+
 export function useStockSelection({
   setSelectedStockState,
   setStocks,
@@ -67,25 +85,19 @@ export function useStockSelection({
       .then((r) => r.json())
       .then((data) => {
         if (data.success && data.stock && data.stock.price > 0) {
+          const fresh = data.stock as Stock;
           setSelectedStockState((prev) =>
-            prev.symbol === stock.symbol
-              ? {
-                  ...prev,
-                  ...data.stock,
-                  fundamentals: data.stock.fundamentals || prev.fundamentals || EMPTY_FUNDAMENTALS,
-                  about: data.stock.about || prev.about,
-                }
-              : prev
+            prev.symbol === stock.symbol ? mergeStockDetails(prev, fresh, stock.symbol) : prev
           );
           if (stock.sector !== 'Index') {
             setStocks((prev) => {
               const idx = prev.findIndex((s) => s.symbol === stock.symbol);
               if (idx >= 0) {
                 const cp = [...prev];
-                cp[idx] = { ...cp[idx], ...data.stock };
+                cp[idx] = mergeStockDetails(cp[idx], fresh, stock.symbol);
                 return cp;
               }
-              return [data.stock, ...prev];
+              return [fresh, ...prev];
             });
           }
         }
@@ -115,39 +127,17 @@ export function useStockSelection({
           const freshStock = data.stock as Stock;
           setSelectedStockState((prev) => {
             const base = existing || (prev.symbol.toUpperCase() === sym ? prev : undefined);
-            return {
-              ...(base || {}),
-              ...freshStock,
-              fundamentals: freshStock.fundamentals || base?.fundamentals || EMPTY_FUNDAMENTALS,
-              about:
-                freshStock.about ||
-                base?.about ||
-                `${freshStock.name || sym} is listed on the National Stock Exchange of India (NSE).`,
-            } as Stock;
+            return mergeStockDetails(base, freshStock, sym);
           });
           if (!matchedIndex && freshStock.sector !== 'Index') {
             setStocks((prev) => {
               const idx = prev.findIndex((s) => s.symbol.toUpperCase() === sym);
               if (idx >= 0) {
                 const updated = [...prev];
-                updated[idx] = {
-                  ...updated[idx],
-                  ...freshStock,
-                  fundamentals: freshStock.fundamentals || updated[idx].fundamentals || EMPTY_FUNDAMENTALS,
-                  about: freshStock.about || updated[idx].about,
-                };
+                updated[idx] = mergeStockDetails(updated[idx], freshStock, sym);
                 return updated;
               }
-              return [
-                {
-                  ...freshStock,
-                  fundamentals: freshStock.fundamentals || EMPTY_FUNDAMENTALS,
-                  about:
-                    freshStock.about ||
-                    `${freshStock.name || sym} is listed on the National Stock Exchange of India (NSE).`,
-                },
-                ...prev,
-              ];
+              return [mergeStockDetails(undefined, freshStock, sym), ...prev];
             });
           }
           setCurrentTab('stock-detail');

@@ -131,7 +131,10 @@
   color-scheme: dark;
 }
 .quiz-arena, .quiz-library { height: calc(100dvh - var(--workspace-header-height)); }
-.quiz-arena { min-height: 680px; }
+.quiz-arena { min-height: 520px; }
+@media (min-width: 640px) {
+  .quiz-arena { min-height: 680px; }
+}
 .quiz-shell :is(button, a, input):focus-visible {
   outline: 2px solid #34d399;
   outline-offset: 4px;

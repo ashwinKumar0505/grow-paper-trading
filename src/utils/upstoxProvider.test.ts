@@ -55,9 +55,45 @@ test('Upstox provider fetches bulk quotes with alias dedup, index quotes, partia
             last_trade_time: String(MARKET_OPEN_TS - 2000),
             lower_circuit_limit: 234,
             upper_circuit_limit: 286,
+            total_buy_quantity: 1200,
+            total_sell_quantity: 1500,
+            depth: {
+              buy: [{ price: 265.4, quantity: 1200, orders: 14 }],
+              sell: [{ price: 265.6, quantity: 1500, orders: 18 }],
+            },
             ohlc: { open: 261, high: 268, low: 259.5, close: 260 },
           },
         },
+      });
+    }
+    if (url.includes('/v2/fundamentals/INE758T01015/key-ratios')) {
+      return makeJsonResponse({
+        status: 'success',
+        data: [
+          { name: 'P/E', company_value: '26.55', sector_value: '22.00' },
+          { name: 'P/B', company_value: '2.65', sector_value: '3.10' },
+          { name: 'ROE', company_value: '18.5%', sector_value: '14.0%' },
+          { name: 'ROCE', company_value: '24.2%', sector_value: '19.1%' },
+          { name: 'ROA', company_value: '11.4%', sector_value: '8.5%' },
+        ],
+      });
+    }
+    if (url.includes('/v2/fundamentals/INE758T01015/profile')) {
+      return makeJsonResponse({
+        status: 'success',
+        data: {
+          company_profile: 'Eternal Limited operates Zomato and Blinkit in India.',
+          sector_market_cap_inr: { value: 256400.4, unit: 'crore', formatted: '256,400.40 Cr' },
+        },
+      });
+    }
+    if (url.includes('/v2/fundamentals/INE758T01015/corporate-actions')) {
+      return makeJsonResponse({
+        status: 'success',
+        data: [
+          { name: 'Dividend', expiry_date: '15 Jan 2026', amount: 2.655 },
+          { name: 'Dividend', expiry_date: '01 Jan 2025', amount: 5.0 },
+        ],
       });
     }
     if (url.includes('/v2/market-quote/quotes') && url.includes('Nifty%2050')) {
@@ -108,16 +144,33 @@ test('Upstox provider fetches bulk quotes with alias dedup, index quotes, partia
   const bulk = await provider.getStockQuotes(['ZOMATO', 'ETERNAL', 'TCS'], MARKET_OPEN_TS);
   assert.equal(bulk.available, true);
   assert.equal(bulk.data?.length, 2);
-  assert.equal(bulk.data?.[0].symbol, 'ZOMATO');
-  assert.equal(bulk.data?.[0].price, 265.5);
-  assert.equal(bulk.data?.[0].previousClose, 260);
-  assert.equal(bulk.data?.[0].change, 5.5);
-  assert.equal(bulk.data?.[0].lowerCircuit, 234);
-  assert.equal(bulk.data?.[0].upperCircuit, 286);
-  assert.equal(bulk.data?.[0].freshness, 'LIVE');
-  assert.equal(bulk.data?.[1].symbol, 'ETERNAL');
+  const z = bulk.data![0];
+  assert.deepEqual(
+    { sym: z.symbol, p: z.price, prev: z.previousClose, chg: z.change, lc: z.lowerCircuit, uc: z.upperCircuit, fr: z.freshness, sym2: bulk.data?.[1].symbol },
+    { sym: 'ZOMATO', p: 265.5, prev: 260, chg: 5.5, lc: 234, uc: 286, fr: 'LIVE', sym2: 'ETERNAL' }
+  );
+  assert.deepEqual(
+    { avail: z.marketDepth?.available, bid: z.marketDepth?.bids[0]?.price, ask: z.marketDepth?.asks[0]?.price, buyQ: z.marketDepth?.totalBuyQty, sellQ: z.marketDepth?.totalSellQty },
+    { avail: true, bid: 265.4, ask: 265.6, buyQ: 1200, sellQ: 1500 }
+  );
   assert.equal(requestedUrls.filter((u) => u.includes('/v2/market-quote/quotes')).length, 1);
   assert.equal(requestedUrls[0].split('INE758T01015').length - 1, 1);
+
+  const depthRes = await provider.getMarketDepth('ZOMATO', MARKET_OPEN_TS);
+  assert.equal(depthRes.available, true);
+  assert.equal(depthRes.data?.totalSellQty, 1500);
+
+  const fundRes = await provider.getFundamentals('ZOMATO', MARKET_OPEN_TS);
+  assert.equal(fundRes.available, true);
+  assert.deepEqual(
+    {
+      mcap: fundRes.data?.marketCap, pe: fundRes.data?.peRatio, indPe: fundRes.data?.industryPe,
+      pb: fundRes.data?.pbRatio, roe: fundRes.data?.roe, roce: fundRes.data?.roce,
+      roa: fundRes.data?.roa, eps: fundRes.data?.eps, bv: fundRes.data?.bookValue,
+      div: fundRes.data?.divYield, de: fundRes.data?.debtToEquity,
+    },
+    { mcap: '₹2,56,400 Cr', pe: 26.55, indPe: 22, pb: 2.65, roe: 18.5, roce: 24.2, roa: 11.4, eps: 10, bv: 100.19, div: 1, de: null }
+  );
 
   const indices = await provider.getIndexQuotes(MARKET_OPEN_TS);
   assert.equal(indices.available, true);

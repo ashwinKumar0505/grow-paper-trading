@@ -96,7 +96,15 @@ export function createMarketRouter(): Router {
         });
         return;
       }
-      res.json({ success: true, available: true, stock: result.data, metadata: result.metadata, marketStatus });
+      let stock = result.data;
+      if (!stock.fundamentals?.available && stock.sector !== 'Index') {
+        const fundRes = await provider.getFundamentals(symbol, now).catch(() => null);
+        if (fundRes?.available && fundRes.data?.available) {
+          const updated = await provider.getStockQuote(symbol, now).catch(() => null);
+          stock = updated?.data || { ...stock, fundamentals: fundRes.data };
+        }
+      }
+      res.json({ success: true, available: true, stock, metadata: result.metadata, marketStatus });
     } catch (err) {
       res.status(503).json({
         success: false, available: false, freshness: 'UNAVAILABLE', marketStatus,

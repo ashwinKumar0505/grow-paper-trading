@@ -25,6 +25,12 @@ export class UpstoxApiError extends Error {
   }
 }
 
+export interface UpstoxDepthLevel {
+  quantity?: number;
+  price?: number;
+  orders?: number;
+}
+
 export interface UpstoxQuoteEntry {
   instrument_token?: string;
   symbol?: string;
@@ -36,6 +42,12 @@ export interface UpstoxQuoteEntry {
   last_trade_time?: string | number;
   lower_circuit_limit?: number;
   upper_circuit_limit?: number;
+  total_buy_quantity?: number;
+  total_sell_quantity?: number;
+  depth?: {
+    buy?: UpstoxDepthLevel[];
+    sell?: UpstoxDepthLevel[];
+  };
   cp?: number;
   prev_close_price?: number;
   ohlc?: { open?: number; high?: number; low?: number; close?: number };
