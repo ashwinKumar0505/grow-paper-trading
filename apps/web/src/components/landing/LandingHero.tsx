@@ -79,10 +79,10 @@ return (
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">
                 <div className="flex items-center gap-2 text-xs font-extrabold text-[#00B386] dark:text-[#00D09C]">
                   <Radar className="w-4 h-4 shrink-0" />
-                  <span>2. Stock Screener &amp; Backtests</span>
+                  <span>2. Stock Screener</span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B7066] dark:text-[#9AB0A5]">
-                  Backtested swing &amp; intraday strategies, chart analysis &amp; technical insights.
+                  AI Powered Backtested swing &amp; intraday strategies, chart analysis &amp; technical insights.
                 </p>
               </div>
               <div className="rounded-2xl border border-[#CFDCD5] dark:border-[#20332A] bg-white/80 dark:bg-[#111C17] p-3.5">

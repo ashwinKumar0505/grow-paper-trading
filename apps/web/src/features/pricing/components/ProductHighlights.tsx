@@ -6,8 +6,8 @@ import { accentText, focusRing, surface, textMuted, textStrong } from '../pricin
 const PRODUCTS = [
   {
     icon: Radar,
-    title: 'Rule-Based Stock Screener & Backtests',
-    description: 'Scan NSE stocks with chart analysis, 2-year historical strategy backtests, and quantitative technical insights.',
+    title: 'Stock Screener AI Powered',
+    description: 'Scan NSE stocks with chart analysis, 2-year historical strategy backtests, quantitative technical insights, and AI-powered commentary.',
     href: '/screener',
     cta: 'Explore Screener',
   },

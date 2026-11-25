@@ -151,9 +151,10 @@ test('backend subscription entitlement enforcement gates orders, screeners, quot
   assert.equal(validateTradingOrderEntitlement({ user: freeUser, product: 'DELIVERY', orderType: 'MARKET', isMarketOpen: true, now }).allowed, true);
   assert.equal(validateTradingOrderEntitlement({ user: freeUser, product: 'INTRADAY', orderType: 'MARKET', isMarketOpen: true, now }).allowed, false);
   assert.equal(validateTradingOrderEntitlement({ user: freeUser, product: 'DELIVERY', orderType: 'LIMIT', isMarketOpen: true, now }).allowed, false);
+  assert.equal(validateTradingOrderEntitlement({ user: freeUser, product: 'DELIVERY', orderType: 'MARKET', isMarketOpen: false, now }).allowed, false);
   assert.equal(validateTradingOrderEntitlement({ user: beginnerUser, product: 'INTRADAY', orderType: 'LIMIT', isMarketOpen: true, now }).allowed, true);
   assert.equal(validateTradingOrderEntitlement({ user: beginnerUser, product: 'DELIVERY', orderType: 'SL', isMarketOpen: true, now }).allowed, false);
-  assert.equal(validateTradingOrderEntitlement({ user: beginnerUser, product: 'DELIVERY', orderType: 'MARKET', isMarketOpen: false, now }).allowed, false);
+  assert.equal(validateTradingOrderEntitlement({ user: beginnerUser, product: 'DELIVERY', orderType: 'MARKET', isMarketOpen: false, now }).allowed, true);
   assert.equal(validateTradingOrderEntitlement({ user: advancedUser, product: 'INTRADAY', orderType: 'SL', isMarketOpen: false, now }).allowed, true);
 
   assert.equal(validateScreenerEntitlement({ user: freeUser, scannerType: 'intraday', now }).allowed, false);

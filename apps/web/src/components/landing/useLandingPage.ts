@@ -46,7 +46,7 @@ export function useLandingPage() {
   const faqs = [
     {
       q: 'What are the 3 tools included inside Tradedia?',
-      a: 'Tradedia brings together three connected tools in one place: (1) Paper Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹50,00,000 in virtual capital, (2) Rule-Based Stock Screener & Stock Analysis to find Swing and Intraday technical setups across Nifty 500 using chart analysis and backtested strategies, and (3) Interactive Learning & Guess the Chart to master 21 candlestick patterns and step through synthetic educational chart scenarios.',
+      a: 'Tradedia brings together three connected tools in one place: (1) Paper Trading Desk to practice Delivery and 5x Intraday orders with ₹1,00,000 to ₹50,00,000 in virtual capital, (2) Stock Screener AI Powered & Stock Analysis to find Swing and Intraday technical setups across Nifty 500 using chart analysis, backtested strategies, and AI-powered insights, and (3) Interactive Learning & Guess the Chart to master 21 candlestick patterns and step through synthetic educational chart scenarios.',
     },
     {
       q: 'How does the Stock Screener evaluate stocks?',

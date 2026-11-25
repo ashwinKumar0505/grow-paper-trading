@@ -62,11 +62,11 @@ export function useOrderExecution({
     const currentMarketStatus = getIndianMarketStatus(now);
     if (!currentMarketStatus.isOpen && !planConfig.allowAmoOrders) {
       openUpgradeModal({
-        requiredTier: 'advanced',
+        requiredTier: 'beginner',
         featureName: 'After-Market Orders (AMO)',
-        featureDescription: 'Scheduling After-Market Orders (AMO) outside regular NSE trading hours is exclusive to the Advanced Package (₹699/mo).',
+        featureDescription: 'Scheduling After-Market Orders (AMO) outside regular NSE trading hours is available on the Beginner & Advanced Packages.',
       });
-      return { success: false, message: 'After-Market Orders (AMO) require the Advanced Package.' };
+      return { success: false, message: 'After-Market Orders (AMO) require the Beginner or Advanced Package.' };
     }
 
     const prevClose = stock.previousClose > 0 ? stock.previousClose : stock.price;

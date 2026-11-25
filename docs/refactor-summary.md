@@ -266,3 +266,19 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - `cd apps/analytics && .venv/bin/pytest tests -v`: **PASS** (48 / 48 passed, including new unpadded `X-User-Context` checks).
 - **Checks NOT Executed**:
   - Live Railway redeploy verification and interactive browser checks require pushing to Railway.
+
+---
+
+## 13. Pricing Comparison Reordering, AI-Powered Layer Copy & Beginner AMO Support (2026-11-25)
+
+- **Changes**:
+  - `apps/web/src/features/pricing/pricingComparisonConfig.ts`: Moved `Paper Trading & Virtual Capital` to first (expanded by default) and `Stock Screener AI Powered` to second; preserved `Chart, strategy & technical stock analysis` and added `(AI-powered)` alongside it.
+  - `apps/web/src/features/pricing/pricingConfig.ts`, `ProductHighlights.tsx`, `LandingScreener.tsx`, `LandingCTA.tsx`, `useLandingPage.ts`: Preserved all chart analysis, technical analysis, rule-based, and backtesting terms while adding `AI-powered` alongside them in key titles and descriptions.
+  - `apps/web/src/lib/subscription.ts`, `useOrderExecution.ts`, `entitlementService.ts`: Enabled After-Market Orders (`allowAmoOrders: true`) on the `beginner` package across both UI gating and authoritative server validation, and updated Free-tier AMO upgrade prompts to require Beginner or Advanced.
+  - `apps/web/src/utils/webhooksAndEntitlements.test.ts` & `pricing.test.ts`: Updated AMO entitlement assertions and added comparison order/title checks.
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (94 / 94 passed).
+  - `cd apps/web && npm run build`: **PASS** (Vite SPA + `esbuild` `dist-server/server.mjs`).
+- **Checks NOT Executed**:
+  - Interactive browser / visual check not executed locally.

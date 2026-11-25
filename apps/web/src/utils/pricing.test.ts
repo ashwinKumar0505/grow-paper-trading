@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { COMPARISON_CATEGORIES } from '../features/pricing/pricingComparisonConfig';
 import { SUBSCRIPTION_PLANS } from '../lib/subscription';
 import {
   formatINR,
@@ -92,4 +93,13 @@ test('differential upgrade pricing charges Beginner users only (Advanced - Begin
   assert.equal(begToAdvYearly.creditAppliedINR, 2899);
   assert.equal(begToAdvYearly.payableINR, 3800);
   assert.equal(begToAdvYearly.isDifferentialUpgrade, true);
+});
+
+test('comparison table orders Paper Trading first, Stock Screener AI Powered second, and enables AMO for Beginner', () => {
+  assert.equal(COMPARISON_CATEGORIES[0].id, 'paper-trading');
+  assert.equal(COMPARISON_CATEGORIES[1].id, 'screener');
+  assert.equal(COMPARISON_CATEGORIES[1].title, 'Stock Screener AI Powered');
+  assert.equal(SUBSCRIPTION_PLANS.free.allowAmoOrders, false);
+  assert.equal(SUBSCRIPTION_PLANS.beginner.allowAmoOrders, true);
+  assert.equal(SUBSCRIPTION_PLANS.advanced.allowAmoOrders, true);
 });

@@ -71,8 +71,8 @@ export function validateTradingOrderEntitlement(params: {
       allowed: false,
       status: 403,
       code: 'AMO_ENTITLEMENT_REQUIRED',
-      requiredTier: 'advanced',
-      message: 'After-Market Orders (AMO) scheduled outside regular NSE trading hours require the Advanced Package.',
+      requiredTier: 'beginner',
+      message: 'After-Market Orders (AMO) scheduled outside regular NSE trading hours require the Beginner or Advanced Package.',
     };
   }
 

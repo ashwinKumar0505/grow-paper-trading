@@ -32,34 +32,6 @@ const ORDER_TYPE_LABEL: Record<string, string> = { MARKET: 'Market', LIMIT: 'Lim
 
 export const COMPARISON_CATEGORIES: ComparisonCategory[] = [
   {
-    id: 'screener',
-    title: 'Rule-Based Stock Screener & Backtests',
-    icon: Radar,
-    rows: [
-      {
-        feature: 'Swing screener (backtested strategies)',
-        tooltip: 'Daily scan for multi-day breakout, trend and momentum setups with entry, target and stop-loss levels.',
-        values: { free: `Top ${F.swingMaxSignals} preview`, beginner: `Top ${B.swingMaxSignals} · Nifty 200`, advanced: 'Full Nifty 500 + live refresh' },
-      },
-      {
-        feature: '15-min intraday screener',
-        values: { free: false, beginner: `Top ${B.intradayMaxSignals} · manual refresh`, advanced: `Top ${A.intradayMaxSignals} · 5-min auto-refresh` },
-      },
-      {
-        feature: 'Chart, strategy & technical stock analysis',
-        tooltip: 'Combines technical chart structure, backtested strategy rules and rule-based quantitative commentary.',
-        values: byTier((t) => limit(plan(t).analysisDailyLimit, 'per day')),
-      },
-      { feature: 'Support/resistance & financials', values: byTier((t) => plan(t).analysisAllowFinancialsAndLevels) },
-      {
-        feature: 'Historical strategy backtesting',
-        tooltip: 'Replays rule-based strategies on 2-year historical price data (with full advanced indicator & risk diagnostics on Advanced). Past results do not predict future returns.',
-        values: { free: 'Summary view', beginner: '2-year backtested strategies', advanced: '2-year backtests & advanced mode' },
-      },
-      { feature: 'One-click trade from screener', values: { free: false, beginner: 'Swing setups', advanced: 'Swing + intraday' } },
-    ],
-  },
-  {
     id: 'paper-trading',
     title: 'Paper Trading & Virtual Capital',
     icon: Wallet,
@@ -90,6 +62,34 @@ export const COMPARISON_CATEGORIES: ComparisonCategory[] = [
         tooltip: 'Orders placed outside market hours that are queued for the next session.',
         values: byTier((t) => plan(t).allowAmoOrders),
       },
+    ],
+  },
+  {
+    id: 'screener',
+    title: 'Stock Screener AI Powered',
+    icon: Radar,
+    rows: [
+      {
+        feature: 'Swing screener (backtested strategies)',
+        tooltip: 'Daily scan for multi-day breakout, trend and momentum setups with entry, target and stop-loss levels.',
+        values: { free: `Top ${F.swingMaxSignals} preview`, beginner: `Top ${B.swingMaxSignals} · Nifty 200`, advanced: 'Full Nifty 500 + live refresh' },
+      },
+      {
+        feature: '15-min intraday screener',
+        values: { free: false, beginner: `Top ${B.intradayMaxSignals} · manual refresh`, advanced: `Top ${A.intradayMaxSignals} · 5-min auto-refresh` },
+      },
+      {
+        feature: 'Chart, strategy & technical stock analysis (AI-powered)',
+        tooltip: 'Combines technical chart structure, backtested strategy rules, rule-based quantitative commentary, and AI-powered insights.',
+        values: byTier((t) => limit(plan(t).analysisDailyLimit, 'per day')),
+      },
+      { feature: 'Support/resistance & financials', values: byTier((t) => plan(t).analysisAllowFinancialsAndLevels) },
+      {
+        feature: 'Historical strategy backtesting',
+        tooltip: 'Replays rule-based strategies on 2-year historical price data (with full advanced indicator & risk diagnostics on Advanced). Past results do not predict future returns.',
+        values: { free: 'Summary view', beginner: '2-year backtested strategies', advanced: '2-year backtests & advanced mode' },
+      },
+      { feature: 'One-click trade from screener', values: { free: false, beginner: 'Swing setups', advanced: 'Swing + intraday' } },
     ],
   },
   {

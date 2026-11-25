@@ -23,18 +23,18 @@ export function LandingScreener({}: Props) {
           <div className="lg:col-span-6 space-y-6 text-left">
             <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#00D09C]/15 text-[#008F6B] dark:text-[#00D09C] border border-[#00D09C]/30 text-xs font-extrabold uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Core Engine · Quantitative Insights, Chart Analysis &amp; Backtested Strategies</span>
+              <span>AI Powered · Quantitative Insights, Chart Analysis &amp; Backtested Strategies</span>
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-black text-[#15241D] dark:text-white tracking-tight leading-tight">
               Discover High-Potential Stocks with{' '}
-              <span className="text-[#00B386] dark:text-[#00D09C]">Rule-Based Technical Insights.</span>
+              <span className="text-[#00B386] dark:text-[#00D09C]">Technical &amp; AI-Powered Insights.</span>
             </h2>
 
             <p className="text-sm sm:text-base text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed">
               Find promising Indian stocks using <strong>advanced chart analysis</strong>,{' '}
               <strong>multiple backtested trading strategies</strong>, and{' '}
-              <strong>rule-based quantitative insights</strong>. Identify intraday and swing trading
+              <strong>rule-based &amp; AI-powered insights</strong>. Identify intraday and swing trading
               opportunities, evaluate historical performance, and make more informed trading
               decisions.
             </p>
