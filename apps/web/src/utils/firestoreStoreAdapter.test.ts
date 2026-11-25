@@ -3,7 +3,11 @@ import crypto from 'node:crypto';
 import test from 'node:test';
 import { resolveOrCreateCanonicalUser } from '../server/auth/authService';
 import { DurableStore } from '../server/storage/durableStore';
-import { FirestoreRestClient, resolveFirestoreConfig } from '../server/storage/firestoreRestClient';
+import {
+  FirestoreRestClient,
+  normalizePemPrivateKey,
+  resolveFirestoreConfig,
+} from '../server/storage/firestoreRestClient';
 import { FirestoreStoreAdapter } from '../server/storage/firestoreStoreAdapter';
 import {
   decodeFirestoreFields,
@@ -98,6 +102,20 @@ test('firestoreValueCodec round-trips nested primitives, numbers, arrays, maps, 
   assert.equal(encodeFirestoreDocId('usr_abc-123'), 'usr_abc-123');
   assert.match(encodeFirestoreDocId('trader@example.com'), /^k_/);
   assert.match(encodeFirestoreDocId('__reserved__'), /^k_/);
+
+  const { privateKey } = crypto.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+  const quotedEscaped = `"${privateKey.replace(/\n/g, '\\n')}"`;
+  const spaceJoined = privateKey.replace(/\n/g, ' ');
+  const b64Key = Buffer.from(privateKey, 'utf8').toString('base64');
+  for (const variant of [quotedEscaped, spaceJoined, b64Key]) {
+    const normalized = normalizePemPrivateKey(variant);
+    const sig = crypto.createSign('RSA-SHA256').update('ping').sign(normalized, 'base64url');
+    assert.ok(sig.length > 20);
+  }
 });
 
 test('Firestore-backed DurableStore syncs only dirty documents and restores full state across restarts', async () => {

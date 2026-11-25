@@ -1,50 +1,24 @@
 import crypto from 'crypto';
 import {
+  normalizePemPrivateKey,
+  resolveFirestoreConfig,
+  type FirestoreConfig,
+} from './firestoreConfig';
+import {
   encodeFirestoreFields,
   type FirestoreDocument,
 } from './firestoreValueCodec';
+
+export { normalizePemPrivateKey, resolveFirestoreConfig, type FirestoreConfig };
 
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FIRESTORE_SCOPE = 'https://www.googleapis.com/auth/datastore';
 const FIRESTORE_API_ORIGIN = 'https://firestore.googleapis.com/v1';
 const MAX_COMMIT_WRITES = 450;
 
-export interface FirestoreConfig {
-  projectId: string;
-  databaseId: string;
-  clientEmail: string;
-  privateKey: string;
-}
-
 export type FirestoreWriteOp =
   | { type: 'set'; collection: string; docId: string; data: Record<string, unknown> }
   | { type: 'delete'; collection: string; docId: string };
-
-export function resolveFirestoreConfig(
-  env: Record<string, string | undefined> = process.env
-): FirestoreConfig | null {
-  const clientEmail = (env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL || '').trim();
-  const rawKey = (env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
-  if (!clientEmail || !rawKey) return null;
-
-  const projectId = (
-    env.FIREBASE_PROJECT_ID ||
-    env.VITE_FIREBASE_PROJECT_ID ||
-    'tradedia-b6cb0'
-  ).trim();
-  const databaseId = (
-    env.FIREBASE_DATABASE_ID ||
-    env.VITE_FIREBASE_DATABASE_ID ||
-    '(default)'
-  ).trim() || '(default)';
-
-  return {
-    projectId,
-    databaseId,
-    clientEmail,
-    privateKey: rawKey.replace(/\\n/g, '\n'),
-  };
-}
 
 export class FirestoreRestClient {
   private config: FirestoreConfig;

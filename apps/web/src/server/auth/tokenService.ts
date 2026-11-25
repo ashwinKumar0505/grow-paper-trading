@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type { DurableStore } from '../storage/durableStore';
 import { defaultStore } from '../storage/durableStore';
+import { resolveFirestoreConfig } from '../storage/firestoreRestClient';
 import {
   getSessionSecret,
   normalizeEmailAddress,
@@ -40,11 +41,11 @@ export function issueSessionToken(
 }
 
 export function tryCreateFirebaseCustomToken(uid: string, email: string): string | null {
-  const clientEmail = process.env.FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL;
-  const rawPrivateKey = process.env.FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  if (!clientEmail || !rawPrivateKey) return null;
+  const cfg = resolveFirestoreConfig(process.env);
+  if (!cfg) return null;
   try {
-    const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
+    const clientEmail = cfg.clientEmail;
+    const privateKey = cfg.privateKey;
     const nowSec = Math.floor(Date.now() / 1000);
     const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
     const payload = Buffer.from(
