@@ -45,25 +45,23 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
    - `ENABLE_BACKGROUND_SCHEDULER=true`
    - `FIREBASE_PROJECT_ID=tradedia-b6cb0`
 
-### Service 2: `tradedia-web` (Public)
+### Service 2: `tradedia-web` (Public — Stateless, Backed by Firebase Firestore)
 1. **Settings → Source**:
-   - **Root Directory**: `apps/web`
+   - **Root Directory**: `/apps/web`
    - **Watch Paths**: `apps/web/**`
    - *(Automatically uses `apps/web/railway.json` and `apps/web/Dockerfile`, healthcheck `GET /api/health`.)*
 2. **Settings → Networking**:
    - Click **Generate Domain** (e.g., `tradedia-web-production.up.railway.app`) and optionally attach your custom domain (e.g., `tradedia.in` + `www.tradedia.in`).
 3. **Settings → Deploy**:
-   - **Replicas**: `1` *(required while using JSON `DurableStore` Volume + in-process 15s trading tick)*.
-4. **Volumes → Add Volume**:
-   - **Mount Path**: `/data`
+   - **Replicas**: `1` *(keeps the 15s background trading tick single-instance; no Railway Volume is needed because all user/ledger/payment state persists directly to Firebase Firestore!)*.
+4. **Volumes**: **None needed** for `tradedia-web` (all state is persisted to Firestore via your Firebase service account).
 5. **Variables**:
    - `NODE_ENV=production`
    - `APP_URL=https://<your-domain>`
    - `ALLOWED_ORIGINS=https://<your-railway-domain>,https://<your-custom-domain>`
-   - `TRADEDIA_STORAGE_PATH=/data/tradedia-store.json`
    - `AUTH_SESSION_SECRET=<32+ random hex>`
    - `SCREENER_BACKEND_URL=http://${{tradedia-analytics.RAILWAY_PRIVATE_DOMAIN}}:8000/api/v1`
-   - `SERVICE_AUTH_SECRET=<exact same secret as tradedia-analytics>`
+   - `SERVICE_AUTH_SECRET=${{tradedia-analytics.SERVICE_AUTH_SECRET}}`
    - `MARKET_DATA_PROVIDER=upstox`
    - `AUTHORIZE_ANALYTICS_PROVIDER=true`
    - `AUTHORIZE_PAPER_TRADING_PROVIDER=true`
@@ -71,8 +69,8 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
    - `UPSTOX_ANALYTICS_TOKEN=<your Upstox Analytics token>`
    - `UPSTOX_RATE_LIMIT_PER_MINUTE=100`
    - `FIREBASE_PROJECT_ID=tradedia-b6cb0`
-   - `FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL=<optional, for Email OTP -> Firestore sync>`
-   - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY=<optional>`
+   - `FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL=<client_email from Firebase Service Account JSON>`
+   - `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY=<private_key from Firebase Service Account JSON>`
    - `RESEND_API_KEY=<your Resend API key>`
    - `OTP_FROM_EMAIL=Tradedia <noreply@tradedia.in>`
    - `RAZORPAY_KEY_ID=rzp_live_...` *(or `rzp_test_...` + `ALLOW_RAZORPAY_TEST_IN_PROD=true` for staging)*
@@ -94,7 +92,7 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
 
 ## 4. Verify Live Deployment
 
-1. `GET https://<your-domain>/api/health` → `200 { "status": "ok", "service": "tradedia-web" }`
+1. `GET https://<your-domain>/api/health` → `200 { "status": "ok", "service": "tradedia-web", "storage": "firestore" }`
 2. `GET https://<your-domain>/api/v1/health` → `200 { "status": "ok", "provider": "upstox", ... }` *(proves Railway private networking + HMAC proxy work end-to-end)*
 3. `GET https://<your-domain>/api/market/status` → verifies authorized Upstox policies for `stockAnalytics` and `paperTrading`.
 4. Open `https://<your-domain>` in a browser: verify landing WebP images load fast, Google & Email OTP sign-in succeed, paper-trading quotes/charts load, and Swing/Intraday scanners return data.

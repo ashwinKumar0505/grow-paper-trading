@@ -19,6 +19,8 @@ const bgTimer = setInterval(() => {
 bgTimer.unref?.();
 
 async function startServer() {
+  await defaultStore.init(process.env);
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -46,10 +48,14 @@ async function startServer() {
   const shutdown = (signal: string) => {
     console.log(`Received ${signal}, shutting down Tradedia server gracefully...`);
     clearInterval(bgTimer);
-    defaultStore.persist();
-    server.close(() => {
-      process.exit(0);
-    });
+    defaultStore
+      .flush()
+      .catch((err) => console.error('Shutdown flush error:', err))
+      .finally(() => {
+        server.close(() => {
+          process.exit(0);
+        });
+      });
     setTimeout(() => process.exit(1), 10000).unref();
   };
 

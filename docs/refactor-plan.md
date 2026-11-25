@@ -94,3 +94,8 @@ Every backend service, route, provider, storage engine, entitlement module, fron
   - Added `esbuild` production server bundle (`npm run build:server` -> `dist-server/server.mjs`, `npm start` -> `node dist-server/server.mjs`), bumped `esbuild` to `^0.28.0` to satisfy `vite@8` peer optional range, and generated `apps/web/package-lock.json`.
   - Added `app.set('trust proxy', 1)` and `GET /api/health` in `apps/web/src/server/app.ts`, graceful `SIGTERM`/`SIGINT` shutdown + static asset caching in `apps/web/server.ts`, updated Firebase project ID fallback to `tradedia-b6cb0` in `apps/web/src/server/auth/tokenService.ts`, standardized `SERVICE_AUTH_SECRET` across proxy/entitlements, and guarded `localhost` screener fallbacks to non-production builds.
   - Documented the full Railway deployment runbook in `docs/railway-deployment.md`.
+
+- [x] **Firestore Write-Through Persistence (`DurableStore` — Stateless `tradedia-web` on Railway)**:
+  - Added zero-dependency Firestore REST persistence (`firestoreValueCodec.ts`, `firestoreRestClient.ts`, `firestoreStoreAdapter.ts`) wired into `durableStore.ts`, `server.ts` (`await defaultStore.init()` on boot and `await defaultStore.flush()` on graceful shutdown), and `/api/health` (`storage: 'firestore' | 'disk' | 'memory'`).
+  - Eliminates the need for a Railway Volume on `tradedia-web`; keeps local `.data/tradedia-store.json` fallback when service account credentials are not set; avoids per-tick Firestore read costs by serving reads from memory and writing only dirty documents via batched Firestore commits.
+  - Added `apps/web/src/utils/firestoreStoreAdapter.test.ts` verifying value encoding/decoding, OAuth token caching, minimal dirty-doc commits, delete propagation, and full server-restart recovery.

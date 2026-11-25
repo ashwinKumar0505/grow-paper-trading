@@ -5,16 +5,13 @@ import {
   type DurableAuditEntry,
   type StoreSchema,
 } from './durableTypes';
+import { FirestoreRestClient, resolveFirestoreConfig } from './firestoreRestClient';
+import { FirestoreStoreAdapter } from './firestoreStoreAdapter';
 
 export * from './durableTypes';
 
-/**
- * Resolves the on-disk store path. `TRADEDIA_STORAGE_PATH` is the current
- * setting; `NIFTYLENS_STORAGE_PATH` is the pre-rebrand name and is still read
- * so existing deployments keep pointing at their persistent volume. When the
- * default location is used and only the legacy `niftylens-store.json` exists,
- * it is renamed in place so no saved accounts or ledgers are lost.
- */
+export type StorageMode = 'firestore' | 'disk' | 'memory';
+
 function resolveDefaultStorePath(): string {
   const configured = process.env.TRADEDIA_STORAGE_PATH ?? process.env.NIFTYLENS_STORAGE_PATH;
   if (configured) return configured;
@@ -24,7 +21,7 @@ function resolveDefaultStorePath(): string {
   try {
     if (!fs.existsSync(current) && fs.existsSync(legacy)) fs.renameSync(legacy, current);
   } catch {
-    // If the rename fails, start from the current path; the legacy file is left untouched.
+    // Keep current path if rename fails.
   }
   return current;
 }
@@ -32,14 +29,51 @@ function resolveDefaultStorePath(): string {
 export class DurableStore {
   private state: StoreSchema;
   private filePath: string | null;
+  private inMemoryOnly: boolean;
+  private firestoreAdapter: FirestoreStoreAdapter | null = null;
   private locks = new Map<string, Promise<unknown>>();
+  private flushChain: Promise<void> = Promise.resolve();
+  private flushPending = false;
+  private initialized = false;
 
-  constructor(options?: { filePath?: string | null; inMemoryOnly?: boolean }) {
-    const isTest = process.env.NODE_ENV === 'test' || options?.inMemoryOnly;
-    this.filePath = isTest
-      ? options?.filePath ?? null
-      : options?.filePath ?? resolveDefaultStorePath();
+  constructor(options?: {
+    filePath?: string | null;
+    inMemoryOnly?: boolean;
+    firestoreAdapter?: FirestoreStoreAdapter | null;
+  }) {
+    const isTest = process.env.NODE_ENV === 'test' || Boolean(options?.inMemoryOnly);
+    this.inMemoryOnly = isTest;
+    this.firestoreAdapter = options?.firestoreAdapter ?? null;
+    this.filePath = this.firestoreAdapter
+      ? null
+      : isTest
+        ? options?.filePath ?? null
+        : options?.filePath ?? resolveDefaultStorePath();
     this.state = this.loadFromDisk();
+  }
+
+  getStorageMode(): StorageMode {
+    if (this.firestoreAdapter) return 'firestore';
+    if (this.filePath) return 'disk';
+    return 'memory';
+  }
+
+  async init(env: Record<string, string | undefined> = process.env): Promise<void> {
+    if (this.initialized) return;
+    if (!this.firestoreAdapter && !this.inMemoryOnly) {
+      const cfg = resolveFirestoreConfig(env);
+      if (cfg) {
+        this.firestoreAdapter = new FirestoreStoreAdapter(new FirestoreRestClient(cfg));
+        this.filePath = null;
+      }
+    }
+    if (this.firestoreAdapter) {
+      this.state = await this.firestoreAdapter.loadAll();
+      const userCount = Object.keys(this.state.users).length;
+      const ledgerCount = Object.keys(this.state.tradingLedgers).length;
+      console.log(`DurableStore initialized with Firestore (${userCount} users, ${ledgerCount} ledgers).`);
+    }
+    this.initialized = true;
   }
 
   private loadFromDisk(): StoreSchema {
@@ -54,7 +88,25 @@ export class DurableStore {
     }
   }
 
+  private scheduleFirestoreSync(): void {
+    if (!this.firestoreAdapter) return;
+    this.flushPending = true;
+    this.flushChain = this.flushChain.then(async () => {
+      if (!this.flushPending || !this.firestoreAdapter) return;
+      this.flushPending = false;
+      try {
+        await this.firestoreAdapter.syncDiff(this.state);
+      } catch (err) {
+        console.error('DurableStore Firestore sync error:', err);
+      }
+    });
+  }
+
   persist(): void {
+    if (this.firestoreAdapter) {
+      this.scheduleFirestoreSync();
+      return;
+    }
     if (!this.filePath) return;
     try {
       const dir = path.dirname(this.filePath);
@@ -69,12 +121,24 @@ export class DurableStore {
     }
   }
 
+  async flush(): Promise<void> {
+    if (this.firestoreAdapter) {
+      this.scheduleFirestoreSync();
+      await this.flushChain;
+      return;
+    }
+    this.persist();
+  }
+
   getState(): StoreSchema {
     return this.state;
   }
 
   resetForTests(): void {
     this.filePath = null;
+    this.firestoreAdapter = null;
+    this.initialized = false;
+    this.flushPending = false;
     this.state = createEmptyStore();
     this.locks.clear();
   }
@@ -105,7 +169,11 @@ export class DurableStore {
     await prev.catch(() => {});
     try {
       const result = await fn();
-      this.persist();
+      if (this.firestoreAdapter) {
+        await this.flush();
+      } else {
+        this.persist();
+      }
       return result;
     } finally {
       release();

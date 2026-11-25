@@ -21,6 +21,7 @@ export function createExpressApp(store: DurableStore = defaultStore): Express {
     res.json({
       status: 'ok',
       service: 'tradedia-web',
+      storage: store.getStorageMode(),
       environment: process.env.NODE_ENV || 'development',
       timestamp: Date.now(),
     });

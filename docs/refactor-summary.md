@@ -230,3 +230,21 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - Line-count compliance check: every modified TS/TSX/JS application file is `<= 198` nonblank/non-comment lines.
 - **Checks NOT Executed**:
   - Interactive browser rendering check and remote Docker/Railway image builds were not run locally.
+
+
+---
+
+## 11. Firestore Write-Through Persistence for `tradedia-web` (2026-11-25, branch `railway-deploy-ready`)
+
+- **Architecture**:
+  - Implemented zero-dependency Google OAuth2 Service Account JWT + Firestore REST v1 persistence (`apps/web/src/server/storage/firestoreValueCodec.ts`, `firestoreRestClient.ts`, `firestoreStoreAdapter.ts`) behind `DurableStore` (`apps/web/src/server/storage/durableStore.ts`).
+  - When `FIREBASE_SERVICE_ACCOUNT_CLIENT_EMAIL` and `FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY` are configured, `server.ts` calls `await defaultStore.init()` on boot to hydrate collections (`users`, `trading_ledgers`, `billing_history`, `quiz_progress`, `payment_intents`, `processed_payments`, `processed_webhooks`, `otp_records`, `server_state`) once into memory, and commits **only changed/deleted documents** asynchronously per mutation (awaited inside `withLock()` for orders/payments/wallet mutations and during `SIGTERM`/`SIGINT` shutdown).
+  - `/api/health` now reports `storage: 'firestore' | 'disk' | 'memory'`. When service-account env vars are unset (local dev), `DurableStore` seamlessly falls back to `.data/tradedia-store.json`.
+  - Removes the Railway Volume requirement from `tradedia-web` and fixes single-file synchronous write blocking at scale while staying within Firestore's free tier for early traffic (the 15s trading loop performs 0 Firestore reads).
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (93 / 93 passed, including new `firestoreStoreAdapter.test.ts`).
+  - `cd apps/web && npm run build`: **PASS** (Vite SPA + `esbuild` `dist-server/server.mjs`).
+  - Every new/modified TS file is `<= 200` nonblank/non-comment lines.
+- **Checks NOT Executed**:
+  - Live end-to-end write against production Firebase project `tradedia-b6cb0` was not run locally (requires service account key in Railway Variables).
