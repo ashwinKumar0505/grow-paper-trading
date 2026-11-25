@@ -213,11 +213,22 @@ def test_service_auth_entitlements_and_rate_limiting(tmp_path, monkeypatch):
     )
     assert client.get("/api/v1/stocks/RELIANCE/analysis", headers=exp_headers).status_code == 401
 
-    # 3. Valid FREE user can access normal analysis
+    # 3. Valid FREE user can access normal analysis (both padded and Node-style unpadded base64url)
     free_headers = _signed_headers(
         secret, "GET", "/api/v1/stocks/RELIANCE/analysis", {"user_id": "u1", "subscription_tier": "FREE"}
     )
     assert client.get("/api/v1/stocks/RELIANCE/analysis", headers=free_headers).status_code == 200
+
+    for uid in ("u", "u1", "firebase-uid-28chars-example"):
+        ts = str(int(time.time()))
+        raw_ctx = {"user_id": uid, "subscription_tier": "FREE", "roles": ["user"]}
+        unpadded_b64 = base64.urlsafe_b64encode(json.dumps(raw_ctx).encode("utf-8")).decode("utf-8").rstrip("=")
+        sig = sign_service_request(secret, ts, "GET", "/api/v1/stocks/RELIANCE/analysis", unpadded_b64)
+        r_unpadded = client.get(
+            "/api/v1/stocks/RELIANCE/analysis",
+            headers={"X-Service-Timestamp": ts, "X-Service-Signature": sig, "X-User-Context": unpadded_b64},
+        )
+        assert r_unpadded.status_code == 200
 
     # 4. FREE user denied on restricted force_refresh=true and POST /backtest/run -> 403 ENTITLEMENT_DENIED
     r_denied_refresh = client.get("/api/v1/stocks/RELIANCE/analysis?force_refresh=true", headers=free_headers)

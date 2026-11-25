@@ -5,6 +5,45 @@ import { resolveAuthoritativeUserTier } from '../entitlements/entitlementService
 import { sanitizeErrorMessage } from '../middleware/security';
 import { defaultStore } from '../storage/durableStore';
 
+interface ProxyCauseSummary {
+  code?: string;
+  detail?: string;
+  logDetail?: string;
+}
+
+function summarizeProxyError(err: unknown): ProxyCauseSummary {
+  if (!(err instanceof Error) || !('cause' in err)) return {};
+  const cause = (err as Error & { cause?: unknown }).cause;
+  if (!cause || typeof cause !== 'object') {
+    return typeof cause === 'string' ? { detail: cause, logDetail: cause } : {};
+  }
+  const rec = cause as Record<string, unknown>;
+  const nested = Array.isArray(rec.errors) ? rec.errors : [];
+  if (nested.length > 0) {
+    const parts = nested.map((item) => {
+      if (!item || typeof item !== 'object') return String(item);
+      const r = item as Record<string, unknown>;
+      const code = typeof r.code === 'string' ? r.code : 'ERR';
+      const target =
+        typeof r.address === 'string'
+          ? `${r.address}${typeof r.port === 'number' ? `:${r.port}` : ''}`
+          : '';
+      return target ? `${code} ${target}` : code;
+    });
+    const first = nested[0] as Record<string, unknown> | undefined;
+    const firstCode = first && typeof first.code === 'string' ? first.code : undefined;
+    return { code: firstCode, detail: parts.join('; '), logDetail: parts.join('; ') };
+  }
+  const code = typeof rec.code === 'string' ? rec.code : undefined;
+  const target =
+    typeof rec.address === 'string'
+      ? `${rec.address}${typeof rec.port === 'number' ? `:${rec.port}` : ''}`
+      : '';
+  const msg = typeof rec.message === 'string' ? rec.message : undefined;
+  const logDetail = [code, target, msg].filter(Boolean).join(' ');
+  return { code, detail: code || msg, logDetail: logDetail || undefined };
+}
+
 /**
  * Same-origin proxy to Python FastAPI Screener Backend (/api/v1/* -> 8001 / 8000)
  * with HMAC-signed service headers.
@@ -38,9 +77,10 @@ export async function handleScreenerProxyRequest(req: Request, res: Response): P
   const serviceHeaders: Record<string, string> = {};
   if (secret) {
     const tsStr = String(Math.floor(Date.now() / 1000));
-    const ctxB64 = Buffer.from(
+    const rawCtxB64 = Buffer.from(
       JSON.stringify({ user_id: userId, subscription_tier: backendTier, roles: ['user'] })
     ).toString('base64url');
+    const ctxB64 = rawCtxB64 + '='.repeat((4 - (rawCtxB64.length % 4)) % 4);
     const sig = crypto
       .createHmac('sha256', secret)
       .update(`${tsStr}.${req.method.toUpperCase()}.${urlPathOnly}.${ctxB64}`)
@@ -73,12 +113,25 @@ export async function handleScreenerProxyRequest(req: Request, res: Response): P
       return;
     } catch (err) {
       lastErr = err;
+      const summary = summarizeProxyError(err);
+      console.error(
+        `[screener-proxy] Failed reaching ${base.replace(/\/$/, '')}${urlPathOnly.replace(/^\/api\/v1/, '')}:`,
+        sanitizeErrorMessage(err, 'fetch failed'),
+        summary.logDetail ? `(${summary.logDetail})` : ''
+      );
     }
   }
+
+  const baseMsg = sanitizeErrorMessage(lastErr, 'Python screener analytics backend is unreachable.');
+  const summary = summarizeProxyError(lastErr);
+  const combinedMsg =
+    summary.detail && !baseMsg.includes(summary.detail)
+      ? `${baseMsg} (${sanitizeErrorMessage(summary.detail, '')})`
+      : baseMsg;
 
   res.status(503).json({
     status: 'ERROR',
     error_code: 'SCREENER_BACKEND_UNREACHABLE',
-    message: sanitizeErrorMessage(lastErr, 'Python screener analytics backend is unreachable.'),
+    message: combinedMsg,
   });
 }

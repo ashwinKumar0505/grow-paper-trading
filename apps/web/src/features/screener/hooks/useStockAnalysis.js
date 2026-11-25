@@ -66,7 +66,7 @@ export function useStockAnalysis() {
     setLoadingSym(clean);
     setError('');
     try {
-      const data = await api.getStockAnalysis(clean, forceRefresh);
+      const data = await api.getStockAnalysis(clean, forceRefresh && subscriptionTier !== 'free');
       consumeAnalysisSearch(clean);
       const saved = saveCachedScan(CACHE_KEYS.analysisPrefix + data.symbol, data, CACHE_TTL_MS.analysis);
       setCachedEntry(saved);

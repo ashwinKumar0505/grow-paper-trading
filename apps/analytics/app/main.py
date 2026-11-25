@@ -3,6 +3,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 import logging
+import sys
 import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +20,7 @@ from app.models.common import APIErrorResponse
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    stream=sys.stdout,
 )
 logger = logging.getLogger(__name__)
 

@@ -107,7 +107,8 @@ def _verify_service_hmac(request: Request) -> Optional[AuthContext]:
     roles: List[str] = ["service"]
     if ctx_b64:
         try:
-            decoded = json.loads(base64.urlsafe_b64decode(ctx_b64.encode("utf-8")).decode("utf-8"))
+            padded_b64 = ctx_b64 + "=" * (-len(ctx_b64) % 4)
+            decoded = json.loads(base64.urlsafe_b64decode(padded_b64.encode("utf-8")).decode("utf-8"))
             user_id = decoded.get("user_id") or user_id
             raw_tier = TIER_ALIASES.get(str(decoded.get("subscription_tier", "FREE")).upper(), str(decoded.get("subscription_tier", "FREE")).upper())
             tier = raw_tier if raw_tier in TIER_RANK else "FREE"

@@ -248,3 +248,21 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - Every new/modified TS file is `<= 200` nonblank/non-comment lines.
 - **Checks NOT Executed**:
   - Live end-to-end write against production Firebase project `tradedia-b6cb0` was not run locally (requires service account key in Railway Variables).
+
+---
+
+## 12. Signed `X-User-Context` Base64url Padding Fix, Stdout Logging & Proxy Diagnostics (2026-11-25)
+
+- **Root Cause & Changes**:
+  - `apps/analytics/app/api/auth.py` & `apps/web/src/server/routes/screenerProxyRoute.ts` (137 lines): Node's `Buffer.toString('base64url')` omits trailing `=` padding, while Python's `base64.urlsafe_b64decode()` requires length divisible by 4, throwing `401 Malformed signed X-User-Context payload.` for signed-in users whose context JSON byte length wasn't a multiple of 3. Fixed both sides (`auth.py` restores missing `=` padding before decoding; `screenerProxyRoute.ts` pads `ctxB64` before HMAC signing so rolling deploys work immediately).
+  - `apps/analytics/tests/test_api.py`: Added regression assertions covering unpadded `X-User-Context` payloads across all length remainders.
+  - `apps/web/src/features/screener/hooks/useSwingScanner.js` & `useStockAnalysis.js`: Scoped swing `universeLimit` to the user's tier (`100` Free / `200` Beginner / `500` Advanced, matching `SUBSCRIPTION_PLANS` and FastAPI `routes.py`) and avoided sending upstream `force_refresh=true` for Free retries so Free users never hit `403 ENTITLEMENT_DENIED` under `AUTH_MODE=service_token`.
+  - `apps/analytics/app/main.py`: Directed `logging.basicConfig` to `stream=sys.stdout` so normal `INFO` logs (including `httpx` Upstox `200 OK` lines) are not flagged as errors in Railway.
+  - `apps/web/src/server/routes/screenerProxyRoute.ts`: Added safe `err.cause` (including Node 22 `AggregateError`) logging and diagnostics.
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (93 / 93 passed).
+  - `cd apps/web && npm run build`: **PASS** (Vite SPA + `esbuild` `dist-server/server.mjs`).
+  - `cd apps/analytics && .venv/bin/pytest tests -v`: **PASS** (48 / 48 passed, including new unpadded `X-User-Context` checks).
+- **Checks NOT Executed**:
+  - Live Railway redeploy verification and interactive browser checks require pushing to Railway.

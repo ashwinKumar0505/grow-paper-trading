@@ -51,8 +51,10 @@ export function useSwingScanner() {
     setLoadingMode(forceRefresh ? 'refresh' : 'scan');
     setError('');
     try {
+      const universeLimit =
+        subscriptionTier === 'advanced' ? 500 : subscriptionTier === 'beginner' ? 200 : 100;
       const res = await api.runSwingScanner({
-        universeLimit: 500,
+        universeLimit,
         minConfidence: SCAN_MIN_CONFIDENCE,
         signalType: 'ALL',
         forceRefresh,
