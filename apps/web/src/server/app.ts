@@ -1,0 +1,90 @@
+import express, { type Express } from 'express';
+import type { Stock } from '../types/market';
+import {
+  securityHeadersAndCors,
+  type AuthenticatedRequest,
+} from './middleware/security';
+import { marketDataRegistry } from './providers/providerRegistry';
+import { createAuthRouter } from './routes/authRoutes';
+import { createMarketRouter } from './routes/marketRoutes';
+import { createPaperTradingRouter } from './routes/paperTradingRoutes';
+import { createPaymentRouter } from './routes/paymentRoutes';
+import { defaultStore, type DurableStore } from './storage/durableStore';
+import { processAccountBackgroundQueue } from './trading/tradingLedger';
+
+export function createExpressApp(store: DurableStore = defaultStore): Express {
+  const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+
+  app.get('/api/health', (_req, res) => {
+    res.json({
+      status: 'ok',
+      service: 'tradedia-web',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: Date.now(),
+    });
+  });
+
+  app.use(securityHeadersAndCors);
+
+  app.use(
+    express.json({
+      limit: '100kb',
+      verify: (req, _res, buf) => {
+        (req as AuthenticatedRequest).rawBody = buf;
+      },
+    })
+  );
+
+  app.use('/api', createMarketRouter());
+  app.use('/api', createAuthRouter(store));
+  app.use('/api', createPaymentRouter(store));
+  app.use('/api', createPaperTradingRouter(store));
+
+  return app;
+}
+
+export async function runServerBackgroundTradingTick(
+  store: DurableStore = defaultStore,
+  now = Date.now()
+): Promise<void> {
+  const ledgers = Object.values(store.getState().tradingLedgers);
+  const activeLedgers = ledgers.filter(
+    (l) =>
+      l.orders.some((o) => o.status === 'SCHEDULED' || o.status === 'PENDING') ||
+      l.positions.length > 0
+  );
+  if (activeLedgers.length === 0) return;
+
+  const symbols = new Set<string>();
+  for (const l of activeLedgers) {
+    for (const o of l.orders) {
+      if (o.status === 'SCHEDULED' || o.status === 'PENDING') symbols.add(o.symbol);
+    }
+    for (const p of l.positions) {
+      symbols.add(p.symbol);
+    }
+  }
+
+  const provider = marketDataRegistry.getProviderForUseCase('paper_trading');
+  const quotes: Record<string, Stock | undefined> = {};
+  const symbolList = Array.from(symbols);
+  if (symbolList.length > 0) {
+    const bulk = await provider.getStockQuotes(symbolList, now);
+    if (bulk.available && bulk.data) {
+      for (const stock of bulk.data) {
+        quotes[stock.symbol.toUpperCase()] = stock;
+      }
+    }
+  }
+
+  for (const l of activeLedgers) {
+    await processAccountBackgroundQueue({
+      userId: l.userId,
+      quotes,
+      store,
+      now,
+    });
+  }
+}

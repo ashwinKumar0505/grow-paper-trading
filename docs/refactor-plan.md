@@ -75,3 +75,22 @@ Every backend service, route, provider, storage engine, entitlement module, fron
   - Removed the Market Depth section from `StockDetailView.tsx` and added `StockAnalysisBanner.tsx` after the `About` card linking directly to `/screener/analysis?symbol=<SYMBOL>`.
   - Integrated authentic Upstox `/v2/fundamentals/{isin}/key-ratios`, `/profile`, and `/corporate-actions` (cached 6h) in `GET /api/stocks/:symbol` and `UpstoxMarketDataProvider.getFundamentals()` for Market Cap, P/E, Industry P/E, P/B, ROE, ROCE, ROA, EPS, Book Value, trailing 365-day Dividend Yield, and company profile (omitting unprovided `Debt to Equity` rather than fabricating from total liabilities).
   - Verified live read-only against Upstox (`INFY`, `RELIANCE`, `HDFCBANK`, `TCS`) and automated checks (`npm run lint`, `npm test` 91/91 PASS, `npm run build`).
+
+
+## 7. Monorepo Restructure, Image Optimization & Railway Deployment Readiness (2026-11-25, branch `railway-deploy-ready`)
+
+- [x] **Monorepo Layout (`apps/web/`, `apps/analytics/`, `firebase/`, `compose.yaml`, `.github/workflows/ci.yml`)**:
+  - Moved the React + Express BFF app into `apps/web/` (Node 22 + `package-lock.json` + `esbuild` production server bundle + `Dockerfile` + `railway.json`).
+  - Copied `/Users/ashwinkumar/grow-paper-trading-backend/backend` cleanly into `apps/analytics/` (original folder left untouched), added `apps/analytics/README.md`, locked Python dependencies with `uv.lock`, configured `uv sync --frozen` in `apps/analytics/Dockerfile`, updated remaining `NiftyLens` titles/log lines to `Tradedia`, and made `apps/analytics/tests/test_api.py` self-contained against isolated `tmp_path` caches.
+  - Moved `firestore.rules` and `firebase-blueprint.json` into `firebase/` and updated `apps/web/src/utils/otpAndFirestoreRules.test.ts` + `apps/web/src/server/providers/diskCacheReader.ts` relative paths.
+  - Added root `compose.yaml` (local multi-service Docker setup mirroring Railway) and `.github/workflows/ci.yml` (web + analytics CI).
+- [x] **Landing & Quiz Image Optimization (Lossless + Lazy Loading)**:
+  - Re-encoded the six original 1254×1254 PNG illustrations (`hero-trading`, `virtual-trading`, `stock-screener`, `interactive-learning`, `quiz-success`, `quiz-failure`) with `cwebp -lossless -z 6` at full 1254×1254 resolution (100% pixel-identical quality, shrinking total from **11.3 MB** to **7.8 MB**, ~31% lossless savings).
+  - Upgraded `FloatingIllustration.tsx` with `IntersectionObserver` (`250px` rootMargin) + native `loading="lazy"` + `decoding="async"` + pulse placeholder and fade-in transition so below-the-fold illustrations fetch zero bytes until scrolled near while keeping `LandingHero` eager (`fetchPriority="high"`).
+- [x] **Frontend & Repo Cleanup**:
+  - Removed four unreferenced React components (`ScreenerLivePreviewCard.tsx`, `ScreenerPreviewSwingTab.tsx`, `ScreenerPreviewIntradayTab.tsx`, `DogOutcomeIllustration.tsx`), unused AI Studio screenshots (`public/assets/aistudio/`, `.aistudio/`), empty `public/assets/landing/`, raw `public/images/landing/logo.png`, stale `metadata.json`, stale `bun.lock`, and unused packages (`@google/genai`, `autoprefixer`).
+  - Untracked `.data/tradedia-store.json` from git (preserving local disk file) and updated `.gitignore`.
+- [x] **Railway Deployment Readiness**:
+  - Added `esbuild` production server bundle (`npm run build:server` -> `dist-server/server.mjs`, `npm start` -> `node dist-server/server.mjs`), bumped `esbuild` to `^0.28.0` to satisfy `vite@8` peer optional range, and generated `apps/web/package-lock.json`.
+  - Added `app.set('trust proxy', 1)` and `GET /api/health` in `apps/web/src/server/app.ts`, graceful `SIGTERM`/`SIGINT` shutdown + static asset caching in `apps/web/server.ts`, updated Firebase project ID fallback to `tradedia-b6cb0` in `apps/web/src/server/auth/tokenService.ts`, standardized `SERVICE_AUTH_SECRET` across proxy/entitlements, and guarded `localhost` screener fallbacks to non-production builds.
+  - Documented the full Railway deployment runbook in `docs/railway-deployment.md`.

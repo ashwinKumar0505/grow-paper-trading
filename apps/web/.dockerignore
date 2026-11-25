@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.env
+.env.*
+!.env.example
+.data
+node_modules
+dist
+dist-server
+coverage
+scripts
+Dockerfile
+.dockerignore
+railway.json

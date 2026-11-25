@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Web & Express BFF (apps/web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Run unit & integration tests
+        run: npm test
+
+      - name: Build client and production server
+        run: npm run build
+
+  analytics:
+    name: Analytics & Screener API (apps/analytics)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/analytics/uv.lock
+
+      - name: Install dependencies from uv.lock
+        run: uv sync --frozen --extra dev
+
+      - name: Run pytest suite
+        run: uv run pytest tests -v

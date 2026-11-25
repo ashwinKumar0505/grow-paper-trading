@@ -1,0 +1,64 @@
+services:
+  analytics:
+    build:
+      context: ./apps/analytics
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: staging
+      PORT: "8000"
+      AUTH_MODE: service_token
+      SERVICE_AUTH_SECRET: ${SERVICE_AUTH_SECRET:-local-dev-shared-secret-change-me}
+      MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-upstox}
+      PRICE_ADJUSTMENT_POLICY: SPLIT_ADJUSTED_ONLY
+      UPSTOX_ANALYTICS_TOKEN: ${UPSTOX_ANALYTICS_TOKEN:-}
+      UPSTOX_RATE_LIMIT_PER_MINUTE: "300"
+      CACHE_DIR: /data/cache
+      ENABLE_BACKGROUND_SCHEDULER: "true"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-tradedia-b6cb0}
+    volumes:
+      - analytics_cache:/data/cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      TRADEDIA_STORAGE_PATH: /data/tradedia-store.json
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-local-dev-session-secret-change-me-32chars}
+      SCREENER_BACKEND_URL: http://analytics:8000/api/v1
+      SERVICE_AUTH_SECRET: ${SERVICE_AUTH_SECRET:-local-dev-shared-secret-change-me}
+      MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-upstox}
+      AUTHORIZE_ANALYTICS_PROVIDER: "true"
+      AUTHORIZE_PAPER_TRADING_PROVIDER: "true"
+      AUTHORIZE_HISTORICAL_REPLAY_PROVIDER: "true"
+      UPSTOX_ANALYTICS_TOKEN: ${UPSTOX_ANALYTICS_TOKEN:-}
+      UPSTOX_RATE_LIMIT_PER_MINUTE: "100"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-tradedia-b6cb0}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      OTP_FROM_EMAIL: ${OTP_FROM_EMAIL:-Tradedia <onboarding@resend.dev>}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      ALLOW_RAZORPAY_TEST_IN_PROD: ${ALLOW_RAZORPAY_TEST_IN_PROD:-true}
+    volumes:
+      - web_data:/data
+    depends_on:
+      analytics:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  web_data:
+  analytics_cache:

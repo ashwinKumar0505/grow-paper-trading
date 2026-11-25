@@ -119,7 +119,6 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
 | `src/features/quiz/components/TradingCanvas.tsx` | 826 | Canvas 2D Renderer | HTML5 2D Canvas chart renderer managing device pixel ratio, viewport transforms, crosshairs, candlestick paths, volume bars, and indicator overlays. |
 | `src/features/virtual-trading/components/StockChart.tsx` | 578 | SVG Chart Renderer | Multi-timeframe SVG chart renderer handling coordinate geometry, crosshair tracking, volume histograms, and moving averages (data fetching extracted to `useStockChartData.ts`). |
 | `src/utils/orderEngine.test.ts` | 571 | Test Suite | 33 mathematical test cases asserting order engine execution, charges, margin reservations, MTF 5x, and AMO scheduling. |
-| `src/features/quiz/components/DogOutcomeIllustration.tsx` | 224 | Vector Artwork | Cohesive SVG vector illustration component for quiz outcome feedback. |
 
 ---
 
@@ -202,3 +201,32 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
 - **Checks Not Executed & Notes**:
   - Interactive mobile browser / Chrome DevTools visual check was not run in this environment.
   - `Debt to Equity` stays `—` when Upstox `/key-ratios` does not report it (intentionally not approximated from `total_liability / equity`). Outside NSE market hours (9:15 AM – 3:30 PM IST), Market Depth shows resting closing-session orders or an explicit `No Active Resting Orders` state when the exchange book is empty.
+
+
+---
+
+## 10. Monorepo Restructure (`apps/web` + `apps/analytics`), Image Optimization & Railway Deployment Readiness (2026-11-25, branch `railway-deploy-ready`)
+
+- **Monorepo Layout (`apps/web/`, `apps/analytics/`, `firebase/`, `compose.yaml`, `.github/workflows/ci.yml`)**:
+  - Moved the React SPA + Express BFF into `apps/web/` (Node 22 + `package-lock.json` + `Dockerfile` + `railway.json`), keeping internal `src/` imports intact and updating `otpAndFirestoreRules.test.ts` + `diskCacheReader.ts` relative paths.
+  - Copied `/Users/ashwinkumar/grow-paper-trading-backend/backend` cleanly into `apps/analytics/` (original directory left untouched), added `apps/analytics/README.md`, pinned Python dependencies with `apps/analytics/uv.lock`, updated `apps/analytics/Dockerfile` to `uv sync --frozen --no-dev --no-install-project` (`--host :: --workers 1`), updated remaining `"NiftyLens"` API metadata/log strings to `"Tradedia"`, and isolated `apps/analytics/tests/test_api.py` against `tmp_path` caches.
+  - Moved `firestore.rules` and `firebase-blueprint.json` into `firebase/`, added root `compose.yaml` for local multi-service Docker runs, and added `.github/workflows/ci.yml`.
+- **Landing & Quiz Image Optimization (Lossless + Lazy Loading)**:
+  - Re-encoded all six original 1254×1254 PNG illustrations (`hero-trading`, `virtual-trading`, `stock-screener`, `interactive-learning`, `quiz-success`, `quiz-failure`) using `cwebp -lossless -z 6` at full `1254×1254` resolution (zero quality loss / zero chroma subsampling; **11.3 MB** → **7.8 MB**, ~31% lossless reduction).
+  - Added `IntersectionObserver` (`rootMargin: '250px 0px'`) + native `loading="lazy"` + `decoding="async"` + pulse placeholder & smooth fade-in to `apps/web/src/components/FloatingIllustration.tsx` so below-the-fold illustrations only load on scroll.
+- **Dead Code & Clutter Cleanup**:
+  - Removed four unreferenced React components (`ScreenerLivePreviewCard.tsx`, `ScreenerPreviewSwingTab.tsx`, `ScreenerPreviewIntradayTab.tsx`, `DogOutcomeIllustration.tsx`), unused AI Studio screenshots (`public/assets/aistudio/`, `.aistudio/`), empty `public/assets/landing/`, raw `public/images/landing/logo.png`, stale `metadata.json`, stale `bun.lock`, and unused dependencies (`@google/genai`, `autoprefixer`). Total `public/` size dropped from **13 MB** → **1.0 MB**.
+  - Untracked `.data/tradedia-store.json` from git (preserving local file on disk) and hardened `.gitignore`.
+- **Railway Production Fixes**:
+  - Added `esbuild` production server bundle (`npm run build:server` → `dist-server/server.mjs`; `npm start` → `node dist-server/server.mjs`), updated `esbuild` to `^0.28.0` for `vite@8` compatibility, and generated `apps/web/package-lock.json`.
+  - Added `app.set('trust proxy', 1)` and `GET /api/health` in `apps/web/src/server/app.ts`, graceful `SIGTERM`/`SIGINT` shutdown and immutable `/assets` cache headers in `apps/web/server.ts`, fixed Firebase project ID fallback (`tradedia-b6cb0`) in `apps/web/src/server/auth/tokenService.ts`, unified `SERVICE_AUTH_SECRET` across proxy & entitlements, and restricted `localhost` screener fallbacks to non-production builds.
+  - Documented the complete Railway deployment runbook in `docs/railway-deployment.md`.
+- **Verification Executed**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (91 / 91 passed).
+  - `cd apps/web && npm run build` (`vite build` + `esbuild server.ts`): **PASS** (`dist/` in 433ms, `dist-server/server.mjs` 253.7 KB in 12ms).
+  - Production bundle smoke test (`NODE_ENV=production node dist-server/server.mjs`): **PASS** (`GET /api/health` 200, `GET /` 200, `GET /images/landing/hero-trading.webp` 200 `image/webp`, clean exit `0` on `SIGTERM`).
+  - `apps/analytics/uv.lock` generation + `pytest apps/analytics/tests -v`: **PASS** (48 / 48 passed).
+  - Line-count compliance check: every modified TS/TSX/JS application file is `<= 198` nonblank/non-comment lines.
+- **Checks NOT Executed**:
+  - Interactive browser rendering check and remote Docker/Railway image builds were not run locally.

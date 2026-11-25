@@ -1,8 +1,33 @@
-node_modules/
-build/
-dist/
-coverage/
-.DS_Store
+# Node / Vite / Server build outputs
+**/node_modules/
+**/build/
+**/dist/
+**/dist-server/
+**/coverage/
 *.log
-.env*
+
+# Local environment secrets (never commit)
+.env
+.env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
+
+# Local runtime state & OS/editor artifacts
+.data/
+**/.data/
+.aistudio/
+.DS_Store
+
+# Python analytics virtualenvs, caches & runtime artifacts
+apps/analytics/.venv/
+apps/analytics/venv/
+apps/analytics/env/
+apps/analytics/data_cache/
+**/__pycache__/
+**/.pytest_cache/
+**/*.egg-info/
+*.py[cod]
+*.db
+*.sqlite3
