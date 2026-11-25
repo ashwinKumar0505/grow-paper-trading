@@ -1,12 +1,12 @@
 {
-  "projectId": "nifty-lens-87f02",
-  "appId": "1:737777212718:web:cc3112670ddf9dd591aebf",
-  "apiKey": "AIzaSyDEGbSP70drA55t8DHF6HNIzoF5xgb2RJE",
-  "authDomain": "nifty-lens-87f02.firebaseapp.com",
+  "projectId": "tradedia-b6cb0",
+  "appId": "1:137287895519:web:50455b8f53c9c1bb9ddc6a",
+  "apiKey": "AIzaSyDW3OEqUGo593WMxY6PobLvzdKBMEr3Fsc",
+  "authDomain": "tradedia-b6cb0.firebaseapp.com",
   "firestoreDatabaseId": "",
-  "storageBucket": "nifty-lens-87f02.firebasestorage.app",
-  "messagingSenderId": "737777212718",
-  "measurementId": "G-R5FEH4PE5B",
+  "storageBucket": "tradedia-b6cb0.firebasestorage.app",
+  "messagingSenderId": "137287895519",
+  "measurementId": "G-NTTB773KTH",
   "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
