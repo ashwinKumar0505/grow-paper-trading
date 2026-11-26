@@ -111,14 +111,20 @@ export function validateQuizEntitlement(params: {
 
 export function issueScreenerServiceToken(
   user: DurableUserAccount,
-  now = Date.now()
+  now = Date.now(),
+  env: Record<string, string | undefined> = process.env
 ): { token: string; expiresAt: number; claims: Record<string, unknown> } {
   const { tier, plan } = resolveAuthoritativeUserTier(user, now);
-  const secret =
-    process.env.SERVICE_AUTH_SECRET ||
-    process.env.SCREENER_SERVICE_SECRET ||
-    process.env.AUTH_SESSION_SECRET ||
-    'niftylens_dev_screener_service_secret_2026';
+  const configuredSecret = (
+    env.SERVICE_AUTH_SECRET ||
+    env.SCREENER_SERVICE_SECRET ||
+    env.AUTH_SESSION_SECRET ||
+    ''
+  ).trim();
+  if (!configuredSecret && (env.NODE_ENV || '').toLowerCase() === 'production') {
+    throw new Error('SERVICE_AUTH_SECRET must be configured in production.');
+  }
+  const secret = configuredSecret || 'niftylens_dev_screener_service_secret_2026';
   const expiresAt = now + 5 * 60 * 1000;
   const claims = {
     uid: user.uid,

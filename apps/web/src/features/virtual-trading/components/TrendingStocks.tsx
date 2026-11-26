@@ -1,6 +1,6 @@
 import {
 Bookmark,
-Flame
+StarIcon
 } from 'lucide-react';
 import type { StockExplorerModel } from '../hooks/useStockExplorer';
 type Props = Pick<StockExplorerModel, 'marketStatus' | 'toggleWatchlistStock' | 'isStockInWatchlist' | 'popularStocks' | 'handleStockClick'>;
@@ -11,9 +11,9 @@ export function TrendingStocks({ marketStatus, toggleWatchlistStock, isStockInWa
       <section className="w-full min-w-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-amber-500" />
+            <StarIcon className="w-5 h-5 text-amber-500" />
             <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white tracking-tight">
-              Most Bought on Tradedia
+              Popular on Tradedia
             </h2>
           </div>
           <span className="text-xs font-semibold flex items-center gap-1.5" title={marketStatus.subText}>

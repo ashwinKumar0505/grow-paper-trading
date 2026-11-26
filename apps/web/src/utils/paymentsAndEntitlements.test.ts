@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import test from 'node:test';
 import { resolveOrCreateCanonicalUser } from '../server/auth/authService';
 import {
+  cancelUserSubscription,
   computeAuthoritativePrice,
   resolveRazorpayCredentials,
   verifyAndActivatePayment,
@@ -159,4 +160,85 @@ test('Beginner-to-Advanced upgrade computes flat tier differential and cancels s
   assert.deepEqual(cancelledSubs, ['sub_old_beginner_111']);
   assert.equal(store.getState().users[user.uid].subscriptionTier, 'advanced');
   assert.equal(getOrCreateTradingLedger(user.uid, store, now).balance, 5_000_000);
+});
+
+test('Razorpay subscription cancellation fails closed on gateway errors and succeeds on confirmation or already-cancelled', async () => {
+  const store = new DurableStore({ inMemoryOnly: true });
+  const now = 1_750_000_000_000;
+  const user = resolveOrCreateCanonicalUser(
+    { email: 'canceller@example.com', name: 'Canceller', authProvider: 'email' },
+    store,
+    now
+  );
+  user.subscriptionTier = 'beginner';
+  user.subscriptionBillingCycle = 'monthly';
+  user.subscriptionStatus = 'active';
+  user.subscriptionAutoPay = true;
+  user.subscriptionExpiresAt = now + 15 * 86_400_000;
+  user.razorpaySubscriptionId = 'sub_live_cancel_001';
+
+  const noCreds = await cancelUserSubscription({ userId: user.uid, store, env: {}, now });
+  assert.equal(noCreds.status, 503);
+  assert.equal(noCreds.cancelled, false);
+  assert.equal(store.getState().users[user.uid].subscriptionStatus, 'active');
+  assert.equal(store.getState().users[user.uid].subscriptionAutoPay, true);
+
+  const upstream500 = await cancelUserSubscription({
+    userId: user.uid,
+    store,
+    env: TEST_ENV,
+    now,
+    fetchFn: async () => new Response('{"error":{"description":"Gateway timeout"}}', { status: 500 }),
+  });
+  assert.equal(upstream500.status, 502);
+  assert.equal(upstream500.cancelled, false);
+  assert.equal(upstream500.code, 'RAZORPAY_CANCEL_FAILED');
+  assert.equal(store.getState().users[user.uid].subscriptionStatus, 'active');
+  assert.equal(store.getState().users[user.uid].subscriptionAutoPay, true);
+
+  const networkFail = await cancelUserSubscription({
+    userId: user.uid,
+    store,
+    env: TEST_ENV,
+    now,
+    fetchFn: async () => {
+      throw new Error('ECONNRESET');
+    },
+  });
+  assert.equal(networkFail.status, 502);
+  assert.equal(networkFail.code, 'RAZORPAY_CANCEL_UNREACHABLE');
+  assert.equal(store.getState().users[user.uid].subscriptionStatus, 'active');
+
+  const cycleEndSec = Math.floor((now + 20 * 86_400_000) / 1000);
+  const confirmed = await cancelUserSubscription({
+    userId: user.uid,
+    store,
+    env: TEST_ENV,
+    now,
+    fetchFn: async () =>
+      new Response(JSON.stringify({ id: 'sub_live_cancel_001', status: 'cancelled', current_end: cycleEndSec }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+  });
+  assert.equal(confirmed.status, 200);
+  assert.equal(confirmed.cancelled, true);
+  assert.equal(confirmed.mode, 'razorpay_api');
+  assert.equal(store.getState().users[user.uid].subscriptionStatus, 'cancelled');
+  assert.equal(store.getState().users[user.uid].subscriptionAutoPay, false);
+  assert.equal(store.getState().users[user.uid].subscriptionExpiresAt, cycleEndSec * 1000);
+
+  user.subscriptionStatus = 'active';
+  user.subscriptionAutoPay = true;
+  const alreadyCancelled = await cancelUserSubscription({
+    userId: user.uid,
+    store,
+    env: TEST_ENV,
+    now: now + 1000,
+    fetchFn: async () =>
+      new Response(JSON.stringify({ error: { description: 'Subscription is already cancelled' } }), { status: 400 }),
+  });
+  assert.equal(alreadyCancelled.status, 200);
+  assert.equal(alreadyCancelled.cancelled, true);
+  assert.equal(store.getState().users[user.uid].subscriptionStatus, 'cancelled');
 });

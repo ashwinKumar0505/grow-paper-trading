@@ -28,12 +28,15 @@ export interface VerifiedAuthIdentity {
   expiresAt: number;
 }
 
-export function getSessionSecret(): string {
-  const configured = process.env.AUTH_SESSION_SECRET || process.env.RAZORPAY_KEY_SECRET;
-  if (configured && configured.length >= 16) return configured;
-  if (process.env.NODE_ENV === 'production') {
+export function getSessionSecret(env: Record<string, string | undefined> = process.env): string {
+  const isProd = (env.NODE_ENV || '').toLowerCase() === 'production';
+  const authSecret = (env.AUTH_SESSION_SECRET || '').trim();
+  if (authSecret.length >= 16) return authSecret;
+  if (isProd) {
     throw new Error('AUTH_SESSION_SECRET must be configured in production (min 16 characters).');
   }
+  const devFallback = (env.RAZORPAY_KEY_SECRET || '').trim();
+  if (devFallback.length >= 16) return devFallback;
   return 'niftylens_dev_test_session_secret_key_2026_v1';
 }
 

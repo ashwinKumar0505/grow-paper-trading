@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { createRateLimiter, createRequireAuth, sanitizeErrorMessage, type AuthenticatedRequest } from '../middleware/security';
-import { processRazorpayWebhook, resolveRazorpayCredentials, verifyAndActivatePayment } from '../payments/razorpayService';
+import { cancelUserSubscription, processRazorpayWebhook, resolveRazorpayCredentials, verifyAndActivatePayment } from '../payments/razorpayService';
 import type { DurableStore } from '../storage/durableStore';
 import { defaultStore } from '../storage/durableStore';
 
@@ -117,58 +117,31 @@ export function createSubscriptionManageRouter(store: DurableStore = defaultStor
 
   router.post('/payments/cancel-subscription', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const authUser = req.authUser!;
-      const user = store.getState().users[authUser.uid];
-      const subscriptionId =
-        typeof req.body?.subscriptionId === 'string' && req.body.subscriptionId.trim()
-          ? req.body.subscriptionId.trim()
-          : user?.razorpaySubscriptionId || '';
+      const result = await cancelUserSubscription({
+        userId: req.authUser!.uid,
+        requestedSubscriptionId:
+          typeof req.body?.subscriptionId === 'string' ? req.body.subscriptionId : undefined,
+        store,
+      });
 
-      if (user?.razorpaySubscriptionId && subscriptionId && subscriptionId !== user.razorpaySubscriptionId) {
-        res.status(403).json({ success: false, message: 'Cannot cancel a subscription belonging to another user.' });
+      if (!result.success) {
+        res.status(result.status).json({
+          success: false,
+          cancelled: false,
+          code: result.code,
+          message: result.message,
+        });
         return;
       }
 
-      const credsRes = resolveRazorpayCredentials();
-      let currentEndMs: number | undefined = user?.subscriptionExpiresAt ?? undefined;
-      let endedAtMs: number | undefined;
-      let mode: 'razorpay_api' | 'local' = 'local';
-
-      if (credsRes.ok && subscriptionId.startsWith('sub_')) {
-        const authHeader = Buffer.from(`${credsRes.creds.keyId}:${credsRes.creds.keySecret}`).toString('base64');
-        const rzpRes = await fetch(
-          `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Basic ${authHeader}` },
-            body: JSON.stringify({ cancel_at_cycle_end: 1 }),
-          }
-        );
-
-        if (rzpRes.ok) {
-          const subData = (await rzpRes.json()) as Record<string, unknown>;
-          mode = 'razorpay_api';
-          if (typeof subData.current_end === 'number') currentEndMs = subData.current_end * 1000;
-          if (typeof subData.ended_at === 'number') endedAtMs = subData.ended_at * 1000;
-        }
-      }
-
-      if (user) {
-        user.subscriptionStatus = 'cancelled';
-        user.subscriptionAutoPay = false;
-        if (currentEndMs) user.subscriptionExpiresAt = currentEndMs;
-        user.subscriptionUpdatedAt = Date.now();
-        user.updatedAt = Date.now();
-        store.appendAudit({
-          userId: user.uid, category: 'SUBSCRIPTION', action: 'SUBSCRIPTION_CANCELLED_BY_USER',
-          details: { subscriptionId, currentEndMs },
-        });
-        store.persist();
-      }
-
-      res.json({
-        success: true, cancelled: true, mode, subscriptionId,
-        status: 'cancelled', currentEndMs, endedAtMs,
+      res.status(result.status).json({
+        success: true,
+        cancelled: true,
+        mode: result.mode,
+        subscriptionId: result.subscriptionId,
+        status: result.subscriptionStatus || 'cancelled',
+        currentEndMs: result.currentEndMs,
+        endedAtMs: result.endedAtMs,
       });
     } catch (err) {
       res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'Subscription cancellation failed') });

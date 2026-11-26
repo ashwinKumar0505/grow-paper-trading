@@ -185,4 +185,14 @@ test('backend subscription entitlement enforcement gates orders, screeners, quot
   assert.equal(serviceTok.claims.tier, 'beginner');
   assert.equal(serviceTok.claims.analysisAllowFinancialsAndLevels, true);
   assert.equal(serviceTok.claims.analysisAllowAdvancedMode, false);
+
+  assert.throws(
+    () => issueScreenerServiceToken(beginnerUser, now, { NODE_ENV: 'production' }),
+    /SERVICE_AUTH_SECRET must be configured in production/
+  );
+  const prodServiceTok = issueScreenerServiceToken(beginnerUser, now, {
+    NODE_ENV: 'production',
+    SERVICE_AUTH_SECRET: 'prod_service_secret_32chars_minimum_ok',
+  });
+  assert.ok(prodServiceTok.token.includes('.'));
 });

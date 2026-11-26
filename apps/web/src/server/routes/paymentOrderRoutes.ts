@@ -128,7 +128,7 @@ export function createPaymentOrderRouter(store: DurableStore = defaultStore): Ro
         creditAppliedINR: priceQuote.creditAppliedINR, currency: 'INR', status: 'created',
         previousSubscriptionId: priceQuote.previousSubscriptionId, createdAt: now,
       };
-      store.persist();
+      await store.flush();
 
       res.json({
         success: true, mode: 'razorpay_api', paymentType: 'subscription', keyId,

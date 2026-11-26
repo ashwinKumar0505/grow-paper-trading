@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { Response } from 'express';
 import {
   canonicalEmailUid,
+  getSessionSecret,
   issueSessionToken,
   resolveOrCreateCanonicalUser,
   revokeSessionToken,
@@ -198,4 +199,19 @@ test('Firebase email/password bearer token rejects unverified emails and accepts
     if (prevProject === undefined) delete process.env.FIREBASE_PROJECT_ID;
     else process.env.FIREBASE_PROJECT_ID = prevProject;
   }
+});
+
+test('getSessionSecret fails closed in production and never falls back to RAZORPAY_KEY_SECRET', () => {
+  assert.throws(
+    () => getSessionSecret({ NODE_ENV: 'production', RAZORPAY_KEY_SECRET: 'live_razorpay_secret_24chars' }),
+    /AUTH_SESSION_SECRET must be configured in production/
+  );
+  assert.equal(
+    getSessionSecret({
+      NODE_ENV: 'production',
+      AUTH_SESSION_SECRET: 'dedicated_prod_session_secret_32chars',
+      RAZORPAY_KEY_SECRET: 'live_razorpay_secret_24chars',
+    }),
+    'dedicated_prod_session_secret_32chars'
+  );
 });
