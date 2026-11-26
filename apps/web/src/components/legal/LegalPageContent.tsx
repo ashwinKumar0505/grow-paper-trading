@@ -149,7 +149,7 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
               Tradedia Educational Technologies (India)
             </p>
             <p className="text-sm font-semibold text-[#00B386] dark:text-[#00D09C]">
-              compliance@tradedia.in
+              support@tradedia.in
             </p>
             <p className="text-[11px] text-[#5B7066] dark:text-[#7F9C8E]">
               Bengaluru, Karnataka, India
