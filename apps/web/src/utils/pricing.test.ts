@@ -95,11 +95,11 @@ test('differential upgrade pricing charges Beginner users only (Advanced - Begin
   assert.equal(begToAdvYearly.isDifferentialUpgrade, true);
 });
 
-test('comparison table orders Paper Trading first, Stock Screener AI Powered second, and enables AMO for Beginner', () => {
+test('comparison table orders Paper Trading first, Stock Screener AI Powered second, and enables AMO for all tiers', () => {
   assert.equal(COMPARISON_CATEGORIES[0].id, 'paper-trading');
   assert.equal(COMPARISON_CATEGORIES[1].id, 'screener');
   assert.equal(COMPARISON_CATEGORIES[1].title, 'Stock Screener AI Powered');
-  assert.equal(SUBSCRIPTION_PLANS.free.allowAmoOrders, false);
+  assert.equal(SUBSCRIPTION_PLANS.free.allowAmoOrders, true);
   assert.equal(SUBSCRIPTION_PLANS.beginner.allowAmoOrders, true);
   assert.equal(SUBSCRIPTION_PLANS.advanced.allowAmoOrders, true);
 });

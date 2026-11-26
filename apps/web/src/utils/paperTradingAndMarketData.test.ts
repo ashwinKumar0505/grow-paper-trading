@@ -140,6 +140,20 @@ test('pending-order cancellation, market-session AMO scheduling, and portfolio a
   assert.equal(amoRes.success, true);
   assert.equal(amoRes.order?.status, 'SCHEDULED');
   assert.equal(amoRes.order?.isAmo, true);
+
+  const freeUser = resolveOrCreateCanonicalUser(
+    { email: 'free.amo@example.com', name: 'Free Trader', authProvider: 'email' },
+    store,
+    AFTER_MARKET_TS
+  );
+  const freeAmoRes = await submitAuthoritativeOrder({
+    userId: freeUser.uid,
+    orderInput: { symbol: 'SBIN', stockName: 'State Bank of India', action: 'BUY', product: 'DELIVERY', orderType: 'MARKET', exchange: 'NSE', quantity: 5 },
+    quoteResolver, store, now: AFTER_MARKET_TS,
+  });
+  assert.equal(freeAmoRes.success, true);
+  assert.equal(freeAmoRes.order?.status, 'SCHEDULED');
+  assert.equal(freeAmoRes.order?.isAmo, true);
 });
 
 test('historical replay session enforces isolated simulation clock and prevents look-ahead bias, and 15:20 IST square-off handles outages safely', async () => {

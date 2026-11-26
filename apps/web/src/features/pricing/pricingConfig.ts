@@ -53,7 +53,7 @@ export const PLAN_CARDS: Record<SubscriptionTier, PlanCardContent> = {
     description: 'Explore and learn at your own pace.',
     features: [
       { icon: Wallet, text: `${formatLakhsWords(F.defaultStartingCash)} virtual capital` },
-      { icon: ChartCandlestick, text: 'Delivery (CNC) market orders' },
+      { icon: ChartCandlestick, text: 'Delivery (CNC) market & after-market (AMO) orders' },
       { icon: Radar, text: `Top ${F.swingMaxSignals} backtested swing setups` },
       { icon: Sparkles, text: `${F.analysisDailyLimit} chart, technical & AI-powered stock analyses/day` },
       { icon: BookOpen, text: `${F.patternLibraryMaxFreePatterns} beginner chart patterns` },
@@ -67,7 +67,7 @@ export const PLAN_CARDS: Record<SubscriptionTier, PlanCardContent> = {
     inheritsFrom: 'Everything in Free, plus:',
     features: [
       { icon: Wallet, text: `${formatLakhsWords(B.defaultStartingCash)} virtual capital` },
-      { icon: ChartCandlestick, text: '5x Intraday (MIS), MTF 5.00x, limit & after-market orders' },
+      { icon: ChartCandlestick, text: '5x Intraday (MIS), MTF 5.00x & limit orders' },
       { icon: Radar, text: `Top ${B.swingMaxSignals} swing + ${B.intradayMaxSignals} intraday technical setups` },
       { icon: Sparkles, text: `${B.analysisDailyLimit} chart, technical & AI-powered analyses/day · 2-year backtests, levels & financials` },
       { icon: BookOpen, text: 'All 21 chart patterns unlocked' },
