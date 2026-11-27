@@ -10,11 +10,11 @@ X
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { navigate } from '../../../lib/navigation';
+import { AppLink, buildLearnPatternPath, navigate } from '../../../lib/navigation';
 import { PATTERN_TEMPLATES } from '../utils/dataGenerator';
 
 import type { PatternLesson } from '../hooks/usePatternLesson';
-import { CATEGORIES,shortName } from '../utils/patternCatalog';
+import { CATEGORIES, shortName, toPatternSlug } from '../utils/patternCatalog';
 
 type Props = Pick<PatternLesson, 'query' | 'setQuery' | 'category' | 'setCategory' | 'sidebarOpen' | 'setSidebarOpen' | 'unlockedPatternNames' | 'pattern' | 'filtered' | 'choosePattern'>;
 
@@ -99,12 +99,16 @@ export function PatternCatalog({ query, setQuery, category, setCategory, sidebar
             const isSelected = pattern.name === item.name;
             const itemBullish = item.expectedDirection === 'BUY';
             const isLocked = !unlockedPatternNames.has(item.name);
+            const href = buildLearnPatternPath(toPatternSlug(item.name));
             return (
-              <Button variant="unstyled" size="unstyled"
+              <AppLink
                 key={item.name}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => choosePattern(item.name)}
+                href={href}
+                aria-current={isSelected ? 'page' : undefined}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  choosePattern(item.name, { skipNavigate: true });
+                }}
                 className={`w-full rounded-xl px-4 py-3.5 text-left transition-all flex items-start justify-between gap-3 border ${
                   isSelected
                     ? 'bg-[#12281f] border-[#00d09c]/60 text-white shadow-sm'
@@ -131,7 +135,7 @@ export function PatternCatalog({ query, setQuery, category, setCategory, sidebar
                   {itemBullish ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                   {itemBullish ? 'Bullish' : 'Bearish'}
                 </span>
-              </Button>
+              </AppLink>
             );
           })}
           {!filtered.length && (

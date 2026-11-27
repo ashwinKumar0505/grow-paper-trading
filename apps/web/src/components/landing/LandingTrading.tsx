@@ -6,6 +6,8 @@ ShieldCheck,
 Wallet,
 Zap
 } from 'lucide-react';
+import { trackProductNavigation } from '../../lib/analytics';
+import { AppLink } from '../../lib/navigation';
 import { FloatingIllustration } from '../FloatingIllustration';
 import type { LandingModel } from './useLandingPage';
 type Props = Pick<LandingModel, 'stocks' | 'handleGetStarted'>;
@@ -102,6 +104,20 @@ return (
                   <span>Open Paper Trading Desk</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+                <AppLink
+                  href="/paper-trading-india"
+                  onClick={() =>
+                    trackProductNavigation({
+                      sourcePage: '/',
+                      targetPage: '/paper-trading-india',
+                      navLocation: 'homepage_section',
+                    })
+                  }
+                  className="px-5 py-3.5 rounded-xl font-bold text-sm text-[#15241D] dark:text-white bg-[#F3F6F4] dark:bg-[#111C17] border border-[#CFDCD5] dark:border-[#20332A] hover:border-[#00B386] dark:hover:border-[#00D09C] transition-colors inline-flex items-center gap-1.5"
+                >
+                  <span>Learn More</span>
+                  <ArrowRight className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
+                </AppLink>
                 <span className="text-xs text-[#5B7066] dark:text-[#9AB0A5]">
                   Live NSE benchmark quotes · 100% risk-free simulation
                 </span>

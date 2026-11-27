@@ -9,6 +9,7 @@ import { createAuthRouter } from './routes/authRoutes';
 import { createMarketRouter } from './routes/marketRoutes';
 import { createPaperTradingRouter } from './routes/paperTradingRoutes';
 import { createPaymentRouter } from './routes/paymentRoutes';
+import { createSeoInfraRouter } from './seo/seoRoutes';
 import { defaultStore, type DurableStore } from './storage/durableStore';
 import { processAccountBackgroundQueue } from './trading/tradingLedger';
 
@@ -18,6 +19,7 @@ export function createExpressApp(store: DurableStore = defaultStore): Express {
   app.set('trust proxy', 1);
 
   app.get('/api/health', (_req, res) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.json({
       status: 'ok',
       service: 'tradedia-web',
@@ -28,6 +30,12 @@ export function createExpressApp(store: DurableStore = defaultStore): Express {
   });
 
   app.use(securityHeadersAndCors);
+  app.use(createSeoInfraRouter());
+
+  app.use('/api', (_req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    next();
+  });
 
   app.use(
     express.json({
@@ -42,6 +50,13 @@ export function createExpressApp(store: DurableStore = defaultStore): Express {
   app.use('/api', createAuthRouter(store));
   app.use('/api', createPaymentRouter(store));
   app.use('/api', createPaperTradingRouter(store));
+  app.use('/api', (_req, res) => {
+    res.status(404).json({
+      success: false,
+      code: 'NOT_FOUND',
+      message: 'API endpoint not found.',
+    });
+  });
 
   return app;
 }

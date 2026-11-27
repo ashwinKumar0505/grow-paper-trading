@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocationSearch, usePathname } from '../navigation';
+import { recordLandingOrigin } from './attribution';
 import { useAnalyticsConsent } from './consent';
 import { applyAnalyticsConsent, isAnalyticsEligible, trackPageView } from './ga4';
 
@@ -7,6 +8,10 @@ export function useAnalyticsTracking(): void {
   const pathname = usePathname();
   const search = useLocationSearch();
   const consent = useAnalyticsConsent();
+
+  useEffect(() => {
+    recordLandingOrigin(pathname);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isAnalyticsEligible()) return;

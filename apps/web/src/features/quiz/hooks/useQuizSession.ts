@@ -42,7 +42,7 @@ export function useQuizSession() {
   const currentView =
     pathname === '/quiz/play'
       ? 'quiz'
-      : pathname === '/learn' || pathname === '/pattern-library'
+      : pathname === '/learn' || pathname.startsWith('/learn/') || pathname === '/pattern-library'
         ? 'learn-charts'
         : 'mode-select';
   const setCurrentView = (view: 'quiz' | 'learn-charts' | 'mode-select') =>

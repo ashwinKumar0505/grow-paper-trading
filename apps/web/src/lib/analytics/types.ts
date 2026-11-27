@@ -25,6 +25,24 @@ export interface SanitizedPageData {
 
 export type AuthAnalyticsMethod = 'google' | 'email';
 
+export type FeatureLandingPath =
+  | '/paper-trading-india'
+  | '/ai-stock-screener'
+  | '/guess-the-chart';
+
+export interface FeatureCtaClickPayload {
+  sourcePage: string;
+  ctaId: string;
+  destinationPath: string;
+  placement: 'hero' | 'section' | 'final_cta';
+}
+
+export interface ProductNavigationPayload {
+  sourcePage: string;
+  targetPage: string;
+  navLocation: 'homepage_section' | 'feature_related' | 'footer' | 'inline';
+}
+
 export interface PaperTradeActivityPayload {
   activityType:
     | 'order_submitted'

@@ -18,7 +18,31 @@ export function canonicalPath(path: string) {
   if (normalized.startsWith('/stocks/')) {
     return `/trade/${normalized.slice('/stocks/'.length)}`;
   }
+  if (normalized.startsWith('/pattern-library/')) {
+    return `/learn/${normalized.slice('/pattern-library/'.length).toLowerCase()}`;
+  }
+  if (normalized.startsWith('/quiz/learn/')) {
+    return `/learn/${normalized.slice('/quiz/learn/'.length).toLowerCase()}`;
+  }
+  if (normalized.startsWith('/learn/')) {
+    return `/learn/${normalized.slice('/learn/'.length).toLowerCase()}`;
+  }
   return aliases[normalized] || normalized;
+}
+
+export function getLearnPatternSlugFromPath(pathname: string): string | null {
+  if (!pathname.startsWith('/learn/')) return null;
+  const rest = pathname.slice('/learn/'.length);
+  if (!rest || rest.includes('/')) return null;
+  try {
+    return decodeURIComponent(rest).trim().toLowerCase() || null;
+  } catch {
+    return rest.trim().toLowerCase() || null;
+  }
+}
+
+export function buildLearnPatternPath(slug: string): string {
+  return `/learn/${encodeURIComponent(slug.trim().toLowerCase())}`;
 }
 
 export function getTradeStockSymbolFromPath(pathname: string): string | null {

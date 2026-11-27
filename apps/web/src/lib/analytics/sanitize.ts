@@ -1,4 +1,5 @@
-import { canonicalPath } from '../navigation';
+import { resolvePatternBySlug } from '../../features/quiz/utils/patternCatalog';
+import { canonicalPath, getLearnPatternSlugFromPath } from '../navigation';
 import type { AnalyticsPrimitive, SanitizedPageData } from './types';
 
 const GA4_MEASUREMENT_ID_RE = /^G-[A-Z0-9]{6,20}$/i;
@@ -6,6 +7,9 @@ const GA4_EVENT_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
 
 const ALLOWED_STATIC_ROUTES = new Set<string>([
   '/',
+  '/paper-trading-india',
+  '/ai-stock-screener',
+  '/guess-the-chart',
   '/trade',
   '/screener',
   '/screener/intraday',
@@ -32,6 +36,9 @@ const ALLOWED_QUERY_PARAMS = new Set<string>([
 
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'Tradedia – One Place to Learn Trading',
+  '/paper-trading-india': 'Paper Trading in India | Tradedia',
+  '/ai-stock-screener': 'AI-Powered Stock Screener | Tradedia',
+  '/guess-the-chart': 'Guess the Chart Quiz | Tradedia',
   '/trade': 'Paper Trading Desk | Tradedia',
   '/trade/:symbol': 'Stock Paper Trading | Tradedia',
   '/screener': 'Swing Stock Screener | Tradedia',
@@ -95,16 +102,19 @@ export function toAnalyticsSlug(value: string | undefined, maxLen = 64): string 
 export function sanitizePagePath(rawPathname: string): string {
   const safeRaw = typeof rawPathname === 'string' && rawPathname.trim() ? rawPathname : '/';
   const canonical = canonicalPath(safeRaw);
-  if (canonical.startsWith('/trade/')) {
-    return '/trade/:symbol';
+  if (canonical.startsWith('/trade/')) return '/trade/:symbol';
+  if (canonical.startsWith('/learn/')) {
+    const matched = resolvePatternBySlug(getLearnPatternSlugFromPath(canonical));
+    return matched ? `/learn/${matched.slug}` : '/not-found';
   }
-  if (ALLOWED_STATIC_ROUTES.has(canonical)) {
-    return canonical;
-  }
-  return '/not-found';
+  return ALLOWED_STATIC_ROUTES.has(canonical) ? canonical : '/not-found';
 }
 
 export function getSanitizedPageTitle(sanitizedPath: string): string {
+  if (sanitizedPath.startsWith('/learn/')) {
+    const matched = resolvePatternBySlug(getLearnPatternSlugFromPath(sanitizedPath));
+    if (matched) return `${matched.shortTitle} Chart Pattern | Tradedia`;
+  }
   return ROUTE_TITLES[sanitizedPath] || ROUTE_TITLES['/not-found'];
 }
 

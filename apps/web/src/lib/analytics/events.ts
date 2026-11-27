@@ -1,20 +1,44 @@
+import { consumeLandingOrigin } from './attribution';
 import { trackEvent } from './ga4';
-import { toAnalyticsSlug } from './sanitize';
+import { sanitizePagePath, toAnalyticsSlug } from './sanitize';
 import type {
   AuthAnalyticsMethod,
   ChartPatternLearningPayload,
+  FeatureCtaClickPayload,
   PaperTradeActivityPayload,
+  ProductNavigationPayload,
   QuizCompletionPayload,
   ScreenerUsagePayload,
   SubscriptionCompletedPayload,
 } from './types';
 
 export function trackSignUp(method: AuthAnalyticsMethod): boolean {
-  return trackEvent('sign_up', { method });
+  const landingOrigin = consumeLandingOrigin();
+  return trackEvent('sign_up', {
+    method,
+    landing_page: landingOrigin ? toAnalyticsSlug(landingOrigin) : undefined,
+  });
 }
 
 export function trackLogin(method: AuthAnalyticsMethod): boolean {
   return trackEvent('login', { method });
+}
+
+export function trackFeatureCtaClick(payload: FeatureCtaClickPayload): boolean {
+  return trackEvent('feature_cta_click', {
+    source_page: sanitizePagePath(payload.sourcePage),
+    cta_id: toAnalyticsSlug(payload.ctaId),
+    destination_path: sanitizePagePath(payload.destinationPath),
+    placement: payload.placement,
+  });
+}
+
+export function trackProductNavigation(payload: ProductNavigationPayload): boolean {
+  return trackEvent('product_navigation', {
+    source_page: sanitizePagePath(payload.sourcePage),
+    target_page: sanitizePagePath(payload.targetPage),
+    nav_location: payload.navLocation,
+  });
 }
 
 export function trackPaperTradeActivity(payload: PaperTradeActivityPayload): boolean {

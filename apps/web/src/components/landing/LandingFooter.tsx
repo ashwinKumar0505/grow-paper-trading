@@ -1,8 +1,15 @@
-import { isAnalyticsEligible, openAnalyticsPreferences } from '../../lib/analytics';
-import { AppLink } from '../../lib/navigation';
+import {
+  isAnalyticsEligible,
+  openAnalyticsPreferences,
+  trackProductNavigation,
+} from '../../lib/analytics';
+import { AppLink, usePathname } from '../../lib/navigation';
 import { BrandLogo } from '../BrandLogo';
 export function LandingFooter() {
 const analyticsEligible = isAnalyticsEligible();
+const pathname = usePathname();
+const trackFooterGuide = (targetPage: string) =>
+  trackProductNavigation({ sourcePage: pathname, targetPage, navLocation: 'footer' });
 return (
 <footer className="bg-white dark:bg-[#0E1713] border-t border-emerald-900/10 dark:border-[#20332A] py-12 px-4 sm:px-6 lg:px-8 text-xs text-[#5B7066] dark:text-[#9AB0A5] text-left">
         <div className="w-full max-w-[1880px] mx-auto space-y-8">
@@ -35,6 +42,47 @@ return (
                 Guess the Chart
               </AppLink>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+            <span className="font-extrabold uppercase tracking-wider text-[10px] text-[#5B7066] dark:text-[#7F9C8E]">
+              Product Guides:
+            </span>
+            <AppLink
+              href="/paper-trading-india"
+              onClick={() => trackFooterGuide('/paper-trading-india')}
+              className="font-semibold hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
+            >
+              Paper Trading India
+            </AppLink>
+            <AppLink
+              href="/ai-stock-screener"
+              onClick={() => trackFooterGuide('/ai-stock-screener')}
+              className="font-semibold hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
+            >
+              AI Stock Screener
+            </AppLink>
+            <AppLink
+              href="/guess-the-chart"
+              onClick={() => trackFooterGuide('/guess-the-chart')}
+              className="font-semibold hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
+            >
+              Guess the Chart Quiz
+            </AppLink>
+            <AppLink
+              href="/learn"
+              onClick={() => trackFooterGuide('/learn')}
+              className="font-semibold hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
+            >
+              Chart Pattern Library
+            </AppLink>
+            <AppLink
+              href="/pricing"
+              onClick={() => trackFooterGuide('/pricing')}
+              className="font-semibold hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors"
+            >
+              Pricing &amp; Plans
+            </AppLink>
           </div>
 
           <div className="space-y-2 text-[11px] leading-relaxed text-[#5B7066] dark:text-[#7F9C8E]">

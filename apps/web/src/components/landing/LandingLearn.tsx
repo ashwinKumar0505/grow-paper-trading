@@ -1,10 +1,12 @@
 import { lazy, Suspense } from 'react';
 import {
+  ArrowRight,
   Award,
   BookOpen,
   GraduationCap,
   PlayCircle,
 } from 'lucide-react';
+import { trackProductNavigation } from '../../lib/analytics';
 import { AppLink } from '../../lib/navigation';
 import { FloatingIllustration } from '../FloatingIllustration';
 
@@ -118,6 +120,20 @@ return (
                 >
                   <GraduationCap className="w-4 h-4 text-[#00D09C]" />
                   <span>Play Guess the Chart →</span>
+                </AppLink>
+                <AppLink
+                  href="/guess-the-chart"
+                  onClick={() =>
+                    trackProductNavigation({
+                      sourcePage: '/',
+                      targetPage: '/guess-the-chart',
+                      navLocation: 'homepage_section',
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 px-2 py-2 text-xs sm:text-sm font-extrabold text-[#00B386] dark:text-[#00D09C] hover:underline"
+                >
+                  <span>Learn More</span>
+                  <ArrowRight className="w-4 h-4" />
                 </AppLink>
               </div>
             </div>

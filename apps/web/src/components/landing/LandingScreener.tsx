@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
+import { trackProductNavigation } from '../../lib/analytics';
 import { AppLink } from '../../lib/navigation';
 import { FloatingIllustration } from '../FloatingIllustration';
 import type { LandingModel } from './useLandingPage';
@@ -104,6 +105,20 @@ export function LandingScreener({}: Props) {
               >
                 <Search className="w-4 h-4 text-[#00B386] dark:text-[#00D09C]" />
                 <span>Analyse Any Stock</span>
+              </AppLink>
+              <AppLink
+                href="/ai-stock-screener"
+                onClick={() =>
+                  trackProductNavigation({
+                    sourcePage: '/',
+                    targetPage: '/ai-stock-screener',
+                    navLocation: 'homepage_section',
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-2 py-2 text-xs sm:text-sm font-extrabold text-[#00B386] dark:text-[#00D09C] hover:underline"
+              >
+                <span>Learn More</span>
+                <ArrowRight className="w-4 h-4" />
               </AppLink>
             </div>
           </div>

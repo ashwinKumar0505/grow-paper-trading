@@ -318,3 +318,26 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
 - **Checks NOT Executed & Notes**:
   - Dedicated git branch creation was skipped because `.git/refs` is write-restricted in this sandbox environment; no commits were created.
   - Live interactive browser verification against GA4 Realtime (`G-NTTB773KTH`) and Railway Docker redeploy were not executed locally.
+
+---
+
+## 15. Production Technical SEO, Dynamic Sitemap, Robots.txt & React Crawlability (`https://www.tradedia.in`, 2026-11-27)
+
+- **Audited SEO Issues Resolved**:
+  - Live `https://www.tradedia.in/sitemap.xml` and `/robots.txt` were intercepted by the Express SPA fallback (`200 text/html`); unknown routes returned soft-404 `200` with `index, follow`.
+  - All routes served identical homepage `<head>` tags and an empty `<div id="root"></div>`, lacked `<link rel="canonical">`, `og:url`, and JSON-LD structured data, and used relative `og:image`/`twitter:image` paths.
+  - Individual chart pattern lessons under `/learn` had no shareable/indexable URLs; private/auth-gated routes (`/trade`, `/screener`, `/quiz`, `/profile`) inherited `index, follow`.
+- **Changes**:
+  - **Pattern Deep-Link Routes**: Extended `patternCatalog.ts`, `navigation.tsx`, `usePatternLesson.ts`, `PatternCatalog.tsx`, `WorkspaceContent.tsx`, `useQuizSession.ts`, `WorkspaceHeader.tsx`, and `analytics/sanitize.ts` with canonical `/learn/:slug` URLs (8 free Beginner patterns publicly indexable; 13 paid patterns remain gated with `noindex, follow`; invalid slugs return HTTP 404).
+  - **Shared Metadata & Structured Data (`apps/web/src/lib/seo/`)**: Added `constants.ts`, `staticRouteMeta.ts`, `routeMetadata.ts`, `structuredData.ts`, and `useRouteSeo.ts` providing unique titles/descriptions, canonical URLs, absolute Open Graph & Twitter cards, honest `Organization`, `WebSite`, `WebApplication`, `BreadcrumbList`, and `LearningResource` JSON-LD, and strict `Tradedia` capitalization. Wired `useRouteSeo` in `App.tsx`, aligned `LegalPages.tsx` date constant, and removed redundant title overwrite in `features/screener/App.jsx`.
+  - **Server-Side SEO & Crawlability (`apps/web/src/server/seo/`)**: Added `sitemapAndRobots.ts`, `crawlerMarkup.ts`, `htmlRenderer.ts`, and `seoRoutes.ts`, mounted `/sitemap.xml` and `/robots.txt` in `src/server/app.ts` (before static/Vite/SPA fallback), added `X-Robots-Tag: noindex, nofollow` on `/api/*` and Railway preview (`*.up.railway.app`) hosts, added JSON 404 for unknown `/api/*`, updated `server.ts` to use `express.static(..., { index: false })` + `createProductionPageMiddleware(distPath)` (301 alias/trailing-slash/apex redirects, true 404s, dynamic `<head>` + JSON-LD + semantic crawler HTML injection), and updated `index.html` with `SEO_META_START`/`SEO_META_END` markers.
+  - **Tests & Docs**: Added `src/utils/seo.test.ts` and `src/utils/seoServer.test.ts`, and updated `docs/railway-deployment.md`.
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (107 / 107 passed).
+  - `cd apps/web && npm run build`: **PASS** (Vite client + `esbuild` `dist-server/server.mjs`).
+  - Compiled production server smoke check (`NODE_ENV=production node dist-server/server.mjs`): **PASS** across `/sitemap.xml`, `/robots.txt`, `/`, `/learn`, `/learn/double-top`, `/pricing`, `/disclaimer`, `/pattern-library` (301), `/profile` (`noindex`), `/does-not-exist` (404), and `/api/health` (`X-Robots-Tag: noindex, nofollow`).
+  - Line-count check: every new and modified TS/TSX/JS application file is `<= 195` nonblank/non-comment lines.
+- **Checks NOT Executed & Notes**:
+  - Live `https://www.tradedia.in` HTTP/HTTPS/www redirect check was run prior to deploy (confirming `http://tradedia.in`, `https://tradedia.in`, and `http://www.tradedia.in` 301-redirect to `https://www.tradedia.in`); live post-deploy verification requires pushing and redeploying `tradedia-web` on Railway.
+  - Dedicated git branch creation and interactive browser checks were not executed in this environment; no commits were created.

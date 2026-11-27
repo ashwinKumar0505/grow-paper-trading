@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, ShieldAlert, FileText, Lock, RefreshCw, Mail } from 'lucide-react';
 import { AppLink } from '../lib/navigation';
+import { LEGAL_LAST_UPDATED_DISPLAY } from '../lib/seo/constants';
 import { LegalPageContent } from './legal/LegalPageContent';
 
 export type LegalPageKind = 'terms' | 'privacy' | 'refund-policy' | 'disclaimer' | 'contact';
@@ -9,7 +10,7 @@ interface LegalPageProps {
   kind: LegalPageKind;
 }
 
-const LAST_UPDATED = 'November 14, 2026';
+const LAST_UPDATED = LEGAL_LAST_UPDATED_DISPLAY;
 
 export const LegalPage: React.FC<LegalPageProps> = ({ kind }) => {
   const navItems: Array<{ href: string; label: string; id: LegalPageKind }> = [

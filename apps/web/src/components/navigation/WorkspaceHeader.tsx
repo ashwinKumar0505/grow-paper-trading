@@ -8,10 +8,11 @@ import { UserProfileMenu } from './UserProfileMenu';
 export function WorkspaceHeader() {
   const pathname = usePathname();
   const { setCurrentTab } = useTrading();
-  const isScreener = pathname.startsWith('/screener');
-  const isTrade = pathname === '/trade' || pathname.startsWith('/trade/');
-  const isLearn = pathname === '/learn';
-  const isQuiz = pathname === '/quiz' || pathname === '/quiz/play';
+  const isScreener = pathname.startsWith('/screener') || pathname === '/ai-stock-screener';
+  const isTrade =
+    pathname === '/trade' || pathname.startsWith('/trade/') || pathname === '/paper-trading-india';
+  const isLearn = pathname === '/learn' || pathname.startsWith('/learn/');
+  const isQuiz = pathname === '/quiz' || pathname === '/quiz/play' || pathname === '/guess-the-chart';
   const isPricing = pathname === '/pricing';
 
   const modes = [

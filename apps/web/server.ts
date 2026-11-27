@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import { createExpressApp, runServerBackgroundTradingTick } from './src/server/app';
 import { marketDataRegistry } from './src/server/providers/providerRegistry';
+import { createProductionPageMiddleware } from './src/server/seo/seoRoutes';
 import { defaultStore } from './src/server/storage/durableStore';
 
 dotenv.config();
@@ -34,11 +35,8 @@ async function startServer() {
       '/assets',
       express.static(path.join(distPath, 'assets'), { maxAge: '1y', immutable: true })
     );
-    app.use(express.static(distPath, { maxAge: '1h' }));
-    app.get('*', (_req, res) => {
-      res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(path.resolve(distPath, 'index.html'));
-    });
+    app.use(express.static(distPath, { index: false, maxAge: '1h' }));
+    app.use(createProductionPageMiddleware(distPath));
   }
 
   const server = app.listen(PORT, HOST, () => {

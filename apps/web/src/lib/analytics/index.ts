@@ -1,4 +1,11 @@
 export {
+  LANDING_ORIGIN_STORAGE_KEY,
+  consumeLandingOrigin,
+  getLandingOrigin,
+  isFeatureLandingPath,
+  recordLandingOrigin,
+} from './attribution';
+export {
   ANALYTICS_CONSENT_STORAGE_KEY,
   closeAnalyticsPreferences,
   getAnalyticsConsent,
@@ -12,8 +19,10 @@ export {
 } from './consent';
 export {
   trackChartPatternLearning,
+  trackFeatureCtaClick,
   trackLogin,
   trackPaperTradeActivity,
+  trackProductNavigation,
   trackQuizCompletion,
   trackScreenerUsage,
   trackSignUp,
@@ -47,7 +56,10 @@ export type {
   AnalyticsPrimitive,
   AuthAnalyticsMethod,
   ChartPatternLearningPayload,
+  FeatureCtaClickPayload,
+  FeatureLandingPath,
   PaperTradeActivityPayload,
+  ProductNavigationPayload,
   QuizCompletionPayload,
   SanitizedPageData,
   ScreenerUsagePayload,
