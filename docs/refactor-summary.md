@@ -341,3 +341,24 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
 - **Checks NOT Executed & Notes**:
   - Live `https://www.tradedia.in` HTTP/HTTPS/www redirect check was run prior to deploy (confirming `http://tradedia.in`, `https://tradedia.in`, and `http://www.tradedia.in` 301-redirect to `https://www.tradedia.in`); live post-deploy verification requires pushing and redeploying `tradedia-web` on Railway.
   - Dedicated git branch creation and interactive browser checks were not executed in this environment; no commits were created.
+
+---
+
+## 16. Dedicated Public Feature Landing Pages (`/paper-trading-india`, `/ai-stock-screener`, `/guess-the-chart`, 2026-11-27)
+
+- **Pages & Reusable Architecture (`apps/web/src/features/feature-landing/`)**:
+  - Created three publicly accessible, lazy-loaded feature landing pages reusing Tradedia's exact design tokens, light/dark themes, `WorkspaceHeader`, `LandingFooter`, `FloatingIllustration` (with existing `virtual-trading.webp`, `stock-screener.webp`, `interactive-learning.webp`), `LandingScreenerStrategyCard`, and lazy `LandingChallengePreview` on `/guess-the-chart`.
+  - Shared pure-TS content modules (`paperTradingContent.ts`, `screenerLandingContent.ts`, `guessChartContent.ts`, `featureContentMap.ts`) power React UI, `FAQPage` JSON-LD, and server-side crawler HTML (`featureCrawlerMarkup.ts`) from one single source of truth so crawler HTML matches user-visible content identically.
+- **SEO, Navigation & GA4 Analytics**:
+  - Registered all three routes in `staticRouteMeta.ts`, `routeMetadata.ts`, `structuredData.ts`, `sitemapAndRobots.ts` (sitemap expanded to 19 URLs; updated `robots.txt` from prefix `Disallow: /paper-trading` to exact `Disallow: /paper-trading$` + explicit `Allow:` rules so `/paper-trading-india` is never blocked), and `crawlerMarkup.ts`.
+  - Added dedicated `1200×630` PNG Open Graph / Twitter social share banner (`apps/web/public/images/landing/tradedia-social-share-card.png`) and upgraded social card metadata to `twitter:card="summary_large_image"` while keeping `Organization.logo` pointing to `logo-512.png`.
+  - Added contextual `Learn More` links on `LandingTrading.tsx`, `LandingScreener.tsx`, and `LandingLearn.tsx` (preserving all existing app-launch CTAs) and a **Product Guides** row in `LandingFooter.tsx`.
+  - Extended GA4 (`attribution.ts`, `events.ts`, `sanitize.ts`, `useAnalyticsTracking.ts`) with allowed static routes, `feature_cta_click`, `product_navigation`, and session-scoped `landing_page` attribution attached to the single existing `sign_up` event (preserving UTM attribution and zero PII).
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (109 / 109 passed, including `featureLandingPages.test.ts` and updated `seo.test.ts` / `seoServer.test.ts`).
+  - `cd apps/web && npm run build`: **PASS** (Vite lazy chunks generated for all three feature pages + `esbuild` `dist-server/server.mjs`).
+  - Production server smoke check (`NODE_ENV=production node dist-server/server.mjs`): **PASS** across `/paper-trading-india`, `/ai-stock-screener`, `/guess-the-chart`, `/sitemap.xml` (19 URLs), and `/robots.txt`.
+  - Line-count check: every new and modified TS/TSX/JS file verified `<= 200` nonblank/non-comment lines.
+- **Checks NOT Executed & Notes**:
+  - Interactive live browser visual testing and post-deploy checks on Railway were not executed locally (pending commit/deploy).

@@ -102,9 +102,9 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
 4. Open `https://<your-domain>` in a browser: verify landing WebP images load fast, Google & Email OTP sign-in succeed, paper-trading quotes/charts load, and Swing/Intraday scanners return data.
 5. Verify GA4 consent & privacy: before accepting the analytics consent banner, confirm DevTools Network shows **zero** requests to `googletagmanager.com` / `google-analytics.com`; after clicking **Accept Analytics**, confirm `gtag/js?id=G-NTTB773KTH` loads once, SPA route changes emit a single sanitized `page_view` (e.g., `/trade/:symbol`, `/screener/analysis` with no `symbol`/token query params), and GA4 Realtime reports receive events.
 6. Verify Technical SEO endpoints on `https://www.tradedia.in`:
-   - `GET https://www.tradedia.in/sitemap.xml` → `200` `application/xml; charset=utf-8` (16 canonical public URLs including `/`, `/learn`, 8 free `/learn/:slug` guides, `/pricing`, and legal pages).
-   - `GET https://www.tradedia.in/robots.txt` → `200` `text/plain; charset=utf-8` referencing `Sitemap: https://www.tradedia.in/sitemap.xml` (on `*.up.railway.app` preview hosts, returns `Disallow: /` and `X-Robots-Tag: noindex, nofollow`).
-   - `GET https://www.tradedia.in/learn/double-top` → `200` `text/html` with route-specific `<title>`, `<link rel="canonical">`, Open Graph/Twitter tags, `BreadcrumbList`/`LearningResource` JSON-LD, and crawler-readable lesson markup.
+   - `GET https://www.tradedia.in/sitemap.xml` → `200` `application/xml; charset=utf-8` (19 canonical public URLs including `/`, `/paper-trading-india`, `/ai-stock-screener`, `/guess-the-chart`, `/learn`, 8 free `/learn/:slug` guides, `/pricing`, and legal pages).
+   - `GET https://www.tradedia.in/robots.txt` → `200` `text/plain; charset=utf-8` allowing `/paper-trading-india`, `/ai-stock-screener`, `/guess-the-chart`, and referencing `Sitemap: https://www.tradedia.in/sitemap.xml` (on `*.up.railway.app` preview hosts, returns `Disallow: /` and `X-Robots-Tag: noindex, nofollow`).
+   - `GET https://www.tradedia.in/paper-trading-india`, `/ai-stock-screener`, `/guess-the-chart`, and `/learn/double-top` → `200` `text/html` with route-specific `<title>`, `<link rel="canonical">`, Open Graph/Twitter tags, JSON-LD, and crawler-readable markup.
    - `GET https://www.tradedia.in/does-not-exist` → `404` with `X-Robots-Tag: noindex, nofollow` and no canonical link.
 
 ---
