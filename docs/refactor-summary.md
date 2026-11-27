@@ -282,3 +282,39 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - `cd apps/web && npm run build`: **PASS** (Vite SPA + `esbuild` `dist-server/server.mjs`).
 - **Checks NOT Executed**:
   - Interactive browser / visual check not executed locally.
+
+---
+
+## 14. Privacy-First Google Analytics 4 Integration (`VITE_GA_MEASUREMENT_ID`, 2026-11-27)
+
+- **Existing Setup Audit**:
+  - `apps/web/firebase-applet-config.json` already listed `"measurementId": "G-NTTB773KTH"` and `apps/web/src/lib/firebase.ts` forwarded it to `initializeApp`, but `firebase/analytics` (`getAnalytics`) and `gtag.js` were never imported or loaded anywhere. Firebase Analytics remains uninitialized so GA4 is exclusively managed by `apps/web/src/lib/analytics/` with consent gating and zero duplicate page views.
+- **Changes**:
+  - **Core GA4 & Consent Modules (`apps/web/src/lib/analytics/`)**:
+    - `types.ts`, `sanitize.ts`, `consent.ts`, `ga4.ts`, `events.ts`, `useAnalyticsTracking.ts`, `index.ts`.
+    - Enabled exclusively in Vite production builds (`import.meta.env.PROD === true`) when `VITE_GA_MEASUREMENT_ID` matches `/^G-[A-Z0-9]{6,20}$/i`.
+    - Consent Mode v2 default-denied; injects `gtag.js` asynchronously only after explicit user consent (`tradedia_analytics_consent_v1`), respects `navigator.globalPrivacyControl`, and immediately sets `window['ga-disable-<id>'] = true` + updates consent to `denied` on withdrawal.
+    - URL/query sanitization collapses `/trade/:symbol` and `/stocks/:symbol` to `/trade/:symbol`, normalizes canonical aliases, maps unknown paths to `/not-found`, strips URL hashes and all query parameters except safe UTM keys (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`), and rejects values containing emails, JWTs, tokens, or payment IDs.
+    - Defense-in-depth `sanitizeEventParams` strips PII, auth tokens, payment/order IDs, financial balances/amounts, and individual trading fields (symbols, quantities, prices, P&L).
+    - `send_page_view: false` + consecutive sanitized `pageKey` deduplication eliminates duplicate SPA page views across initial load, canonical redirects, StrictMode effects, and stripped query updates.
+    - Every storage, DOM, script, and `gtag` call is wrapped so failures or blockers never affect app behavior or performance.
+  - **Consent UI & Privacy Transparency**:
+    - `AnalyticsConsentBanner.tsx` (in `GlobalOverlays.tsx`), `AnalyticsPreferenceControl.tsx` (embedded in `LegalPageContent.tsx` Privacy Policy), and footer `Analytics Preferences` triggers in `LandingFooter.tsx` and `TradingWorkspace.tsx` (visible only when analytics is eligible in production).
+  - **Event Instrumentation**:
+    - Page views: `App.tsx` (`useAnalyticsTracking`).
+    - Registrations & logins: `authModalService.ts`, `useSignUp.ts`, `useSignIn.ts` (`sign_up`, `login` — only `{ method }`, never fired on passive `onAuthStateChanged` restores).
+    - Paper trading activity: `useOrderExecution.ts`, `useWalletActions.ts`, `useWatchlistActions.ts` (`paper_trade_activity` — categorical activity/product/order metadata only).
+    - Stock screener usage: `useSwingScanner.js`, `useIntradayScanner.js`, `useStockAnalysis.js` (`screener_usage` — mode/action/trigger/view mode only, no symbols).
+    - Chart pattern learning: `usePatternLesson.ts`, `PatternDemonstration.tsx`, `QuizApp.tsx` (`chart_pattern_learning`).
+    - Quiz completions: `useQuizTrade.ts`, `useLandingChallenge.ts` (`quiz_completed` — computed outside React state updaters to avoid duplicate firing).
+    - Successful subscriptions: `useRazorpayCheckout.ts` (`subscription_completed` on non-replay verified payments — plan tier, billing cycle, payment type, previous tier only; zero payment IDs or amounts).
+  - **Env, Docker & Deployment Docs**:
+    - Updated `apps/web/.env.example`, `apps/web/Dockerfile` (`ARG VITE_GA_MEASUREMENT_ID`), `compose.yaml`, and `docs/railway-deployment.md`.
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (101 / 101 passed, including 5 new suites in `apps/web/src/utils/analytics.test.ts`).
+  - `cd apps/web && npm run build`: **PASS** (Vite client + esbuild server); verified Vite statically inlines `PROD: !0` and `VITE_GA_MEASUREMENT_ID: "G-NTTB773KTH"` when set at build time and leaves it disabled when unset.
+  - Line-count check: every new and modified TS/TSX/JS application file is `<= 198` nonblank/non-comment lines.
+- **Checks NOT Executed & Notes**:
+  - Dedicated git branch creation was skipped because `.git/refs` is write-restricted in this sandbox environment; no commits were created.
+  - Live interactive browser verification against GA4 Realtime (`G-NTTB773KTH`) and Railway Docker redeploy were not executed locally.

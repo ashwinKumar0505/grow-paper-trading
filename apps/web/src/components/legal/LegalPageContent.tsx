@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Mail } from 'lucide-react';
+import { AnalyticsPreferenceControl } from '../common/AnalyticsPreferenceControl';
 import type { LegalPageKind } from '../LegalPages';
 
 interface LegalPageContentProps {
@@ -64,7 +65,14 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
             </p>
           </section>
           <section className="space-y-2">
-            <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Data Retention &amp; Deletion</h2>
+            <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Product Analytics &amp; Consent</h2>
+            <p>
+              In production, and only after you grant consent, Tradedia uses Google Analytics 4 with IP anonymization and disabled advertising signals to measure aggregate page navigation and feature usage (such as screener runs, pattern lessons, quiz completions, and subscription plan selections). Page URLs and query parameters are sanitized before transmission, and we never send personal information, authentication tokens, payment identifiers, wallet balances, or individual stock trade details to analytics.
+            </p>
+            <AnalyticsPreferenceControl />
+          </section>
+          <section className="space-y-2">
+            <h2 className="text-base font-bold text-[#15241D] dark:text-white">4. Data Retention &amp; Deletion</h2>
             <p>
               You may request deletion of your account and associated simulation data at any time by contacting our support team at <span className="font-semibold text-[#00B386] dark:text-[#00D09C]">support@tradedia.in</span>.
             </p>

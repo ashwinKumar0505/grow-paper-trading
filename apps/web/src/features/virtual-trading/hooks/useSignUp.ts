@@ -1,4 +1,5 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { trackLogin, trackSignUp } from '../../../lib/analytics';
 import { db, doc, setDoc } from '../../../lib/firebase';
 import { normalizeUsageQuota, SUBSCRIPTION_PLANS } from '../../../lib/subscription';
 import { UserProfile, WalletTransaction } from '../../../types/market';
@@ -74,6 +75,11 @@ export function useSignUp({
           : `Free Starter Account activated with ₹${portfolio.balance.toLocaleString('en-IN')} virtual capital (1L Automatic Monthly Reset). Upgrade anytime for ₹10L–₹50L & Pro tools.`,
         'success'
       );
+      if (isReturning) {
+        trackLogin(profile.authProvider);
+      } else {
+        trackSignUp(profile.authProvider);
+      }
       return;
     }
 
@@ -103,6 +109,7 @@ export function useSignUp({
         `Existing account restored (${SUBSCRIPTION_PLANS[activeTier].name}).`,
         'success'
       );
+      trackLogin(restoredProfile.authProvider);
       return;
     }
 
@@ -161,6 +168,7 @@ export function useSignUp({
       `Free Starter Account activated with ₹${clampedCash.toLocaleString('en-IN')} virtual capital (1L Automatic Monthly Reset). Upgrade anytime for ₹10L–₹50L & Pro tools.`,
       'success'
     );
+    trackSignUp(profile.authProvider);
   };
 
   return { signUpUser };

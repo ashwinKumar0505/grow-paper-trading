@@ -76,7 +76,10 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
    - `RAZORPAY_KEY_ID=rzp_live_...` *(or `rzp_test_...` + `ALLOW_RAZORPAY_TEST_IN_PROD=true` for staging)*
    - `RAZORPAY_KEY_SECRET=...`
    - `RAZORPAY_WEBHOOK_SECRET=...`
+   - `VITE_GA_MEASUREMENT_ID=G-NTTB773KTH` *(production Google Analytics 4 Measurement ID — baked into the Vite bundle at Docker build time via `ARG VITE_GA_MEASUREMENT_ID`; leave unset in staging/local dev so analytics stays disabled)*
 
+> **Build-time Vite variables:** `VITE_GA_MEASUREMENT_ID` is read during `vite build` inside `apps/web/Dockerfile`. After adding or changing it in Railway Variables, trigger a redeploy of `tradedia-web` so the updated client bundle is built. Analytics only loads in production builds (`import.meta.env.PROD`) after the user grants consent.
+>
 > Do **not** set `VITE_SCREENER_API_URL` in production — leaving it unset ensures browsers always call same-origin `/api/v1/*` through Express.
 
 ---
@@ -87,6 +90,7 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
 2. **Deploy Firestore Rules**: push `firebase/firestore.rules` to Firebase (`firebase deploy --only firestore:rules` with `firebase.json` pointing at `firebase/firestore.rules`, or paste in Firebase Console → Firestore → Rules).
 3. **Razorpay Dashboard → Settings → Webhooks**: add `https://<your-domain>/api/payments/webhook` with `RAZORPAY_WEBHOOK_SECRET` and enable payment/subscription events.
 4. **Resend Dashboard → Domains**: verify `tradedia.in` so `OTP_FROM_EMAIL` can send verification codes to all users (not just your Resend test email).
+5. **Google Analytics 4 Admin → Data Streams → Web Stream (`G-NTTB773KTH`) → Enhanced measurement**: click the gear icon → under **Page views → Show advanced settings**, disable **"Page changes based on browser history events"** so GA4 does not emit unsanitized duplicate history `page_view` events alongside Tradedia's consent-gated, URL-sanitized SPA page tracker.
 
 ---
 
@@ -96,6 +100,7 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
 2. `GET https://<your-domain>/api/v1/health` → `200 { "status": "ok", "provider": "upstox", ... }` *(proves Railway private networking + HMAC proxy work end-to-end)*
 3. `GET https://<your-domain>/api/market/status` → verifies authorized Upstox policies for `stockAnalytics` and `paperTrading`.
 4. Open `https://<your-domain>` in a browser: verify landing WebP images load fast, Google & Email OTP sign-in succeed, paper-trading quotes/charts load, and Swing/Intraday scanners return data.
+5. Verify GA4 consent & privacy: before accepting the analytics consent banner, confirm DevTools Network shows **zero** requests to `googletagmanager.com` / `google-analytics.com`; after clicking **Accept Analytics**, confirm `gtag/js?id=G-NTTB773KTH` loads once, SPA route changes emit a single sanitized `page_view` (e.g., `/trade/:symbol`, `/screener/analysis` with no `symbol`/token query params), and GA4 Realtime reports receive events.
 
 ---
 

@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import type { ExecuteOrderParams, TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { trackPaperTradeActivity } from '../../../lib/analytics';
 import { Order, Stock } from '../../../types/market';
 import { getIndianMarketStatus } from '../../../utils/marketHours';
 import { cancelOrder, OrderBookState, submitOrder } from '../../../utils/orderEngine';
@@ -101,6 +102,14 @@ export function useOrderExecution({
     if (result.toast) {
       addToast(result.toast.title, result.toast.description, result.toast.type);
     }
+    if (result.success && result.order) {
+      trackPaperTradeActivity({
+        activityType: opts.silent ? 'position_exit' : 'order_submitted',
+        productType: product.toLowerCase() as 'delivery' | 'intraday' | 'mtf',
+        orderType: orderType.toLowerCase().replace('-', '_') as 'market' | 'limit' | 'sl' | 'sl_m',
+        orderStatus: result.order.status,
+      });
+    }
     if (result.success && result.order && !opts.silent && (result.order.status === 'EXECUTED' || result.order.status === 'SCHEDULED')) {
       setLastExecutedOrder(result.order);
     }
@@ -124,6 +133,7 @@ export function useOrderExecution({
     const cancelled = cancelOrder(engineRef.current, orderId, Date.now());
     if (!cancelled.cancelled) return;
     commitEngine({ balance: cancelled.state.balance, orders: cancelled.state.orders });
+    trackPaperTradeActivity({ activityType: 'order_cancelled' });
     if (user?.uid) {
       void postAuthoritativeServerCancelOrder({ orderId, commitEngine });
     }

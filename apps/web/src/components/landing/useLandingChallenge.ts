@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTrading } from '../../context/TradingContext';
+import { trackQuizCompletion } from '../../lib/analytics';
 import type { ChartScenario, TradeDirection } from '../../features/quiz/types/trading';
 import { triggerWinConfetti } from '../../features/quiz/utils/celebration';
 import { generateScenario } from '../../features/quiz/utils/dataGenerator';
@@ -112,6 +113,12 @@ export function useLandingChallenge() {
 
           const result = evaluateQuizPrediction(scenario, direction, 1000);
           setEvaluation(result);
+          trackQuizCompletion({
+            quizMode: 'landing_preview',
+            completionScope: 'question',
+            isCorrect: result.isWin,
+            patternCategory: scenario.patternCategory,
+          });
 
           if (result.isWin) {
             sound.playWin();

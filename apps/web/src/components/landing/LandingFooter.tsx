@@ -1,6 +1,8 @@
+import { isAnalyticsEligible, openAnalyticsPreferences } from '../../lib/analytics';
 import { AppLink } from '../../lib/navigation';
 import { BrandLogo } from '../BrandLogo';
 export function LandingFooter() {
+const analyticsEligible = isAnalyticsEligible();
 return (
 <footer className="bg-white dark:bg-[#0E1713] border-t border-emerald-900/10 dark:border-[#20332A] py-12 px-4 sm:px-6 lg:px-8 text-xs text-[#5B7066] dark:text-[#9AB0A5] text-left">
         <div className="w-full max-w-[1880px] mx-auto space-y-8">
@@ -62,6 +64,15 @@ return (
               <AppLink href="/contact" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
                 Contact
               </AppLink>
+              {analyticsEligible && (
+                <button
+                  type="button"
+                  onClick={openAnalyticsPreferences}
+                  className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors cursor-pointer"
+                >
+                  Analytics Preferences
+                </button>
+              )}
             </div>
             <div>Educational Research &amp; Paper Trading Sandbox · Virtual Capital: ₹1,00,000 – ₹50,00,000</div>
           </div>

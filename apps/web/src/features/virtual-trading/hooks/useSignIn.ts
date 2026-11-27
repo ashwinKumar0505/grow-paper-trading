@@ -1,4 +1,5 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { trackLogin } from '../../../lib/analytics';
 import { BillingCycle, normalizeUsageQuota, SUBSCRIPTION_PLANS, SubscriptionTier } from '../../../lib/subscription';
 import { UserProfile } from '../../../types/market';
 import { fetchAuthoritativeAccountProfile } from '../services/paperTradingApi';
@@ -62,6 +63,7 @@ export function useSignIn({
         `Signed in (${SUBSCRIPTION_PLANS[activeTier].name}). Ready to trade.`,
         'success'
       );
+      trackLogin(profile.authProvider);
       return true;
     }
 
@@ -161,6 +163,7 @@ export function useSignIn({
       `Signed in (${SUBSCRIPTION_PLANS[activeTier].name}). Ready to trade.`,
       'success'
     );
+    trackLogin(profile.authProvider);
     return true;
   };
 

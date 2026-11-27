@@ -1,3 +1,4 @@
+import { trackSignUp } from '../../lib/analytics';
 import { setStoredSessionToken } from '../../lib/authSession';
 import {
   auth,
@@ -111,6 +112,7 @@ export async function registerEmailPasswordAccount(params: {
   }
   await sendEmailVerification(credential.user);
   await firebaseSignOut(auth);
+  trackSignUp('email');
 }
 
 export async function authenticateEmailPasswordAccount(params: {

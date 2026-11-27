@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { useTrading } from '../../context/TradingContext';
+import { trackSubscriptionCompleted } from '../../lib/analytics';
 import { SUBSCRIPTION_PLANS } from '../../lib/subscription';
 import { getUpgradeAmountQuote } from '../../utils/pricing';
 import { createRazorpayOrder, verifyRazorpayPayment } from './razorpayApi';
@@ -115,6 +116,12 @@ export function useRazorpayCheckout() {
           amountPaid: amountINR,
           subscriptionAutoPay: true,
         });
+        trackSubscriptionCompleted({
+          planTier: tier,
+          billingCycle,
+          paymentType: orderInfo?.paymentType || 'subscription',
+          previousTier: subscriptionTier,
+        });
       }
       try { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 }, colors: ['#10B981', '#00D09C', '#F59E0B'] }); } catch {}
       setPaymentSuccess({
@@ -126,7 +133,7 @@ export function useRazorpayCheckout() {
         isRecurring: true,
       });
     },
-    [upgradeSubscription, tier, billingCycle, amountINR, plan.name, plan.maxWalletLimit]
+    [upgradeSubscription, tier, billingCycle, amountINR, plan.name, plan.maxWalletLimit, orderInfo?.paymentType, subscriptionTier]
   );
 
   const handleStartPayment = async (e: React.FormEvent) => {

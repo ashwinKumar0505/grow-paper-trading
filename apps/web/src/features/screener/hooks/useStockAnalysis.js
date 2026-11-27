@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { trackScreenerUsage } from '../../../lib/analytics';
 import { useQueryParams } from '../../../lib/navigation';
 import { SUBSCRIPTION_PLANS, normalizeUsageQuota } from '../../../lib/subscription';
 import { api } from '../api/client';
@@ -32,10 +33,21 @@ export function useStockAnalysis() {
   const [loadingSym, setLoadingSym] = useState('');
   const [error, setError] = useState('');
   const [lastAttemptSym, setLastAttemptSym] = useState('');
-  const [mode, setMode] = useState(() => localStorage.getItem('qp.analysisMode') || 'simple');
+  const [mode, setModeState] = useState(() => localStorage.getItem('qp.analysisMode') || 'simple');
   const inputRef = useRef(null);
 
   useEffect(() => localStorage.setItem('qp.analysisMode', mode), [mode]);
+
+  const setMode = (nextMode) => {
+    if (nextMode !== mode) {
+      trackScreenerUsage({
+        screenerMode: 'stock_analysis',
+        action: 'view_mode_changed',
+        viewMode: nextMode === 'advanced' ? 'advanced' : 'simple',
+      });
+    }
+    setModeState(nextMode);
+  };
 
   const load = async (sym, forceRefresh = false) => {
     const clean = sym.trim().toUpperCase();
@@ -52,6 +64,13 @@ export function useStockAnalysis() {
       setStaleWarning('');
       setError('');
       if (urlSymbol !== clean) setSearchParams({ symbol: clean });
+      if (analysis?.symbol !== clean) {
+        trackScreenerUsage({
+          screenerMode: 'stock_analysis',
+          action: 'analysis_completed',
+          viewMode: mode === 'advanced' ? 'advanced' : 'simple',
+        });
+      }
       return;
     }
 
@@ -74,6 +93,11 @@ export function useStockAnalysis() {
       setStaleWarning('');
       setQuery(data.symbol);
       setSearchParams({ symbol: data.symbol });
+      trackScreenerUsage({
+        screenerMode: 'stock_analysis',
+        action: 'analysis_completed',
+        viewMode: mode === 'advanced' ? 'advanced' : 'simple',
+      });
     } catch (err) {
       const msg =
         err.message ||

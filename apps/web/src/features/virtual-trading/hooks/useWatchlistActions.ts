@@ -1,4 +1,5 @@
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { trackPaperTradeActivity } from '../../../lib/analytics';
 import type { TradingState } from './useTradingState';
 type Options = Pick<TradingState, 'watchlists' | 'planConfig' | 'openUpgradeModal' | 'subscriptionTier' | 'setWatchlists' | 'setActiveWatchlistId' | 'activeWatchlistId'> & Pick<TradingContextType, 'addToast'>;
 
@@ -14,6 +15,7 @@ export function useWatchlistActions({ watchlists, planConfig, openUpgradeModal, 
       });
       return;
     }
+    const existedBefore = Boolean(targetWl?.symbols.includes(symbol));
     setWatchlists((prev) =>
       prev.map((wl) => {
         if (wl.id === watchlistId) {
@@ -26,6 +28,9 @@ export function useWatchlistActions({ watchlists, planConfig, openUpgradeModal, 
         return wl;
       })
     );
+    if (targetWl) {
+      trackPaperTradeActivity({ activityType: existedBefore ? 'watchlist_remove' : 'watchlist_add' });
+    }
   };
 
   const createWatchlist = (name: string) => {
@@ -45,6 +50,7 @@ export function useWatchlistActions({ watchlists, planConfig, openUpgradeModal, 
     setWatchlists((prev) => [...prev, { id: newId, name: trimmed, symbols: [] }]);
     setActiveWatchlistId(newId);
     addToast('Watchlist Created', `Created watchlist "${trimmed}"`, 'success');
+    trackPaperTradeActivity({ activityType: 'watchlist_created' });
   };
 
   const isStockInWatchlist = (symbol: string, watchlistId?: string) => {

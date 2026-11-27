@@ -1,10 +1,11 @@
 import { useCallback,type RefObject } from 'react';
+import { trackQuizCompletion } from '../../../lib/analytics';
 import type { TradeDirection,TradeRecord } from '../types/trading';
 import { evaluateQuizPrediction } from '../utils/evaluatePrediction';
 import { sound } from '../utils/sound';
 import type { QuizState } from './useQuizState';
 
-type Options = Pick<QuizState, 'gameMode' | 'setSurvivalState' | 'scenario' | 'setRevealedOutcomeCount' | 'isRevealing' | 'setIsRevealing' | 'userTrade' | 'setUserTrade' | 'setChosenDirection' | 'entryPrice' | 'setEntryPrice' | 'positionSize' | 'setQuizStats' | 'tournamentState' | 'setTournamentState' | 'stats' | 'setStats'> & {
+type Options = Pick<QuizState, 'difficulty' | 'gameMode' | 'survivalState' | 'setSurvivalState' | 'scenario' | 'setRevealedOutcomeCount' | 'isRevealing' | 'setIsRevealing' | 'userTrade' | 'setUserTrade' | 'setChosenDirection' | 'entryPrice' | 'setEntryPrice' | 'positionSize' | 'setQuizStats' | 'tournamentState' | 'setTournamentState' | 'stats' | 'setStats'> & {
   tradeInFlight: RefObject<boolean>;
   revealTimer: RefObject<number | null>;
   consumeQuizQuestion: () => boolean;
@@ -12,7 +13,7 @@ type Options = Pick<QuizState, 'gameMode' | 'setSurvivalState' | 'scenario' | 's
 };
 
 export function useQuizTrade(options: Options) {
-  const { gameMode, setSurvivalState, scenario, setRevealedOutcomeCount, isRevealing, setIsRevealing, userTrade, setUserTrade, setChosenDirection, entryPrice, setEntryPrice, positionSize, setQuizStats, tournamentState, setTournamentState, stats, setStats, tradeInFlight, revealTimer, consumeQuizQuestion, triggerWinConfetti } = options;
+  const { difficulty, gameMode, survivalState, setSurvivalState, scenario, setRevealedOutcomeCount, isRevealing, setIsRevealing, userTrade, setUserTrade, setChosenDirection, entryPrice, setEntryPrice, positionSize, setQuizStats, tournamentState, setTournamentState, stats, setStats, tradeInFlight, revealTimer, consumeQuizQuestion, triggerWinConfetti } = options;
   // Execute Trade Decision
   const executeTrade = useCallback(
     (direction: TradeDirection, size: number = 1000) => {
@@ -83,6 +84,38 @@ export function useQuizTrade(options: Options) {
           };
 
           setUserTrade(record);
+
+          // Track quiz completion outside React state updaters to avoid duplicate firing
+          if (gameMode === 'quiz') {
+            trackQuizCompletion({
+              quizMode: 'practice',
+              completionScope: 'question',
+              difficulty,
+              isCorrect: isWin,
+              patternCategory: scenario.patternCategory,
+            });
+          } else if (gameMode === 'survival') {
+            const nextLives = isWin ? survivalState.lives : Math.max(0, survivalState.lives - 1);
+            if (nextLives <= 0) {
+              const nextStreak = isWin ? survivalState.streak + 1 : 0;
+              trackQuizCompletion({
+                quizMode: 'survival',
+                completionScope: 'session',
+                difficulty,
+                roundsCompleted: isWin ? survivalState.roundsSurvived + 1 : survivalState.roundsSurvived,
+                bestStreak: Math.max(survivalState.bestStreak, nextStreak),
+              });
+            }
+          } else if (gameMode === 'tournament' && tournamentState.currentRound >= tournamentState.totalRounds) {
+            const totalWins = tournamentState.trades.filter((t) => t.isWin).length + (isWin ? 1 : 0);
+            trackQuizCompletion({
+              quizMode: 'tournament',
+              completionScope: 'session',
+              difficulty,
+              roundsCompleted: tournamentState.totalRounds,
+              correctCount: totalWins,
+            });
+          }
 
           // Update Survival Mode State
           if (gameMode === 'survival') {
@@ -157,7 +190,7 @@ export function useQuizTrade(options: Options) {
       }, 75);
       revealTimer.current = interval;
     },
-    [isRevealing, userTrade, scenario, gameMode, tournamentState.currentRound, tournamentState.balance, triggerWinConfetti]
+    [difficulty, isRevealing, userTrade, scenario, gameMode, survivalState, tournamentState.currentRound, tournamentState.totalRounds, tournamentState.balance, tournamentState.trades, triggerWinConfetti]
   );
 
   return executeTrade;

@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import type { TradingContextType } from '../../../features/virtual-trading/types/tradingContext';
+import { trackPaperTradeActivity } from '../../../lib/analytics';
 import { getCurrentMonthKey, normalizeUsageQuota, UserUsageQuota } from '../../../lib/subscription';
 import { OrderBookState } from '../../../utils/orderEngine';
 import {
@@ -100,6 +101,7 @@ export function useWalletActions({
       }
       applyAuthoritativeLedger(serverRes.state);
       addToast('Money Added!', `₹${amount.toLocaleString('en-IN')} added to your paper wallet. New balance: ₹${serverRes.state.balance.toLocaleString('en-IN')}.`, 'success');
+      trackPaperTradeActivity({ activityType: 'wallet_topup' });
       return true;
     }
 
@@ -111,6 +113,7 @@ export function useWalletActions({
       type: 'DEPOSIT', amount, description, timestamp: Date.now(),
     }, ...prev]);
     addToast('Money Added!', `₹${amount.toLocaleString('en-IN')} added to your paper wallet. New balance: ₹${newBalance.toLocaleString('en-IN')}.`, 'success');
+    trackPaperTradeActivity({ activityType: 'wallet_topup' });
     return true;
   };
 
@@ -179,6 +182,7 @@ export function useWalletActions({
       setUsageQuota(nextQuota);
       setIsWalletModalOpen(false);
       addToast('Portfolio Reset', serverRes.message || `Reset paper portfolio with fresh ₹${clampedCash.toLocaleString('en-IN')} cash`, 'info');
+      trackPaperTradeActivity({ activityType: 'portfolio_reset' });
       return;
     }
 
@@ -192,6 +196,7 @@ export function useWalletActions({
       description: `Portfolio reset credit (${planConfig.name})`, timestamp: Date.now(),
     }]);
     addToast('Portfolio Reset', `Reset paper portfolio with fresh ₹${clampedCash.toLocaleString('en-IN')} cash`, 'info');
+    trackPaperTradeActivity({ activityType: 'portfolio_reset' });
   };
 
   return { addMoneyToWallet, setPaperBalance, resetPortfolio };

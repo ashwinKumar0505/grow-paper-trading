@@ -1,6 +1,7 @@
 import { Activity, Clock, Layers, Target } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { trackScreenerUsage } from '../../../lib/analytics';
 import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
 import { api } from '../api/client';
 import { shortDate, timeAgo } from '../utils/format';
@@ -22,10 +23,17 @@ export function useIntradayScanner(marketStatus) {
   );
   const [minConfidence, setMinConfidence] = useState(50);
   const [sectorFilter, setSectorFilter] = useState('ALL');
-  const [selectedSignal, setSelectedSignal] = useState(null);
+  const [selectedSignal, setSelectedSignalState] = useState(null);
   const [now, setNow] = useState(Date.now());
   const loadingRef = useRef(false);
   const hasManualStatusSelectionRef = useRef(false);
+
+  const setSelectedSignal = (signal) => {
+    setSelectedSignalState(signal);
+    if (signal) {
+      trackScreenerUsage({ screenerMode: 'intraday', action: 'signal_inspected' });
+    }
+  };
 
   const isLocked = planConfig.intradayAccess === 'locked';
   const data = isLocked ? null : scan?.data;
@@ -44,7 +52,7 @@ export function useIntradayScanner(marketStatus) {
     setStatusFilterState(isMarketOpen ? 'OPEN' : 'ALL');
   }, [isMarketOpen]);
 
-  const fetchSignals = async (forceRefresh = false) => {
+  const fetchSignals = async (forceRefresh = false, source = 'manual') => {
     if (isLocked) {
       openUpgradeModal({
         requiredTier: 'beginner',
@@ -65,6 +73,13 @@ export function useIntradayScanner(marketStatus) {
         includeLastSession: true,
       });
       setScan(saveCachedScan(CACHE_KEYS.intraday, res, CACHE_TTL_MS.intraday));
+      if (source !== 'auto_refresh') {
+        trackScreenerUsage({
+          screenerMode: 'intraday',
+          action: 'scan_completed',
+          trigger: source === 'initial' ? 'initial' : 'manual',
+        });
+      }
     } catch (err) {
       const msg =
         err.message ||
@@ -88,7 +103,7 @@ export function useIntradayScanner(marketStatus) {
   };
 
   useEffect(() => {
-    if (!scan && !isLocked) fetchSignals(false);
+    if (!scan && !isLocked) fetchSignals(false, 'initial');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLocked]);
 
@@ -103,7 +118,7 @@ export function useIntradayScanner(marketStatus) {
 
   useEffect(() => {
     if (isMarketOpen && planConfig.intradayAutoRefresh && scan && secondsLeft === 0 && !loadingRef.current) {
-      fetchSignals(true);
+      fetchSignals(true, 'auto_refresh');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMarketOpen, planConfig.intradayAutoRefresh, secondsLeft]);

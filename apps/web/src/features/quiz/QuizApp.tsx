@@ -1,3 +1,4 @@
+import { trackChartPatternLearning } from '../../lib/analytics';
 import { ActionDock } from './components/ActionDock';
 import { ChartHeader } from './components/ChartHeader';
 import { HistoryDrawer } from './components/HistoryDrawer';
@@ -14,6 +15,10 @@ import { useQuizSession } from './hooks/useQuizSession';
 
 export default function QuizApp() {
   const { difficulty, gameMode, survivalState, scenario, tradeNumber, revealedOutcomeCount, isRevealing, userTrade, chosenDirection, entryPrice, positionSize, setPositionSize, indicatorSettings, isHistoryOpen, setIsHistoryOpen, isGuideOpen, setIsGuideOpen, chartType, setChartType, quizStats, tournamentState, stats, handleNextScenario, handleRestartTournament, handleRetrySurvival, handleLaunchQuiz, currentView, setCurrentView, executeTrade, handleToggleIndicator, handleOpenHistory, handleResetStats } = useQuizSession();
+  const handleOpenGuide = () => {
+    setIsGuideOpen(true);
+    trackChartPatternLearning({ action: 'guide_opened' });
+  };
   // 2. Separate Mode & Difficulty Selection Page
   if (currentView === 'mode-select') {
     return (
@@ -55,7 +60,7 @@ export default function QuizApp() {
         onToggleChartType={setChartType}
         onOpenModeSelect={() => setCurrentView('mode-select')}
         onOpenHistory={handleOpenHistory}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenGuide={handleOpenGuide}
         onGoHome={() => setCurrentView('mode-select')}
         onOpenLearnCharts={() => setCurrentView('learn-charts')}
       />
@@ -70,7 +75,7 @@ export default function QuizApp() {
         survivalState={survivalState}
         tournamentState={tournamentState}
         onOpenHistory={handleOpenHistory}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenGuide={handleOpenGuide}
         onGoHome={() => setCurrentView('mode-select')}
         onOpenLearnCharts={() => setCurrentView('learn-charts')}
       />
@@ -83,7 +88,7 @@ export default function QuizApp() {
         onToggleIndicator={handleToggleIndicator}
         chartType={chartType}
         onToggleChartType={setChartType}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenGuide={handleOpenGuide}
       />
 
       {/* 3. Main Chart Canvas Viewport */}
@@ -139,7 +144,7 @@ export default function QuizApp() {
           survivalMaxLives={survivalState.maxLives}
           survivalStreak={survivalState.streak}
           survivalRoundsSurvived={survivalState.roundsSurvived}
-          onOpenGuide={() => setIsGuideOpen(true)}
+          onOpenGuide={handleOpenGuide}
         />
       )}
 

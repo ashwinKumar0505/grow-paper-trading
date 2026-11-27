@@ -1,4 +1,5 @@
 import { AuthModal } from '../components/AuthModal';
+import { AnalyticsConsentBanner } from '../components/common/AnalyticsConsentBanner';
 import { RazorpayCheckoutModal } from '../components/RazorpayCheckoutModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { UpgradeModal } from '../components/UpgradeModal';
@@ -11,5 +12,6 @@ export function GlobalOverlays() {
     <UpgradeModal />
     <RazorpayCheckoutModal />
     <ToastContainer />
+    <AnalyticsConsentBanner />
   </>;
 }

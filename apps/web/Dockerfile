@@ -17,6 +17,9 @@ ARG VITE_FIREBASE_APP_ID
 ARG VITE_FIREBASE_MEASUREMENT_ID
 ARG VITE_FIREBASE_DATABASE_ID
 
+# Google Analytics 4 measurement ID (build-time Vite env var; enabled only in production after user consent)
+ARG VITE_GA_MEASUREMENT_ID
+
 RUN npm run build
 
 FROM node:22-slim AS runner

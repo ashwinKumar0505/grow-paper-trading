@@ -4,10 +4,12 @@ import { WorkspaceContent } from './app/WorkspaceContent';
 import { LandingPage } from './components/LandingPage';
 import { WorkspaceHeader } from './components/navigation/WorkspaceHeader';
 import { TradingProvider } from './context/TradingContext';
+import { useAnalyticsTracking } from './lib/analytics';
 import { usePathname } from './lib/navigation';
 
 function AppContent() {
   const pathname = usePathname();
+  useAnalyticsTracking();
   useEffect(() => {
     if (window.location.pathname !== pathname) {
       window.history.replaceState(null, '', pathname + window.location.search + window.location.hash);

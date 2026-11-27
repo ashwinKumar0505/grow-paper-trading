@@ -1,5 +1,6 @@
 import { useMemo,useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { trackChartPatternLearning } from '../../../lib/analytics';
 import type { ChartType,IndicatorSettings } from '../types/trading';
 import { ASSETS,PATTERN_TEMPLATES,generatePatternExample } from '../utils/dataGenerator';
 
@@ -51,9 +52,17 @@ export function usePatternLesson() {
   );
 
   const choosePattern = (name: string) => {
+    const selected = PATTERN_TEMPLATES.find((item) => item.name === name);
     setPatternName(name);
     setShowOutcome(false);
     setSidebarOpen(false);
+    trackChartPatternLearning({
+      action: 'pattern_selected',
+      patternName: selected?.name || name,
+      patternCategory: selected?.cheatSheetGroup,
+      difficulty: selected?.difficulty,
+      isLocked: selected ? !unlockedPatternNames.has(selected.name) : undefined,
+    });
   };
 
   const isBullish = pattern.expectedDirection === 'BUY';

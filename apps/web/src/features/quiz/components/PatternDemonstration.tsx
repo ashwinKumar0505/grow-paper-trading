@@ -4,6 +4,7 @@ Lock,
 RefreshCw
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { trackChartPatternLearning } from '../../../lib/analytics';
 import { navigate } from '../../../lib/navigation';
 import { ASSETS } from '../utils/dataGenerator';
 import { ChartControls } from './ChartControls';
@@ -67,6 +68,12 @@ export function PatternDemonstration({ symbol, setSymbol, setVariation, showOutc
                     }
                     setVariation((n) => n + 1);
                     setShowOutcome(false);
+                    trackChartPatternLearning({
+                      action: 'variation_generated',
+                      patternName: pattern.name,
+                      patternCategory: pattern.cheatSheetGroup,
+                      difficulty: pattern.difficulty,
+                    });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-[#cfdcd5] dark:border-[#2c4538] bg-[#f6f9f7] dark:bg-[#16241e] hover:border-[#00b386] px-3 py-1.5 text-xs font-bold text-[#15241d] dark:text-white transition-colors"
                 >
@@ -80,7 +87,17 @@ export function PatternDemonstration({ symbol, setSymbol, setVariation, showOutc
 
                 <Button variant="unstyled" size="unstyled"
                   type="button"
-                  onClick={() => setShowOutcome((value) => !value)}
+                  onClick={() => {
+                    if (!showOutcome) {
+                      trackChartPatternLearning({
+                        action: 'outcome_revealed',
+                        patternName: pattern.name,
+                        patternCategory: pattern.cheatSheetGroup,
+                        difficulty: pattern.difficulty,
+                      });
+                    }
+                    setShowOutcome((value) => !value);
+                  }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#00b386] hover:bg-[#009a73] dark:bg-[#00d09c] dark:hover:bg-[#00b386] px-3.5 py-1.5 text-xs font-extrabold text-white dark:text-[#04261c] transition-colors shadow-xs"
                 >
                   <span>{showOutcome ? 'Hide Next Candles' : 'Reveal Next Candles'}</span>

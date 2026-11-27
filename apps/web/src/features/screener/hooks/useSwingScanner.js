@@ -1,11 +1,7 @@
-import {
-  CheckCircle2,
-  Clock,
-  Layers,
-  TrendingUp,
-} from 'lucide-react';
+import { CheckCircle2, Clock, Layers, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTrading } from '../../../context/TradingContext';
+import { trackScreenerUsage } from '../../../lib/analytics';
 import { SUBSCRIPTION_PLANS } from '../../../lib/subscription';
 import { api } from '../api/client';
 import { shortDate, timeAgo } from '../utils/format';
@@ -31,13 +27,20 @@ export function useSwingScanner() {
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('confidence_score');
   const [sortDir, setSortDir] = useState('desc');
-  const [selectedSignal, setSelectedSignal] = useState(null);
+  const [selectedSignal, setSelectedSignalState] = useState(null);
   const autoLoadedRef = useRef(false);
+
+  const setSelectedSignal = (signal) => {
+    setSelectedSignalState(signal);
+    if (signal) {
+      trackScreenerUsage({ screenerMode: 'swing', action: 'signal_inspected' });
+    }
+  };
 
   const data = scan?.data;
   const staleWarning = scan?.staleWarning || '';
 
-  const runScan = async (forceRefresh) => {
+  const runScan = async (forceRefresh, trigger = 'manual') => {
     if (forceRefresh && !planConfig.swingAllowForceRefresh) {
       openUpgradeModal({
         requiredTier: 'advanced',
@@ -60,7 +63,12 @@ export function useSwingScanner() {
         forceRefresh,
       });
       setScan(saveCachedScan(CACHE_KEYS.swing, res, CACHE_TTL_MS.swing));
-      setSelectedSignal(null);
+      setSelectedSignalState(null);
+      trackScreenerUsage({
+        screenerMode: 'swing',
+        action: forceRefresh ? 'force_refresh' : 'scan_completed',
+        trigger: trigger === 'initial' ? 'initial' : 'manual',
+      });
     } catch (err) {
       const msg =
         err.message ||
@@ -85,7 +93,7 @@ export function useSwingScanner() {
   useEffect(() => {
     if (!scan && !autoLoadedRef.current) {
       autoLoadedRef.current = true;
-      runScan(false);
+      runScan(false, 'initial');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -172,33 +180,10 @@ export function useSwingScanner() {
     : [];
 
   return {
-    planConfig,
-    scan,
-    staleWarning,
-    loading,
-    loadingMode,
-    error,
-    minConfidence,
-    setMinConfidence,
-    statusFilter,
-    setStatusFilter,
-    sectorFilter,
-    setSectorFilter,
-    sortBy,
-    sortDir,
-    selectedSignal,
-    setSelectedSignal,
-    data,
-    runScan,
-    sectors,
-    counts,
-    rows,
-    onSort,
-    resetFilters,
-    visibleRows,
-    lockedCount,
-    nextTier,
-    nextPlan,
-    stats,
+    planConfig, scan, staleWarning, loading, loadingMode, error,
+    minConfidence, setMinConfidence, statusFilter, setStatusFilter,
+    sectorFilter, setSectorFilter, sortBy, sortDir,
+    selectedSignal, setSelectedSignal, data, runScan, sectors, counts, rows,
+    onSort, resetFilters, visibleRows, lockedCount, nextTier, nextPlan, stats,
   };
 }

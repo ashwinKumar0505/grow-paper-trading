@@ -35,6 +35,8 @@ const firebaseConfig = {
   storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData.storageBucket,
   messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigData.messagingSenderId,
   appId: env.VITE_FIREBASE_APP_ID || firebaseConfigData.appId,
+  // GA4 is managed exclusively via src/lib/analytics/ (VITE_GA_MEASUREMENT_ID) with consent gating;
+  // do not initialize firebase/analytics alongside it to avoid duplicate page views or unconsented loads.
   measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigData.measurementId,
 };
 
