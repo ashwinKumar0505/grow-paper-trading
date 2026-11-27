@@ -22,7 +22,7 @@ export const WalletLimitWarning: React.FC<WalletLimitWarningProps> = ({
   openUpgradeModal,
 }) => {
   return (
-    <div className="p-5 rounded-xl bg-[#111C17] border border-amber-400/35 space-y-3">
+    <div className="p-4 sm:p-5 rounded-xl bg-[#111C17] border border-amber-400/35 space-y-3">
       <div className="flex items-start gap-3">
         <AlertTriangle className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
         <div className="space-y-1">

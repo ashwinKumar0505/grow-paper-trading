@@ -2976,6 +2976,8 @@
 
 .sc-mob-card {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: left;
   padding: 14px;
   border-radius: var(--radius-sm);
@@ -2983,6 +2985,7 @@
   background: var(--surface-2);
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   transition: border-color 0.15s ease;
 }
@@ -2992,23 +2995,48 @@
 }
 
 .sc-mob-top {
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
+.sc-mob-top .stock-cell {
+  min-width: 0;
+  flex: 1;
+}
+
+.sc-mob-top .stock-cell > div:last-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.sc-mob-top .stock-name {
+  max-width: 100%;
+}
+
+.sc-mob-top .badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .sc-mob-metrics {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 10px;
+  padding: 10px 12px;
   border-radius: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
 }
 
 .sc-mob-metrics > div {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -3025,13 +3053,20 @@
 }
 
 .sc-mob-foot {
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
+.sc-mob-foot .conf-meter {
+  flex-shrink: 0;
+}
+
 .sc-mob-strat {
+  min-width: 0;
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
@@ -3521,6 +3556,8 @@
 }
 
 .sc-live-entry-meta.is-compact {
+  width: 100%;
+  min-width: 0;
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
@@ -3713,5 +3750,6 @@
   }
   .sc-mob-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
   }
 }
