@@ -28,10 +28,10 @@ export const AnalyticsPreferenceControl: React.FC = () => {
           <ShieldCheck className="w-4 h-4 text-[#00B386] dark:text-[#00D09C] shrink-0 mt-0.5" />
           <div className="text-xs space-y-0.5">
             <div className="font-bold text-[#15241D] dark:text-white">
-              Privacy &amp; Cookie Consent Controls
+              Cookie &amp; Privacy Preferences
             </div>
             <p className="text-[#5B7066] dark:text-[#9AB0A5]">
-              Update or withdraw your consent for Analytics and Advertising Measurement independently at any time. Ad personalization is always disabled.
+              Update or withdraw your analytics and advertising measurement choices anytime. Personalized ads are always off.
             </p>
           </div>
         </div>
@@ -58,12 +58,12 @@ export const AnalyticsPreferenceControl: React.FC = () => {
       <div className="grid sm:grid-cols-2 gap-2.5 text-xs">
         <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white dark:bg-[#111C17] border border-emerald-900/10 dark:border-[#20332A]">
           <div className="min-w-0 space-y-0.5">
-            <div className="font-bold text-[#15241D] dark:text-white">Analytics (GA4)</div>
+            <div className="font-bold text-[#15241D] dark:text-white">Analytics</div>
             <div className="text-[11px] text-[#008F6B] dark:text-[#00D09C]">
               {formatConsentStatus(eligible, preferences.analytics)}
             </div>
             <div className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5]">
-              Controls <code className="font-mono">analytics_storage</code>
+              Usage &amp; feature insights (Google Analytics)
             </div>
           </div>
           {eligible && (
@@ -97,8 +97,7 @@ export const AnalyticsPreferenceControl: React.FC = () => {
               {formatConsentStatus(eligible, preferences.adMeasurement)}
             </div>
             <div className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5]">
-              Controls <code className="font-mono">ad_storage</code>,{' '}
-              <code className="font-mono">ad_user_data</code> &amp; hashed-email signup matching
+              Signup attribution (Google Ads, hashed email)
             </div>
           </div>
           {eligible && (
@@ -129,8 +128,7 @@ export const AnalyticsPreferenceControl: React.FC = () => {
       </div>
 
       <p className="text-[11px] text-[#5B7066] dark:text-[#9AB0A5]">
-        <strong>Ad Personalization (<code className="font-mono">ad_personalization</code>):</strong>{' '}
-        Permanently disabled. Tradedia does not enable remarketing audiences or personalized ad signals.
+        <strong>Personalized Ads:</strong> Permanently disabled.
       </p>
     </div>
   );

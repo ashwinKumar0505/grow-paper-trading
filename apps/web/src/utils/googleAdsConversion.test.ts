@@ -926,24 +926,26 @@ test('Consent banner, preference controls, and Privacy Policy disclose separate 
   try {
     enableProdTrackingForTests();
     const bannerHtml = renderToStaticMarkup(React.createElement(AnalyticsConsentBanner));
+    assert.match(bannerHtml, /Cookie preferences/);
     assert.match(bannerHtml, /Reject All/);
     assert.match(bannerHtml, /Customize/);
     assert.match(bannerHtml, /Accept All/);
-    assert.match(bannerHtml, /Advertising Measurement/);
-    assert.match(bannerHtml, /SHA-256 hashed verified email/);
+    assert.match(bannerHtml, /Privacy Policy/);
 
     const prefsHtml = renderToStaticMarkup(React.createElement(AnalyticsPreferenceControl));
-    assert.match(prefsHtml, /analytics_storage/);
-    assert.match(prefsHtml, /ad_storage/);
-    assert.match(prefsHtml, /ad_user_data/);
-    assert.match(prefsHtml, /ad_personalization/);
-    assert.match(prefsHtml, /hashed-email signup matching/);
+    assert.match(prefsHtml, /Analytics/);
+    assert.match(prefsHtml, /Advertising Measurement/);
+    assert.match(prefsHtml, /hashed email/);
     assert.match(prefsHtml, /Permanently disabled/);
 
     const privacyHtml = renderToStaticMarkup(
       React.createElement(LegalPageContent, { kind: 'privacy' })
     );
     assert.match(privacyHtml, /Google Consent Mode v2/);
+    assert.match(privacyHtml, /analytics_storage/);
+    assert.match(privacyHtml, /ad_storage/);
+    assert.match(privacyHtml, /ad_user_data/);
+    assert.match(privacyHtml, /ad_personalization/);
     assert.match(privacyHtml, /Enhanced Conversions/);
     assert.match(privacyHtml, /sha256_email_address/);
     assert.match(privacyHtml, /_gcl_aw/);

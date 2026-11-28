@@ -100,7 +100,7 @@ export const AnalyticsConsentBanner: React.FC = () => {
     <aside
       role="region"
       aria-label="Privacy and cookie consent"
-      className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-5 sm:max-w-lg z-40 rounded-2xl border border-emerald-900/15 dark:border-[#243B30] bg-white/95 dark:bg-[#111C17]/95 backdrop-blur-md shadow-xl p-4 sm:p-5 text-left"
+      className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-5 sm:max-w-md z-40 rounded-2xl border border-emerald-900/15 dark:border-[#243B30] bg-white/95 dark:bg-[#111C17]/95 backdrop-blur-md shadow-xl p-4 sm:p-5 text-left"
     >
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#00B386]/10 dark:bg-[#00D09C]/15 border border-[#00B386]/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -109,7 +109,7 @@ export const AnalyticsConsentBanner: React.FC = () => {
         <div className="flex-1 min-w-0 space-y-2.5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="text-sm font-bold text-[#15241D] dark:text-white">
-              Privacy &amp; cookie preferences
+              Cookie preferences
             </h2>
             {isPreferencesOpen && !unset && (
               <button
@@ -123,12 +123,7 @@ export const AnalyticsConsentBanner: React.FC = () => {
             )}
           </div>
           <p className="text-xs leading-relaxed text-[#465C52] dark:text-[#A9BEB4]">
-            All optional measurement tags are off by default. You can separately control{' '}
-            <strong>Analytics</strong> (Google Analytics 4) and{' '}
-            <strong>Advertising Measurement</strong> (Google Ads signup attribution using a one-way
-            SHA-256 hashed verified email and opaque conversion ID). Ad personalization is
-            permanently disabled, and we never send raw personal details, auth tokens, payment IDs,
-            or trades.{' '}
+            We use optional cookies to improve Tradedia and measure signups from our ads.{' '}
             <AppLink
               href="/privacy"
               onClick={closeAnalyticsPreferences}
@@ -142,15 +137,15 @@ export const AnalyticsConsentBanner: React.FC = () => {
             <div className="space-y-2 pt-1">
               <ConsentToggleRow
                 id="consent-toggle-analytics"
-                label="Analytics (Google Analytics 4)"
-                description="Controls analytics_storage to measure aggregate page views and feature usage with sanitized URLs."
+                label="Analytics"
+                description="Helps us understand how Tradedia is used so we can improve features."
                 checked={draftAnalytics}
                 onToggle={() => setDraftAnalytics((prev) => !prev)}
               />
               <ConsentToggleRow
                 id="consent-toggle-ad-measurement"
-                label="Advertising Measurement (Google Ads)"
-                description="Controls ad_storage and ad_user_data to attribute verified new signups using an opaque conversion ID and SHA-256 hashed verified email (Enhanced Conversions). Ad personalization remains permanently off."
+                label="Advertising Measurement"
+                description="Measures verified signups from Google Ads using hashed email data. Personalized ads stay off."
                 checked={draftAdMeasurement}
                 onToggle={() => setDraftAdMeasurement((prev) => !prev)}
               />
