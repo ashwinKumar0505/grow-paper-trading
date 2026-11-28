@@ -24,14 +24,14 @@ return (
             <h1 className="text-3xl sm:text-5xl xl:text-[3.5rem] font-black  text-[#00B386] dark:text-[#00D09C]  tracking-tight leading-[1.08]">
               Real time Paper Trading.{' '}
               <span className="text-[#15241D] dark:text-white">
-                Backtested Screeners &amp; Chart Analysis.
+                AI Stock Screeners &amp; Chart Analysis.
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-[#5B7066] dark:text-[#9AB0A5] leading-relaxed max-w-2xl">
               Practice intraday and delivery trades risk-free with{' '}
               <strong>virtual capital and NSE quotes</strong>. Discover high-potential Indian
-              stocks with <strong>rule-based technical insights</strong>,{' '}
+              stocks with <strong>AI Powered technical insights</strong>,{' '}
               <strong>advanced chart analysis</strong>, and{' '}
               <strong>backtested trading strategies</strong>.
             </p>
