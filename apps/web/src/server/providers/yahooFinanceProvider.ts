@@ -8,6 +8,10 @@ import {
   CHART_TTL_MS, extractCandlesFromYahooResponse, fetchYahooRawChart,
   parseYahooStockFromChart, QUOTE_TTL_MS, searchYahooEquities, type YahooChartResponse,
 } from './yahooHttpClient';
+import { pruneMapEntries, setBoundedMapEntry } from '../utils/boundedCache';
+
+const MAX_QUOTES = 150;
+const MAX_CHARTS = 40;
 
 const TIMEFRAME_MAP: Record<Timeframe, { range: string; interval: string }> = {
   '1D': { range: '1d', interval: '2m' }, '1W': { range: '5d', interval: '15m' },
@@ -56,7 +60,7 @@ export class YahooFinanceProvider implements MarketDataProvider {
     const parsed = result ? parseYahooStockFromChart(symbol, result, this.id, now) : null;
     if (parsed) {
       const stock = this.annotateStock(parsed, now, true);
-      this.authenticQuotes.set(symbol, stock);
+      setBoundedMapEntry(this.authenticQuotes, symbol, stock, MAX_QUOTES);
       return { available: true, data: stock, metadata: stock.dataStatus! };
     }
     const cached = this.authenticQuotes.get(symbol);
@@ -67,7 +71,7 @@ export class YahooFinanceProvider implements MarketDataProvider {
     const diskRaw = buildRawStockFromDiskCsv(symbol, now);
     if (diskRaw) {
       const diskStock = this.annotateStock(diskRaw, now, true);
-      this.authenticQuotes.set(symbol, diskStock);
+      setBoundedMapEntry(this.authenticQuotes, symbol, diskStock, MAX_QUOTES);
       return { available: true, data: diskStock, metadata: diskStock.dataStatus! };
     }
     return { available: false, data: null, metadata: buildMarketDataMetadata({ source: this.id, freshness: 'UNAVAILABLE', providerAvailable: false, now }), error: `Authentic market quote for ${symbol} is currently unavailable.` };
@@ -132,7 +136,7 @@ export class YahooFinanceProvider implements MarketDataProvider {
     if (res?.meta && points.length >= 2) {
       const lastTs = points[points.length - 1].timestamp;
       const payload: ProviderChartPayload = { symbol, timeframe, points, previousClose: Number(res.meta.chartPreviousClose ?? points[0].open), currentPrice: Number(res.meta.regularMarketPrice ?? points[points.length - 1].close) };
-      this.authenticCharts.set(chartKey, { payload, timestamp: lastTs });
+      setBoundedMapEntry(this.authenticCharts, chartKey, { payload, timestamp: lastTs }, MAX_CHARTS);
       return { available: true, data: payload, metadata: buildMarketDataMetadata({ source: this.id, price: payload.currentPrice ?? undefined, quoteTimestamp: lastTs, fetchedAt: now, freshness: timeframe === '1D' ? undefined : 'HISTORICAL', providerAvailable: true, now }) };
     }
     const cached = this.authenticCharts.get(chartKey);
@@ -140,7 +144,7 @@ export class YahooFinanceProvider implements MarketDataProvider {
     const diskPayload = buildChartFromDiskCsv(symbol, timeframe);
     if (diskPayload && diskPayload.points.length >= 2) {
       const lastTs = diskPayload.points[diskPayload.points.length - 1].timestamp;
-      this.authenticCharts.set(chartKey, { payload: diskPayload, timestamp: lastTs });
+      setBoundedMapEntry(this.authenticCharts, chartKey, { payload: diskPayload, timestamp: lastTs }, MAX_CHARTS);
       return { available: true, data: diskPayload, metadata: buildMarketDataMetadata({ source: 'nse_cached_ohlcv', price: diskPayload.currentPrice ?? undefined, quoteTimestamp: lastTs, fetchedAt: now, freshness: 'HISTORICAL', providerAvailable: true, now }) };
     }
     return { available: false, data: null, metadata: buildMarketDataMetadata({ source: this.id, freshness: 'UNAVAILABLE', providerAvailable: false, now }), error: `Authentic historical candle data is unavailable for ${symbol} (${timeframe}).` };
@@ -168,6 +172,12 @@ export class YahooFinanceProvider implements MarketDataProvider {
   }
 
   seedAuthenticQuote(stock: Stock): void {
-    this.authenticQuotes.set(stock.symbol.toUpperCase(), stock);
+    setBoundedMapEntry(this.authenticQuotes, stock.symbol.toUpperCase(), stock, MAX_QUOTES);
+  }
+
+  pruneExpiredCaches(now = Date.now()): void {
+    pruneMapEntries(this.ttlCache, (v) => now - v.fetchedAt > CHART_TTL_MS * 5, 150);
+    pruneMapEntries(this.authenticCharts, () => false, MAX_CHARTS);
+    pruneMapEntries(this.authenticQuotes, () => false, MAX_QUOTES);
   }
 }

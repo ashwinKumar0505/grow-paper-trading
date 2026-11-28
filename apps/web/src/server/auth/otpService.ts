@@ -16,9 +16,15 @@ import {
   verifyOtpHash,
 } from './authService';
 import { deliverOtpEmailViaResend } from './otpMailer';
+import { pruneMapEntries, setBoundedMapEntry } from '../utils/boundedCache';
 
+const MAX_IP_OTP_BUCKETS = 2000;
 const ipOtpWindow = new Map<string, { windowStart: number; count: number }>();
 const MAX_IP_OTP_REQUESTS_PER_WINDOW = 10;
+
+export function pruneOtpRateLimits(now = Date.now()): number {
+  return pruneMapEntries(ipOtpWindow, (e) => now - e.windowStart >= OTP_RATE_WINDOW_MS, MAX_IP_OTP_BUCKETS);
+}
 
 export function resetOtpRateLimitsForTests(): void {
   ipOtpWindow.clear();
@@ -58,7 +64,8 @@ export async function createAndSendEmailOtp(params: {
     }
     ipState.count += 1;
   } else {
-    ipOtpWindow.set(ip, { windowStart: now, count: 1 });
+    if (ipOtpWindow.size >= MAX_IP_OTP_BUCKETS) pruneOtpRateLimits(now);
+    setBoundedMapEntry(ipOtpWindow, ip, { windowStart: now, count: 1 }, MAX_IP_OTP_BUCKETS);
   }
 
   const existing = store.getState().otpRecords[email];

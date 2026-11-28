@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 import threading
-from typing import Dict, Optional
+from typing import Optional
+from cachetools import TTLCache
 
 from app.data.nifty500_constituents import (
     get_constituent_map,
@@ -30,7 +31,11 @@ class UpstoxInstrumentResolver:
     def __init__(self, client: UpstoxHttpClient):
         self._client = client
         self._lock = threading.Lock()
-        self._dynamic_cache: Dict[str, Optional[ResolvedUpstoxInstrument]] = {}
+        self._dynamic_cache: TTLCache = TTLCache(maxsize=256, ttl=86400)
+
+    def prune_cache(self) -> None:
+        with self._lock:
+            self._dynamic_cache.expire()
 
     def resolve(self, raw_symbol: str, allow_remote: bool = True) -> Optional[ResolvedUpstoxInstrument]:
         clean = resolve_nse_symbol_alias(raw_symbol)

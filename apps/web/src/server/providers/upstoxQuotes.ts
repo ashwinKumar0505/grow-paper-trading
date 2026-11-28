@@ -6,8 +6,10 @@ import type { ProviderResponse } from './types';
 import type { UpstoxHttpClient } from './upstoxHttpClient';
 import { indexQuotesByInstrumentKey, parseUpstoxQuoteToIndex, parseUpstoxQuoteToStock } from './upstoxNormalizer';
 import { UpstoxApiError, type UpstoxQuoteEntry } from './upstoxTypes';
+import { setBoundedMapEntry } from '../utils/boundedCache';
 
 export const QUOTE_TTL_MS = 15_000;
+export const MAX_QUOTE_CACHE_ENTRIES = 150;
 const MAX_QUOTES_PER_BATCH = 100;
 
 export interface CachedQuoteEntry {
@@ -87,7 +89,7 @@ export async function fetchUpstoxBulkQuotes(params: {
       const parsed = entry ? parseUpstoxQuoteToStock(symbol, entry, now, { fallbackName: dynamicName }) : null;
       if (parsed) {
         const annotated = annotateUpstoxStock(parsed, now, true);
-        quoteCache.set(symbol, { stock: annotated, cachedAt: now });
+        setBoundedMapEntry(quoteCache, symbol, { stock: annotated, cachedAt: now }, MAX_QUOTE_CACHE_ENTRIES);
         resolved.set(symbol, annotated);
       } else {
         const cached = quoteCache.get(symbol);

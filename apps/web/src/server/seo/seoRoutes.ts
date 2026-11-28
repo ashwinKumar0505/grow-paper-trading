@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Router, type NextFunction, type Request, type Response } from 'express';
-import { canonicalPath } from '../../lib/navigation';
+import { canonicalPath } from '../../lib/routePaths';
 import { APEX_HOST, CANONICAL_ORIGIN } from '../../lib/seo/constants';
 import { resolveRouteSeo } from '../../lib/seo/routeMetadata';
 import { renderSeoHtml } from './htmlRenderer';

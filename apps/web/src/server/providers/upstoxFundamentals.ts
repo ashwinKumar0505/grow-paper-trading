@@ -1,8 +1,11 @@
 import type { StockFundamentals } from '../../types/market';
 import { NSE_SYMBOL_CATALOG, resolveCanonicalSymbol } from './symbolCatalog';
 import type { UpstoxHttpClient } from './upstoxHttpClient';
+import { setBoundedMapEntry } from '../utils/boundedCache';
 
 export const FUNDAMENTALS_TTL_MS = 6 * 3600_000;
+export const NEGATIVE_FUNDAMENTALS_TTL_MS = 10 * 60_000;
+export const MAX_FUNDAMENTALS_CACHE_ENTRIES = 100;
 
 export interface CachedFundamentalsEntry {
   fundamentals: StockFundamentals;
@@ -88,11 +91,14 @@ export async function fetchUpstoxFundamentals(params: {
   const { client, symbol, isin, currentPrice, now, cache } = params;
   const upper = symbol.trim().toUpperCase();
   const cached = cache.get(upper);
-  if (cached && now - cached.cachedAt < FUNDAMENTALS_TTL_MS && cached.fundamentals.available) {
-    return { fundamentals: cached.fundamentals, about: cached.about };
+  if (cached) {
+    const ttl = cached.fundamentals.available ? FUNDAMENTALS_TTL_MS : NEGATIVE_FUNDAMENTALS_TTL_MS;
+    if (now - cached.cachedAt < ttl) {
+      return cached.fundamentals.available ? { fundamentals: cached.fundamentals, about: cached.about } : null;
+    }
   }
   if (!isin || !client.hasAnalyticsToken()) {
-    return cached ? { fundamentals: cached.fundamentals, about: cached.about } : null;
+    return cached?.fundamentals.available ? { fundamentals: cached.fundamentals, about: cached.about } : null;
   }
 
   try {
@@ -172,7 +178,15 @@ export async function fetchUpstoxFundamentals(params: {
     const hasAnyMetric = Boolean(
       marketCap || peRatio !== null || pbRatio !== null || roe !== null || roce !== null || roa !== null || eps !== null || bookValue !== null || debtToEquity !== null || divYield !== null
     );
-    if (!hasAnyMetric) return cached ? { fundamentals: cached.fundamentals, about: cached.about } : null;
+    if (!hasAnyMetric) {
+      if (cached?.fundamentals.available) return { fundamentals: cached.fundamentals, about: cached.about };
+      const unavailable: StockFundamentals = {
+        available: false, source: 'unavailable', marketCap: null, peRatio: null, pbRatio: null,
+        industryPe: null, debtToEquity: null, roe: null, divYield: null, eps: null, bookValue: null,
+      };
+      setBoundedMapEntry(cache, upper, { fundamentals: unavailable, cachedAt: now }, MAX_FUNDAMENTALS_CACHE_ENTRIES);
+      return null;
+    }
 
     const fundamentals: StockFundamentals = {
       available: true,
@@ -193,9 +207,9 @@ export async function fetchUpstoxFundamentals(params: {
       typeof rawProfile?.company_profile === 'string' && rawProfile.company_profile.trim().length > 0
         ? rawProfile.company_profile.trim()
         : undefined;
-    cache.set(upper, { fundamentals, about, cachedAt: now });
+    setBoundedMapEntry(cache, upper, { fundamentals, about, cachedAt: now }, MAX_FUNDAMENTALS_CACHE_ENTRIES);
     return { fundamentals, about };
   } catch {
-    return cached ? { fundamentals: cached.fundamentals, about: cached.about } : null;
+    return cached?.fundamentals.available ? { fundamentals: cached.fundamentals, about: cached.about } : null;
   }
 }

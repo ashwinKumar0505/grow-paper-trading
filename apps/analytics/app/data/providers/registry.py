@@ -12,8 +12,6 @@ from app.data.providers.base import (
     ProviderCapabilities,
     ProviderNotConfiguredError,
 )
-from app.data.providers.upstox_adapter import UpstoxMarketDataProvider
-from app.data.providers.yfinance_adapter import YFinanceMarketDataProvider
 from app.models.market import StockConstituent
 
 
@@ -84,11 +82,15 @@ _LICENSED_STUBS = {
 
 
 def get_provider(provider_id: Optional[str] = None) -> MarketDataProvider:
-    """Instantiate the configured market-data provider."""
+    """Instantiate the configured market-data provider lazily so unused vendor SDKs stay out of RAM."""
     pid = (provider_id or settings.MARKET_DATA_PROVIDER).strip().lower()
     if pid == "upstox":
+        from app.data.providers.upstox_adapter import UpstoxMarketDataProvider
+
         return UpstoxMarketDataProvider()
     if pid == "yfinance":
+        from app.data.providers.yfinance_adapter import YFinanceMarketDataProvider
+
         return YFinanceMarketDataProvider()
     if pid in _LICENSED_STUBS:
         display_name, env_vars = _LICENSED_STUBS[pid]

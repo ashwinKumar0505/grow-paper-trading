@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { verifyBearerToken, type VerifiedAuthIdentity } from '../auth/authService';
 import type { DurableStore } from '../storage/durableStore';
 import { defaultStore } from '../storage/durableStore';
+import { pruneMapEntries, setBoundedMapEntry } from '../utils/boundedCache';
 
 export interface AuthenticatedRequest extends Request {
   authUser?: VerifiedAuthIdentity;
@@ -65,7 +66,12 @@ export function securityHeadersAndCors(req: Request, res: Response, next: NextFu
   next();
 }
 
-const rateBuckets = new Map<string, { windowStart: number; count: number }>();
+const MAX_RATE_BUCKETS = 2000;
+const rateBuckets = new Map<string, { windowStart: number; count: number; windowMs: number }>();
+
+export function pruneRateLimitBuckets(now = Date.now()): number {
+  return pruneMapEntries(rateBuckets, (entry) => now - entry.windowStart >= entry.windowMs, MAX_RATE_BUCKETS);
+}
 
 export function createRateLimiter(options: {
   windowMs: number;
@@ -74,6 +80,9 @@ export function createRateLimiter(options: {
 }) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const now = Date.now();
+    if (rateBuckets.size >= MAX_RATE_BUCKETS) {
+      pruneRateLimitBuckets(now);
+    }
     const subject = req.authUser?.uid || req.ip || req.socket?.remoteAddress || 'anon';
     const key = `${options.keyPrefix}:${subject}`;
     const current = rateBuckets.get(key);
@@ -92,7 +101,12 @@ export function createRateLimiter(options: {
       }
       current.count += 1;
     } else {
-      rateBuckets.set(key, { windowStart: now, count: 1 });
+      setBoundedMapEntry(
+        rateBuckets,
+        key,
+        { windowStart: now, count: 1, windowMs: options.windowMs },
+        MAX_RATE_BUCKETS
+      );
     }
     next();
   };

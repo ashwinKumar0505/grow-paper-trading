@@ -1,7 +1,7 @@
 import { getFeatureLandingContent } from '../../features/feature-landing/data/featureContentMap';
 import type { FeatureLandingRoute } from '../../features/feature-landing/types';
 import { resolvePatternBySlug, type PatternCatalogEntry } from '../../features/quiz/utils/patternCatalog';
-import { canonicalPath, getLearnPatternSlugFromPath } from '../navigation';
+import { canonicalPath, getLearnPatternSlugFromPath } from '../routePaths';
 import { BRAND_NAME, DEFAULT_OG_IMAGE_ALT, DEFAULT_OG_IMAGE_URL, buildCanonicalUrl } from './constants';
 import {
   AUTH_GATED_META,

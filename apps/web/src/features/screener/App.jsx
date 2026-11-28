@@ -51,16 +51,36 @@ export default function ScreenerApp() {
   }, [addToast]);
 
   useEffect(() => {
-    const fetchStatus = () =>
-      api
+    let lastFetchedAt = 0;
+    const fetchStatus = () => {
+      lastFetchedAt = Date.now();
+      return api
         .getMarketStatus()
         .then((res) => {
           setMarketStatus(res);
         })
         .catch(() => setOffline(true));
+    };
     fetchStatus();
-    const timer = setInterval(fetchStatus, 30000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) {
+        fetchStatus();
+      }
+    }, 60000);
+    const onVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden && Date.now() - lastFetchedAt >= 15000) {
+        fetchStatus();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+    return () => {
+      clearInterval(timer);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    };
   }, []);
 
   const title = TITLES[pathname] || 'Stock Screener';

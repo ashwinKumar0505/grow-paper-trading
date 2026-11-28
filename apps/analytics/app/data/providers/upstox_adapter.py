@@ -134,9 +134,18 @@ class UpstoxMarketDataProvider(MarketDataProvider):
         self._limiter = limiter or rate_limiter
         self._client = client or UpstoxHttpClient(limiter=self._limiter)
         self._resolver = UpstoxInstrumentResolver(self._client)
-        self._failed_download_ts: Dict[str, float] = {}
+        self._failed_download_ts: TTLCache = TTLCache(maxsize=256, ttl=1800)
         self._quote_lock = threading.Lock()
-        self._quote_cache: TTLCache = TTLCache(maxsize=600, ttl=60)
+        self._quote_cache: TTLCache = TTLCache(maxsize=256, ttl=60)
+
+    def prune_caches(self) -> None:
+        with self._quote_lock:
+            self._quote_cache.expire()
+            self._failed_download_ts.expire()
+        self._resolver.prune_cache()
+
+    def close(self) -> None:
+        self._client.close()
 
     @property
     def capabilities(self) -> ProviderCapabilities:
@@ -377,9 +386,18 @@ class UpstoxMarketDataProvider(MarketDataProvider):
             return self._unavailable_result(clean, interval, adj_policy, "UNSUPPORTED_SYMBOL", f"Invalid NSE symbol '{symbol}'.")
 
         key = self._cache.build_key("upstox", clean, interval, adj_policy)
+        use_mem_cache = not is_batch
         with self._cache.get_key_lock(key):
             if not force_refresh:
-                cached_df, meta = self._cache.get_ohlcv(clean, interval, "upstox", adj_policy, allow_stale_disk=False)
+                cached_df, meta = self._cache.get_ohlcv(
+                    clean,
+                    interval,
+                    "upstox",
+                    adj_policy,
+                    allow_stale_disk=False,
+                    cache_in_memory=use_mem_cache,
+                    allow_closed_market_session_reuse=True,
+                )
                 if cached_df is not None and meta is not None:
                     res = self._package_validated(clean, interval, cached_df, min_bars, adj_policy, meta, meta.cache_layer)
                     if res.status in ("OK", "STALE_CACHE"):
@@ -389,7 +407,14 @@ class UpstoxMarketDataProvider(MarketDataProvider):
                 policy.purpose in ("HISTORICAL_BACKTEST", "EDUCATIONAL_HISTORICAL_REPLAY")
                 or settings.EDUCATIONAL_REPLAY_MODE
             ):
-                disk_df, disk_meta = self._cache.get_ohlcv(clean, interval, "upstox", adj_policy, allow_stale_disk=True)
+                disk_df, disk_meta = self._cache.get_ohlcv(
+                    clean,
+                    interval,
+                    "upstox",
+                    adj_policy,
+                    allow_stale_disk=True,
+                    cache_in_memory=use_mem_cache,
+                )
                 if disk_df is not None and disk_meta is not None:
                     res = self._package_validated(clean, interval, disk_df, min_bars, adj_policy, disk_meta, disk_meta.cache_layer)
                     if disk_meta.is_ttl_expired:
@@ -416,6 +441,7 @@ class UpstoxMarketDataProvider(MarketDataProvider):
                                 clean, res.df, interval=interval, provider_id="upstox",
                                 adjustment_policy=adj_policy,
                                 last_completed_candle_ts=res.provenance.last_completed_candle_ts,
+                                cache_in_memory=use_mem_cache,
                             )
                             res.provenance.fetched_at_utc = saved.fetched_at_utc
                             res.provenance.fetched_at_ist = saved.fetched_at_ist
@@ -490,7 +516,15 @@ class UpstoxMarketDataProvider(MarketDataProvider):
                 results[clean] = self._unavailable_result(clean, interval, adj_policy, "UNSUPPORTED_SYMBOL", f"Invalid NSE symbol '{raw_sym}'.")
                 continue
             if not force_refresh:
-                cached_df, meta = self._cache.get_ohlcv(clean, interval, "upstox", adj_policy, allow_stale_disk=False)
+                cached_df, meta = self._cache.get_ohlcv(
+                    clean,
+                    interval,
+                    "upstox",
+                    adj_policy,
+                    allow_stale_disk=False,
+                    cache_in_memory=False,
+                    allow_closed_market_session_reuse=True,
+                )
                 if cached_df is not None and meta is not None:
                     res = self._package_validated(clean, interval, cached_df, min_bars, adj_policy, meta, meta.cache_layer)
                     if res.status in ("OK", "STALE_CACHE"):

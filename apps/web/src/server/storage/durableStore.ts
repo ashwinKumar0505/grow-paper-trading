@@ -158,26 +158,56 @@ export class DurableStore {
     }
   }
 
+  pruneExpiredState(now = Date.now()): number {
+    let pruned = 0;
+    for (const [email, otp] of Object.entries(this.state.otpRecords)) {
+      if (otp.expiresAt <= now) {
+        delete this.state.otpRecords[email];
+        pruned += 1;
+      }
+    }
+    for (const [jti, exp] of Object.entries(this.state.revokedTokens)) {
+      if (exp <= now) {
+        delete this.state.revokedTokens[jti];
+        pruned += 1;
+      }
+    }
+    return pruned;
+  }
+
   /** Serializes concurrent operations for a specific key (e.g., userId) to guarantee atomicity. */
-  async withLock<T>(key: string, fn: () => Promise<T> | T): Promise<T> {
+  async withLock<T>(
+    key: string,
+    fn: () => Promise<T> | T,
+    options?: { persist?: boolean | ((result: T) => boolean) }
+  ): Promise<T> {
     const prev = this.locks.get(key) ?? Promise.resolve();
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    this.locks.set(key, prev.then(() => gate, () => gate));
+    const chain = prev.then(() => gate, () => gate);
+    this.locks.set(key, chain);
     await prev.catch(() => {});
     try {
       const result = await fn();
-      if (this.firestoreAdapter) {
-        await this.flush();
-      } else {
-        this.persist();
+      const shouldPersist =
+        options?.persist === undefined
+          ? true
+          : typeof options.persist === 'function'
+            ? options.persist(result)
+            : options.persist;
+      if (shouldPersist) {
+        if (this.firestoreAdapter) {
+          await this.flush();
+        } else {
+          this.persist();
+        }
       }
       return result;
     } finally {
       release();
-      if (this.locks.get(key) === gate) {
+      if (this.locks.get(key) === chain) {
         this.locks.delete(key);
       }
     }

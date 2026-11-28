@@ -2,6 +2,9 @@ import type { ChartPoint, Stock, Timeframe } from '../../types/market';
 import { formatChartTimeLabel } from './diskCacheReader';
 import { INDICES_CATALOG, NSE_SYMBOL_CATALOG } from './symbolCatalog';
 import type { StockSearchItem } from './types';
+import { setBoundedMapEntry } from '../utils/boundedCache';
+
+const MAX_YAHOO_TTL_CACHE = 150;
 
 export const YAHOO_HEADERS = {
   'User-Agent':
@@ -52,7 +55,7 @@ export async function fetchYahooRawChart(
       const json = (await res.json()) as { chart?: { result?: YahooChartResponse[] } };
       const result = json?.chart?.result?.[0];
       if (!result?.meta) continue;
-      ttlCache.set(key, { data: result, fetchedAt: Date.now() });
+      setBoundedMapEntry(ttlCache, key, { data: result, fetchedAt: Date.now() }, MAX_YAHOO_TTL_CACHE);
       return result;
     } catch {
       clearTimeout(timer);

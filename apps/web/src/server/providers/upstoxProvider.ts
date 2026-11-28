@@ -1,27 +1,20 @@
 import type { IndexData, MarketDepthItem, Stock, StockFundamentals, Timeframe } from '../../types/market';
 import { buildMarketDataMetadata } from '../../utils/marketHours';
-import {
-  isSupportedSymbolFormat, NSE_SYMBOL_CATALOG,
-  resolveCanonicalSymbol, resolveCatalogUpstoxInstrumentKey,
-} from './symbolCatalog';
-import type {
-  MarketDataProvider, ProviderCapabilities, ProviderChartPayload,
-  ProviderResponse, StockSearchItem,
-} from './types';
+import { isSupportedSymbolFormat, NSE_SYMBOL_CATALOG, resolveCanonicalSymbol, resolveCatalogUpstoxInstrumentKey } from './symbolCatalog';
+import type { MarketDataProvider, ProviderCapabilities, ProviderChartPayload, ProviderResponse, StockSearchItem } from './types';
 import { fetchUpstoxHistoricalChart, mergeUpstoxCandles, type CachedChartEntry } from './upstoxCandles';
-import {
-  extractIsinFromInstrumentKey, fetchUpstoxFundamentals,
-  resolveCatalogIsin, type CachedFundamentalsEntry,
-} from './upstoxFundamentals';
+import { extractIsinFromInstrumentKey, fetchUpstoxFundamentals, resolveCatalogIsin, type CachedFundamentalsEntry } from './upstoxFundamentals';
 import { UpstoxHttpClient } from './upstoxHttpClient';
 import { normalizeUpstoxSearchResults } from './upstoxNormalizer';
-import {
-  fetchUpstoxBulkQuotes, fetchUpstoxIndexQuotes,
-  type CachedIndexEntry, type CachedQuoteEntry,
-} from './upstoxQuotes';
+import { fetchUpstoxBulkQuotes, fetchUpstoxIndexQuotes, MAX_QUOTE_CACHE_ENTRIES, type CachedIndexEntry, type CachedQuoteEntry } from './upstoxQuotes';
 import type { UpstoxHttpClientOptions } from './upstoxTypes';
+import { pruneMapEntries, setBoundedMapEntry } from '../utils/boundedCache';
 
 const SEARCH_TTL_MS = 300_000;
+const MAX_SEARCH_CACHE_ENTRIES = 100;
+const MAX_DYNAMIC_INSTRUMENTS = 250;
+const CHART_EVICT_MS = 10 * 60_000;
+const QUOTE_EVICT_MS = 30 * 60_000;
 
 export class UpstoxMarketDataProvider implements MarketDataProvider {
   readonly id = 'upstox' as const;
@@ -72,7 +65,7 @@ export class UpstoxMarketDataProvider implements MarketDataProvider {
     try {
       const results = await this.client.searchInstruments(canonical, 10);
       const { discoveredKeys } = normalizeUpstoxSearchResults(results, 10, () => null);
-      for (const [sym, info] of discoveredKeys) this.dynamicInstruments.set(sym, info);
+      for (const [sym, info] of discoveredKeys) setBoundedMapEntry(this.dynamicInstruments, sym, info, MAX_DYNAMIC_INSTRUMENTS);
       return this.dynamicInstruments.get(canonical)?.instrumentKey ?? null;
     } catch {
       return null;
@@ -190,9 +183,9 @@ export class UpstoxMarketDataProvider implements MarketDataProvider {
     try {
       const raw = await this.client.searchInstruments(searchQuery, limit);
       const { items, discoveredKeys } = normalizeUpstoxSearchResults(raw, limit, (s) => this.authenticQuotes.get(s)?.stock.price ?? null);
-      for (const [sym, info] of discoveredKeys) this.dynamicInstruments.set(sym, info);
+      for (const [sym, info] of discoveredKeys) setBoundedMapEntry(this.dynamicInstruments, sym, info, MAX_DYNAMIC_INSTRUMENTS);
       if (items.length > 0) {
-        this.searchCache.set(cacheKey, { items, cachedAt: now });
+        setBoundedMapEntry(this.searchCache, cacheKey, { items, cachedAt: now }, MAX_SEARCH_CACHE_ENTRIES);
         return { available: true, data: items, metadata: buildMarketDataMetadata({ source: this.id, price: 1, quoteTimestamp: now, providerAvailable: true, now }) };
       }
     } catch { /* fall back to static NSE catalog metadata without fabricating prices */ }
@@ -210,6 +203,13 @@ export class UpstoxMarketDataProvider implements MarketDataProvider {
   }
 
   seedAuthenticQuote(stock: Stock, cachedAt = Date.now()): void {
-    this.authenticQuotes.set(stock.symbol.toUpperCase(), { stock, cachedAt });
+    setBoundedMapEntry(this.authenticQuotes, stock.symbol.toUpperCase(), { stock, cachedAt }, MAX_QUOTE_CACHE_ENTRIES);
+  }
+
+  pruneExpiredCaches(now = Date.now()): void {
+    pruneMapEntries(this.authenticCharts, (v) => now - v.cachedAt > CHART_EVICT_MS, 40);
+    pruneMapEntries(this.searchCache, (v) => now - v.cachedAt > SEARCH_TTL_MS, MAX_SEARCH_CACHE_ENTRIES);
+    pruneMapEntries(this.authenticQuotes, (v) => now - v.cachedAt > QUOTE_EVICT_MS, MAX_QUOTE_CACHE_ENTRIES);
+    pruneMapEntries(this.authenticFundamentals, (v) => now - v.cachedAt > (v.fundamentals.available ? 6 * 3600_000 : 10 * 60_000), 100);
   }
 }

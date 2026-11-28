@@ -25,16 +25,29 @@ TIER_RANK: Dict[str, int] = {
 
 
 class SlidingWindowRateLimiter:
-    """Thread-safe in-memory per-identity sliding-window API rate limiter."""
+    """Thread-safe bounded in-memory per-identity sliding-window API rate limiter."""
 
-    def __init__(self):
+    def __init__(self, max_keys: int = 2000):
         self._hits: Dict[str, Deque[float]] = defaultdict(deque)
+        self._max_keys = max(100, int(max_keys))
         self._lock = threading.Lock()
+
+    def _evict_expired_locked(self, now: float, window_seconds: float) -> None:
+        cutoff = now - window_seconds
+        stale_keys = [k for k, q in self._hits.items() if not q or q[-1] < cutoff]
+        for k in stale_keys:
+            self._hits.pop(k, None)
+        if len(self._hits) > self._max_keys:
+            overflow = len(self._hits) - self._max_keys
+            for k in list(self._hits.keys())[:overflow]:
+                self._hits.pop(k, None)
 
     def check(self, key: str, max_requests: int, window_seconds: float = 60.0) -> bool:
         now = time.monotonic()
         cutoff = now - window_seconds
         with self._lock:
+            if len(self._hits) > self._max_keys:
+                self._evict_expired_locked(now, window_seconds)
             q = self._hits[key]
             while q and q[0] < cutoff:
                 q.popleft()
@@ -42,6 +55,13 @@ class SlidingWindowRateLimiter:
                 return False
             q.append(now)
             return True
+
+    def prune_expired(self, window_seconds: float = 60.0) -> int:
+        now = time.monotonic()
+        with self._lock:
+            before = len(self._hits)
+            self._evict_expired_locked(now, window_seconds)
+            return max(0, before - len(self._hits))
 
     def reset(self) -> None:
         with self._lock:

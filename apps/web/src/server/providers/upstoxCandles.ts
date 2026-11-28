@@ -5,8 +5,10 @@ import type { ProviderChartPayload, ProviderResponse } from './types';
 import type { UpstoxHttpClient } from './upstoxHttpClient';
 import { formatIstDateOffset, parseUpstoxTimestampMs, toFinitePositive, toIstDateKey } from './upstoxNormalizer';
 import { UpstoxApiError, type UpstoxRawCandle } from './upstoxTypes';
+import { setBoundedMapEntry } from '../utils/boundedCache';
 
 export const CHART_TTL_MS = 60_000;
+export const MAX_CHART_CACHE_ENTRIES = 40;
 
 interface TimeframeSpec {
   unit: 'minutes' | 'days' | 'weeks' | 'months';
@@ -127,7 +129,7 @@ export async function fetchUpstoxHistoricalChart(params: {
       const currentPrice = timeframe === '1D' && cachedQuote?.price ? cachedQuote.price : points[points.length - 1].close;
       const payload: ProviderChartPayload = { symbol, timeframe, points, previousClose, currentPrice };
       const lastTs = points[points.length - 1].timestamp;
-      chartCache.set(chartKey, { payload, timestamp: lastTs, cachedAt: now });
+      setBoundedMapEntry(chartCache, chartKey, { payload, timestamp: lastTs, cachedAt: now }, MAX_CHART_CACHE_ENTRIES);
       return {
         available: true,
         data: payload,

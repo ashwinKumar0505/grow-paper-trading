@@ -37,29 +37,33 @@ class ValidatedOHLCV:
 
 
 def _extract_standard_columns(df: pd.DataFrame) -> Optional[pd.DataFrame]:
-    """Flatten MultiIndex columns if present and normalize OHLCV column names."""
-    out = df.copy()
-    if isinstance(out.columns, pd.MultiIndex):
+    """Flatten MultiIndex columns if present and normalize OHLCV column names with a single copy."""
+    if isinstance(df.columns, pd.MultiIndex):
+        out = df.copy(deep=False)
         lvl0 = [str(c) for c in out.columns.get_level_values(0)]
         if "Close" in lvl0 or "Open" in lvl0:
             out.columns = out.columns.get_level_values(0)
         else:
             out.columns = out.columns.get_level_values(-1)
+    else:
+        out = df
 
     col_map = {}
     for col in out.columns:
         normalized = str(col).strip().capitalize()
         if normalized in REQUIRED_OHLCV_COLS and normalized not in col_map.values():
             col_map[col] = normalized
-    out = out.rename(columns=col_map)
-    if not all(c in out.columns for c in REQUIRED_OHLCV_COLS):
+    if len(col_map) < len(REQUIRED_OHLCV_COLS):
         return None
-    return out[REQUIRED_OHLCV_COLS].copy()
+    if list(col_map.keys()) == REQUIRED_OHLCV_COLS and list(col_map.values()) == REQUIRED_OHLCV_COLS:
+        return out[REQUIRED_OHLCV_COLS].copy()
+    selected = out[list(col_map.keys())].rename(columns=col_map)
+    return selected[REQUIRED_OHLCV_COLS].copy()
 
 
 def _normalize_ist_index(df: pd.DataFrame, issues: List[str]) -> pd.DataFrame:
-    """Normalize index to timezone-naive IST (Asia/Kolkata) timestamps."""
-    out = df.copy()
+    """Normalize index to timezone-naive IST (Asia/Kolkata) timestamps on caller-owned DataFrame."""
+    out = df
     idx = pd.to_datetime(out.index, errors="coerce", utc=False)
     valid_ts_mask = ~pd.isna(idx)
     if not valid_ts_mask.all():

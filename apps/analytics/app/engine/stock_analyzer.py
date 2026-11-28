@@ -283,21 +283,34 @@ def analyze_single_stock(
     stock_bt_summary = _run_stock_historical_simulation(clean_sym, df_ind)
 
     recent_bars: List[PriceBar] = []
-    for ts, r in df_ind.tail(90).iterrows():
+    tail_df = df_ind.tail(90)
+    t_idx = tail_df.index
+    t_open = tail_df["Open"].to_numpy(dtype=float)
+    t_high = tail_df["High"].to_numpy(dtype=float)
+    t_low = tail_df["Low"].to_numpy(dtype=float)
+    t_close = tail_df["Close"].to_numpy(dtype=float)
+    t_vol = tail_df["Volume"].to_numpy()
+    t_ema20 = tail_df["EMA_20"].to_numpy(dtype=float)
+    t_ema50 = tail_df["EMA_50"].to_numpy(dtype=float)
+    t_ema200 = tail_df["EMA_200"].to_numpy(dtype=float)
+    t_bbu = tail_df["BB_Upper"].to_numpy(dtype=float)
+    t_bbl = tail_df["BB_Lower"].to_numpy(dtype=float)
+    t_rsi = tail_df["RSI_14"].to_numpy(dtype=float)
+    for i in range(len(tail_df)):
         recent_bars.append(
             PriceBar(
-                date=str(ts)[:10],
-                open=round(float(r["Open"]), 2),
-                high=round(float(r["High"]), 2),
-                low=round(float(r["Low"]), 2),
-                close=round(float(r["Close"]), 2),
-                volume=int(r["Volume"]),
-                ema_20=round(float(r["EMA_20"]), 2) if pd.notna(r["EMA_20"]) else None,
-                ema_50=round(float(r["EMA_50"]), 2) if pd.notna(r["EMA_50"]) else None,
-                ema_200=round(float(r["EMA_200"]), 2) if pd.notna(r["EMA_200"]) else None,
-                bb_upper=round(float(r["BB_Upper"]), 2) if pd.notna(r["BB_Upper"]) else None,
-                bb_lower=round(float(r["BB_Lower"]), 2) if pd.notna(r["BB_Lower"]) else None,
-                rsi_14=round(float(r["RSI_14"]), 1) if pd.notna(r["RSI_14"]) else None,
+                date=str(t_idx[i])[:10],
+                open=round(float(t_open[i]), 2),
+                high=round(float(t_high[i]), 2),
+                low=round(float(t_low[i]), 2),
+                close=round(float(t_close[i]), 2),
+                volume=int(t_vol[i]),
+                ema_20=round(float(t_ema20[i]), 2) if np.isfinite(t_ema20[i]) else None,
+                ema_50=round(float(t_ema50[i]), 2) if np.isfinite(t_ema50[i]) else None,
+                ema_200=round(float(t_ema200[i]), 2) if np.isfinite(t_ema200[i]) else None,
+                bb_upper=round(float(t_bbu[i]), 2) if np.isfinite(t_bbu[i]) else None,
+                bb_lower=round(float(t_bbl[i]), 2) if np.isfinite(t_bbl[i]) else None,
+                rsi_14=round(float(t_rsi[i]), 1) if np.isfinite(t_rsi[i]) else None,
                 is_completed_candle=True,
             )
         )

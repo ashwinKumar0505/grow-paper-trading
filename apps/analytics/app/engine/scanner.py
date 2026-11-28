@@ -9,6 +9,7 @@ import threading
 import time
 from typing import Dict, List, Literal, Optional
 
+from app.api.auth import api_rate_limiter
 from app.config import settings
 from app.data.cache import market_cache
 from app.data.nifty500_constituents import UNIVERSE_VERSION, load_nifty500_universe
@@ -28,6 +29,7 @@ from app.models.signals import (
     SwingScannerResponse,
     SwingSignalItem,
 )
+from app.runtime_memory import release_memory
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,16 @@ def _select_universe_symbols(universe_limit: int) -> List[str]:
     return [c.symbol for c in universe[:capped]]
 
 
+def _finalize_provenance(valid_count: int, stale_count: int, fetch_ts: Optional[str]):
+    """Summarize freshness, staleness, and latest fetch timestamp from streaming counters."""
+    if valid_count == 0:
+        return stale_count, fetch_ts, "UNAVAILABLE", True
+    if stale_count > 0:
+        return stale_count, fetch_ts, "STALE", True
+    is_rt = data_provider.capabilities.is_realtime
+    return 0, fetch_ts, ("FRESH" if is_rt else "DELAYED"), False
+
+
 def _aggregate_provenance(results: Dict[str, MarketDataResult]):
     """Summarize freshness, staleness, and latest fetch timestamp across fetched symbols."""
     valid_results = [r for r in results.values() if r.df is not None and r.status in ("OK", "STALE_CACHE")]
@@ -52,14 +64,7 @@ def _aggregate_provenance(results: Dict[str, MarketDataResult]):
         (r.provenance.fetched_at_ist for r in valid_results if r.provenance.fetched_at_ist),
         default=None,
     )
-    if not valid_results:
-        return stale_count, fetch_ts, "UNAVAILABLE", True
-    if stale_count == len(valid_results):
-        return stale_count, fetch_ts, "STALE", True
-    if stale_count > 0:
-        return stale_count, fetch_ts, "STALE", True
-    is_rt = data_provider.capabilities.is_realtime
-    return 0, fetch_ts, ("FRESH" if is_rt else "DELAYED"), False
+    return _finalize_provenance(len(valid_results), stale_count, fetch_ts)
 
 
 def _classify_live_entry_status(
@@ -139,185 +144,218 @@ def run_swing_scanner(
 
     with _swing_scan_lock:
         t0 = time.monotonic()
-        universe = load_nifty500_universe()
-        eligible_universe_size = len(universe)
-        symbols = _select_universe_symbols(req_limit)
+        try:
+            universe = load_nifty500_universe()
+            eligible_universe_size = len(universe)
+            symbols = _select_universe_symbols(req_limit)
 
-        policy = DataUsagePolicy(
-            purpose="CURRENT_MARKET_SCREENING",
-            allow_delayed_data=settings.ALLOW_DELAYED_DATA,
-            allow_stale_cache_fallback=settings.ALLOW_STALE_CACHE_FALLBACK,
-            require_production_approved_provider=settings.effective_require_production_approved_provider,
-            adjustment_policy=settings.PRICE_ADJUSTMENT_POLICY,
-        )
-        res_map = data_provider.fetch_batch_daily_ohlcv_results(
-            symbols=symbols,
-            period="2y",
-            force_refresh=force_refresh,
-            min_bars=60,
-            policy=policy,
-        )
-
-        validated_stats, overall_val_status = get_validated_strategy_stats()
-        skip_reasons: Counter = Counter()
-        failed_count = 0
-        fetched_count = 0
-        analyzed_count = 0
-        usable_results: Dict[str, MarketDataResult] = {}
-
-        for sym in symbols:
-            r = res_map.get(sym)
-            if r is None or r.status == "PROVIDER_UNAVAILABLE":
-                failed_count += 1
-                skip_reasons["provider_unavailable"] += 1
-            elif r.status in ("INSUFFICIENT_HISTORY", "INVALID_DATA", "UNSUPPORTED_SYMBOL"):
-                skip_reasons[r.status.lower()] += 1
-            elif r.df is not None and len(r.df) >= 60:
-                fetched_count += 1
-                usable_results[sym] = r
-            else:
-                skip_reasons["insufficient_history"] += 1
-
-        candidates: List[SwingSignalItem] = []
-        latest_data_date = "N/A"
-        timeout_sec = settings.SCANNER_SYMBOL_TIMEOUT_SECONDS
-
-        with ThreadPoolExecutor(max_workers=settings.SCANNER_MAX_WORKERS) as pool:
-            fut_to_sym = {
-                pool.submit(
-                    evaluate_swing_candidate,
-                    sym,
-                    r.df,
-                    validated_stats,
-                    overall_val_status,
-                    r.provenance,
-                    r.quality,
-                ): sym
-                for sym, r in usable_results.items()
-            }
-            for fut in as_completed(fut_to_sym):
-                sym = fut_to_sym[fut]
-                try:
-                    item = fut.result(timeout=timeout_sec)
-                    analyzed_count += 1
-                    if item is not None and item.technical_setup_score >= threshold:
-                        if signal_type_filter and signal_type_filter != "ALL":
-                            if item.signal_type != signal_type_filter:
-                                continue
-                        candidates.append(item)
-                        if latest_data_date == "N/A" or item.last_updated_date > latest_data_date:
-                            latest_data_date = item.last_updated_date
-                except FuturesTimeoutError:
-                    failed_count += 1
-                    skip_reasons["evaluation_timeout"] += 1
-                    logger.warning("Swing evaluation timed out for %s", sym)
-                except Exception as exc:
-                    failed_count += 1
-                    skip_reasons["evaluation_error"] += 1
-                    logger.warning("Swing evaluation error for %s: %s", sym, exc)
-
-        if latest_data_date == "N/A" and usable_results:
-            latest_data_date = max(
-                str(r.df.index[-1])[:10] for r in usable_results.values() if r.df is not None
+            policy = DataUsagePolicy(
+                purpose="CURRENT_MARKET_SCREENING",
+                allow_delayed_data=settings.ALLOW_DELAYED_DATA,
+                allow_stale_cache_fallback=settings.ALLOW_STALE_CACHE_FALLBACK,
+                require_production_approved_provider=settings.effective_require_production_approved_provider,
+                adjustment_policy=settings.PRICE_ADJUSTMENT_POLICY,
             )
 
-        candidates.sort(
-            key=lambda x: (
-                1 if x.signal_type == "CONFIRMED_SIGNAL" else 0,
-                x.technical_setup_score,
-                x.empirical_win_rate_oos_pct if x.empirical_win_rate_oos_pct is not None else -1.0,
-                x.risk_reward_ratio,
-            ),
-            reverse=True,
-        )
-        matching_total = len(candidates)
-        returned = candidates[:cap_results] if cap_results and cap_results > 0 else candidates
-        for idx, item in enumerate(returned, start=1):
-            item.rank = idx
+            validated_stats, overall_val_status = get_validated_strategy_stats()
+            skip_reasons: Counter = Counter()
+            failed_count = 0
+            fetched_count = 0
+            analyzed_count = 0
+            prov_valid_count = 0
+            prov_stale_count = 0
+            latest_fetch_ts: Optional[str] = None
+            max_usable_bar_date: Optional[str] = None
+            candidates: List[SwingSignalItem] = []
+            latest_data_date = "N/A"
+            timeout_sec = settings.SCANNER_SYMBOL_TIMEOUT_SECONDS
+            batch_size = max(1, int(settings.SCANNER_BATCH_SIZE))
+            max_workers = max(1, min(int(settings.SCANNER_MAX_WORKERS), len(symbols)))
 
-        stale_cnt, fetch_ts, freshness, is_stale = _aggregate_provenance(res_map)
-        stocks_skipped = max(0, len(symbols) - analyzed_count - failed_count)
-        coverage_pct = round((analyzed_count / max(1, len(symbols))) * 100.0, 2)
-        is_partial = analyzed_count < len(symbols) or len(symbols) < eligible_universe_size
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                for start_idx in range(0, len(symbols), batch_size):
+                    chunk_syms = symbols[start_idx : start_idx + batch_size]
+                    chunk_res = data_provider.fetch_batch_daily_ohlcv_results(
+                        symbols=chunk_syms,
+                        period="2y",
+                        force_refresh=force_refresh,
+                        min_bars=60,
+                        policy=policy,
+                    )
 
-        coverage = ScanCoverageMetrics(
-            universe_version=UNIVERSE_VERSION,
-            requested_universe_size=req_limit,
-            eligible_universe_size=eligible_universe_size,
-            stocks_attempted=len(symbols),
-            stocks_fetched=fetched_count,
-            stocks_analyzed=analyzed_count,
-            stocks_skipped=stocks_skipped,
-            skip_reasons=dict(skip_reasons),
-            stocks_failed=failed_count,
-            stocks_using_stale_data=stale_cnt,
-            matching_signals_count=matching_total,
-            returned_signals_count=len(returned),
-            applied_result_limit=cap_results,
-            coverage_pct=coverage_pct,
-            is_partial_coverage=is_partial,
-        )
+                    usable_chunk: Dict[str, MarketDataResult] = {}
+                    for sym in chunk_syms:
+                        r = chunk_res.get(sym)
+                        if r is not None and r.df is not None and r.status in ("OK", "STALE_CACHE"):
+                            prov_valid_count += 1
+                            if r.provenance.is_stale:
+                                prov_stale_count += 1
+                            if r.provenance.fetched_at_ist and (
+                                latest_fetch_ts is None or r.provenance.fetched_at_ist > latest_fetch_ts
+                            ):
+                                latest_fetch_ts = r.provenance.fetched_at_ist
 
-        caps = data_provider.capabilities
-        if analyzed_count == 0:
-            resp_status = "PROVIDER_UNAVAILABLE"
-        elif is_stale:
-            resp_status = "STALE_DATA"
-        elif analyzed_count < len(symbols):
-            resp_status = "PARTIAL_RESULTS"
-        else:
-            resp_status = "OK"
+                        if r is None or r.status == "PROVIDER_UNAVAILABLE":
+                            failed_count += 1
+                            skip_reasons["provider_unavailable"] += 1
+                        elif r.status in ("INSUFFICIENT_HISTORY", "INVALID_DATA", "UNSUPPORTED_SYMBOL"):
+                            skip_reasons[r.status.lower()] += 1
+                        elif r.df is not None and len(r.df) >= 60:
+                            fetched_count += 1
+                            bar_date = str(r.df.index[-1])[:10]
+                            if max_usable_bar_date is None or bar_date > max_usable_bar_date:
+                                max_usable_bar_date = bar_date
+                            usable_chunk[sym] = r
+                        else:
+                            skip_reasons["insufficient_history"] += 1
 
-        engine_meta = AnalysisEngineMetadata(
-            strategy_version=STRATEGY_ENGINE_VERSION,
-            data_source=f"{caps.provider_id} ({settings.PRICE_ADJUSTMENT_POLICY})",
-            data_limitations=[
-                *caps.limitations,
-                "Technical Setup Score (0-100) is a deterministic rule-based heuristic, not a calibrated win probability.",
-                f"Analyzed {analyzed_count} of {len(symbols)} attempted stocks ({eligible_universe_size} in bundled NIFTY 500).",
-            ],
-        )
+                    fut_to_sym = {
+                        pool.submit(
+                            evaluate_swing_candidate,
+                            sym,
+                            r.df,
+                            validated_stats,
+                            overall_val_status,
+                            r.provenance,
+                            r.quality,
+                        ): sym
+                        for sym, r in usable_chunk.items()
+                    }
+                    for fut in as_completed(fut_to_sym):
+                        sym = fut_to_sym[fut]
+                        try:
+                            item = fut.result(timeout=timeout_sec)
+                            analyzed_count += 1
+                            if item is not None and item.technical_setup_score >= threshold:
+                                if signal_type_filter and signal_type_filter != "ALL":
+                                    if item.signal_type != signal_type_filter:
+                                        continue
+                                candidates.append(item)
+                                if latest_data_date == "N/A" or item.last_updated_date > latest_data_date:
+                                    latest_data_date = item.last_updated_date
+                        except FuturesTimeoutError:
+                            failed_count += 1
+                            skip_reasons["evaluation_timeout"] += 1
+                            logger.warning("Swing evaluation timed out for %s", sym)
+                        except Exception as exc:
+                            failed_count += 1
+                            skip_reasons["evaluation_error"] += 1
+                            logger.warning("Swing evaluation error for %s: %s", sym, exc)
 
-        now_ist = get_now_ist()
-        m_status = get_market_status(now_ist)
-        actionable_session_date: Optional[str] = None
-        if latest_data_date != "N/A":
-            try:
-                actionable_session_date = get_next_trading_day(date.fromisoformat(latest_data_date)).isoformat()
-            except ValueError:
-                actionable_session_date = None
+                    # Release chunk DataFrames immediately before loading the next batch
+                    del fut_to_sym, usable_chunk, chunk_res
 
-        if m_status.is_market_open and returned:
-            _enrich_swing_signals_with_live_quotes(returned, now_ist, timeout_seconds=2.0)
+            if latest_data_date == "N/A" and max_usable_bar_date:
+                latest_data_date = max_usable_bar_date
 
-        resp = SwingScannerResponse(
-            status=resp_status,  # type: ignore[arg-type]
-            scan_timestamp_ist=now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
-            data_as_of_date=latest_data_date,
-            actionable_session_date=actionable_session_date,
-            fetch_timestamp_ist=fetch_ts,
-            data_provider=caps.display_name,
-            data_delay_minutes=caps.estimated_delay_minutes,
-            data_freshness=freshness,  # type: ignore[arg-type]
-            is_stale=is_stale,
-            total_universe_count=eligible_universe_size,
-            total_scanned=analyzed_count,
-            bullish_signals_found=matching_total,
-            scan_duration_seconds=round(time.monotonic() - t0, 2),
-            scan_coverage=coverage,
-            validation_status=overall_val_status,
-            strategy_version=STRATEGY_ENGINE_VERSION,
-            engine_metadata=engine_meta,
-            methodology_disclaimer=(
-                "Rule-based technical screening over completed NSE daily candles. "
-                "Reference entry, target, and stop levels are ATR-based rules, not guaranteed outcomes or investment advice."
-            ),
-            signals=returned,
-        )
-        market_cache.save_json_artifact(f"latest_swing_scan_{caps.provider_id}", resp.model_dump())
-        if caps.provider_id == "yfinance":
-            market_cache.save_json_artifact("latest_swing_scan", resp.model_dump())
-        return resp
+            candidates.sort(
+                key=lambda x: (
+                    1 if x.signal_type == "CONFIRMED_SIGNAL" else 0,
+                    x.technical_setup_score,
+                    x.empirical_win_rate_oos_pct if x.empirical_win_rate_oos_pct is not None else -1.0,
+                    x.risk_reward_ratio,
+                ),
+                reverse=True,
+            )
+            matching_total = len(candidates)
+            returned = candidates[:cap_results] if cap_results and cap_results > 0 else candidates
+            for idx, item in enumerate(returned, start=1):
+                item.rank = idx
+
+            stale_cnt, fetch_ts, freshness, is_stale = _finalize_provenance(
+                prov_valid_count, prov_stale_count, latest_fetch_ts
+            )
+            stocks_skipped = max(0, len(symbols) - analyzed_count - failed_count)
+            coverage_pct = round((analyzed_count / max(1, len(symbols))) * 100.0, 2)
+            is_partial = analyzed_count < len(symbols) or len(symbols) < eligible_universe_size
+
+            coverage = ScanCoverageMetrics(
+                universe_version=UNIVERSE_VERSION,
+                requested_universe_size=req_limit,
+                eligible_universe_size=eligible_universe_size,
+                stocks_attempted=len(symbols),
+                stocks_fetched=fetched_count,
+                stocks_analyzed=analyzed_count,
+                stocks_skipped=stocks_skipped,
+                skip_reasons=dict(skip_reasons),
+                stocks_failed=failed_count,
+                stocks_using_stale_data=stale_cnt,
+                matching_signals_count=matching_total,
+                returned_signals_count=len(returned),
+                applied_result_limit=cap_results,
+                coverage_pct=coverage_pct,
+                is_partial_coverage=is_partial,
+            )
+
+            caps = data_provider.capabilities
+            if analyzed_count == 0:
+                resp_status = "PROVIDER_UNAVAILABLE"
+            elif is_stale:
+                resp_status = "STALE_DATA"
+            elif analyzed_count < len(symbols):
+                resp_status = "PARTIAL_RESULTS"
+            else:
+                resp_status = "OK"
+
+            engine_meta = AnalysisEngineMetadata(
+                strategy_version=STRATEGY_ENGINE_VERSION,
+                data_source=f"{caps.provider_id} ({settings.PRICE_ADJUSTMENT_POLICY})",
+                data_limitations=[
+                    *caps.limitations,
+                    "Technical Setup Score (0-100) is a deterministic rule-based heuristic, not a calibrated win probability.",
+                    f"Analyzed {analyzed_count} of {len(symbols)} attempted stocks ({eligible_universe_size} in bundled NIFTY 500).",
+                ],
+            )
+
+            now_ist = get_now_ist()
+            m_status = get_market_status(now_ist)
+            actionable_session_date: Optional[str] = None
+            if latest_data_date != "N/A":
+                try:
+                    actionable_session_date = get_next_trading_day(date.fromisoformat(latest_data_date)).isoformat()
+                except ValueError:
+                    actionable_session_date = None
+
+            if m_status.is_market_open and returned:
+                _enrich_swing_signals_with_live_quotes(returned, now_ist, timeout_seconds=2.0)
+
+            resp = SwingScannerResponse(
+                status=resp_status,  # type: ignore[arg-type]
+                scan_timestamp_ist=now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+                data_as_of_date=latest_data_date,
+                actionable_session_date=actionable_session_date,
+                fetch_timestamp_ist=fetch_ts,
+                data_provider=caps.display_name,
+                data_delay_minutes=caps.estimated_delay_minutes,
+                data_freshness=freshness,  # type: ignore[arg-type]
+                is_stale=is_stale,
+                total_universe_count=eligible_universe_size,
+                total_scanned=analyzed_count,
+                bullish_signals_found=matching_total,
+                scan_duration_seconds=round(time.monotonic() - t0, 2),
+                scan_coverage=coverage,
+                validation_status=overall_val_status,
+                strategy_version=STRATEGY_ENGINE_VERSION,
+                engine_metadata=engine_meta,
+                methodology_disclaimer=(
+                    "Rule-based technical screening over completed NSE daily candles. "
+                    "Reference entry, target, and stop levels are ATR-based rules, not guaranteed outcomes or investment advice."
+                ),
+                signals=returned,
+            )
+            market_cache.save_json_artifact(f"latest_swing_scan_{caps.provider_id}", resp.model_dump())
+            if caps.provider_id == "yfinance":
+                market_cache.save_json_artifact("latest_swing_scan", resp.model_dump())
+            return resp
+        finally:
+            mem = release_memory()
+            logger.info(
+                "Swing scan finished in %.2fs (universe_limit=%d, rss_mb=%s, peak_rss_mb=%s).",
+                time.monotonic() - t0,
+                req_limit,
+                mem.get("rss_mb"),
+                mem.get("peak_rss_mb"),
+            )
 
 
 def run_intraday_scanner(
@@ -400,166 +438,200 @@ def run_intraday_scanner(
             adjustment_policy=settings.PRICE_ADJUSTMENT_POLICY,
         )
         should_fetch_fresh = is_live and force_refresh
-        res_map = data_provider.fetch_batch_intraday_ohlcv_results(
-            symbols=symbols,
-            period="5d",
-            interval="15m",
-            force_refresh=should_fetch_fresh,
-            min_bars=20,
-            policy=policy,
-        )
+        t0 = time.monotonic()
+        try:
+            skip_reasons: Counter = Counter()
+            failed_count = 0
+            fetched_count = 0
+            analyzed_count = 0
+            prov_valid_count = 0
+            prov_stale_count = 0
+            latest_fetch_ts: Optional[str] = None
+            max_session_date: Optional[str] = None
+            all_signals: List[IntradaySignalItem] = []
+            session_date_str = m_status.last_completed_trading_session_date
+            timeout_sec = settings.SCANNER_SYMBOL_TIMEOUT_SECONDS
+            batch_size = max(1, int(settings.SCANNER_BATCH_SIZE))
+            max_workers = max(1, min(int(settings.SCANNER_MAX_WORKERS), len(symbols)))
 
-        skip_reasons: Counter = Counter()
-        failed_count = 0
-        fetched_count = 0
-        analyzed_count = 0
-        usable_results: Dict[str, MarketDataResult] = {}
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                for start_idx in range(0, len(symbols), batch_size):
+                    chunk_syms = symbols[start_idx : start_idx + batch_size]
+                    chunk_res = data_provider.fetch_batch_intraday_ohlcv_results(
+                        symbols=chunk_syms,
+                        period="5d",
+                        interval="15m",
+                        force_refresh=should_fetch_fresh,
+                        min_bars=20,
+                        policy=policy,
+                    )
 
-        for sym in symbols:
-            r = res_map.get(sym)
-            if r is None or r.status == "PROVIDER_UNAVAILABLE":
-                failed_count += 1
-                skip_reasons["provider_unavailable"] += 1
-            elif r.status in ("INSUFFICIENT_HISTORY", "INVALID_DATA", "UNSUPPORTED_SYMBOL"):
-                skip_reasons[r.status.lower()] += 1
-            elif r.df is not None and len(r.df) >= 20:
-                fetched_count += 1
-                usable_results[sym] = r
+                    usable_chunk: Dict[str, MarketDataResult] = {}
+                    for sym in chunk_syms:
+                        r = chunk_res.get(sym)
+                        if r is not None and r.df is not None and r.status in ("OK", "STALE_CACHE"):
+                            prov_valid_count += 1
+                            if r.provenance.is_stale:
+                                prov_stale_count += 1
+                            if r.provenance.fetched_at_ist and (
+                                latest_fetch_ts is None or r.provenance.fetched_at_ist > latest_fetch_ts
+                            ):
+                                latest_fetch_ts = r.provenance.fetched_at_ist
+
+                        if r is None or r.status == "PROVIDER_UNAVAILABLE":
+                            failed_count += 1
+                            skip_reasons["provider_unavailable"] += 1
+                        elif r.status in ("INSUFFICIENT_HISTORY", "INVALID_DATA", "UNSUPPORTED_SYMBOL"):
+                            skip_reasons[r.status.lower()] += 1
+                        elif r.df is not None and len(r.df) >= 20:
+                            fetched_count += 1
+                            s_date = str(r.df.index[-1].date())
+                            if max_session_date is None or s_date > max_session_date:
+                                max_session_date = s_date
+                            usable_chunk[sym] = r
+                        else:
+                            skip_reasons["insufficient_history"] += 1
+
+                    fut_to_sym = {
+                        pool.submit(
+                            evaluate_intraday_session_signals,
+                            sym,
+                            r.df,
+                            is_live,
+                            validated_stats,
+                            r.provenance,
+                        ): sym
+                        for sym, r in usable_chunk.items()
+                    }
+                    for fut in as_completed(fut_to_sym):
+                        sym = fut_to_sym[fut]
+                        try:
+                            sig_list = fut.result(timeout=timeout_sec)
+                            analyzed_count += 1
+                            if sig_list:
+                                all_signals.extend(sig_list)
+                        except FuturesTimeoutError:
+                            failed_count += 1
+                            skip_reasons["evaluation_timeout"] += 1
+                        except Exception as exc:
+                            failed_count += 1
+                            skip_reasons["evaluation_error"] += 1
+                            logger.warning("Intraday evaluation failed for %s: %s", sym, exc)
+
+                    del fut_to_sym, usable_chunk, chunk_res
+
+            if max_session_date:
+                session_date_str = max_session_date
+
+            if is_live:
+                all_signals.sort(
+                    key=lambda s: (1 if s.is_projected_exit else 0, s.entry_time_ist, s.technical_setup_score),
+                    reverse=True,
+                )
             else:
-                skip_reasons["insufficient_history"] += 1
+                all_signals.sort(
+                    key=lambda s: (s.technical_setup_score, 1 if s.is_projected_exit else 0, s.entry_time_ist),
+                    reverse=True,
+                )
+            matching_total = len(all_signals)
+            returned = all_signals[:cap_results] if cap_results and cap_results > 0 else all_signals
+            active_cnt = sum(1 for s in returned if s.is_projected_exit)
+            completed_cnt = sum(1 for s in returned if not s.is_projected_exit)
 
-        all_signals: List[IntradaySignalItem] = []
-        session_date_str = m_status.last_completed_trading_session_date
-        timeout_sec = settings.SCANNER_SYMBOL_TIMEOUT_SECONDS
-
-        with ThreadPoolExecutor(max_workers=settings.SCANNER_MAX_WORKERS) as pool:
-            fut_to_sym = {
-                pool.submit(
-                    evaluate_intraday_session_signals,
-                    sym,
-                    r.df,
-                    is_live,
-                    validated_stats,
-                    r.provenance,
-                ): sym
-                for sym, r in usable_results.items()
-            }
-            for fut in as_completed(fut_to_sym):
-                sym = fut_to_sym[fut]
-                try:
-                    sig_list = fut.result(timeout=timeout_sec)
-                    analyzed_count += 1
-                    if sig_list:
-                        all_signals.extend(sig_list)
-                except FuturesTimeoutError:
-                    failed_count += 1
-                    skip_reasons["evaluation_timeout"] += 1
-                except Exception as exc:
-                    failed_count += 1
-                    skip_reasons["evaluation_error"] += 1
-                    logger.warning("Intraday evaluation failed for %s: %s", sym, exc)
-
-        if usable_results:
-            session_date_str = max(
-                str(r.df.index[-1].date()) for r in usable_results.values() if r.df is not None
+            stale_cnt, fetch_ts, freshness, is_stale = _finalize_provenance(
+                prov_valid_count, prov_stale_count, latest_fetch_ts
+            )
+            stocks_skipped = max(0, len(symbols) - analyzed_count - failed_count)
+            coverage = ScanCoverageMetrics(
+                universe_version=UNIVERSE_VERSION,
+                requested_universe_size=req_limit,
+                eligible_universe_size=eligible_universe_size,
+                stocks_attempted=len(symbols),
+                stocks_fetched=fetched_count,
+                stocks_analyzed=analyzed_count,
+                stocks_skipped=stocks_skipped,
+                skip_reasons=dict(skip_reasons),
+                stocks_failed=failed_count,
+                stocks_using_stale_data=stale_cnt,
+                matching_signals_count=matching_total,
+                returned_signals_count=len(returned),
+                applied_result_limit=cap_results,
+                coverage_pct=round((analyzed_count / max(1, len(symbols))) * 100.0, 2),
+                is_partial_coverage=analyzed_count < len(symbols) or len(symbols) < eligible_universe_size,
             )
 
-        if is_live:
-            all_signals.sort(
-                key=lambda s: (1 if s.is_projected_exit else 0, s.entry_time_ist, s.technical_setup_score),
-                reverse=True,
+            next_refresh = (
+                (now_ist + timedelta(seconds=settings.INTRADAY_REFRESH_SECONDS)).strftime("%Y-%m-%d %H:%M:%S IST")
+                if is_live
+                else None
             )
-        else:
-            all_signals.sort(
-                key=lambda s: (s.technical_setup_score, 1 if s.is_projected_exit else 0, s.entry_time_ist),
-                reverse=True,
+            delay_str = (
+                f"estimated ~{caps.estimated_delay_minutes} min exchange delay"
+                if not caps.is_realtime
+                else "licensed real-time feed"
             )
-        matching_total = len(all_signals)
-        returned = all_signals[:cap_results] if cap_results and cap_results > 0 else all_signals
-        active_cnt = sum(1 for s in returned if s.is_projected_exit)
-        completed_cnt = sum(1 for s in returned if not s.is_projected_exit)
+            delay_notice = (
+                f"LIVE MARKET HOURS ({caps.display_name}, {delay_str}): Scanner refreshes every "
+                f"{settings.INTRADAY_REFRESH_SECONDS // 60} minutes. Refresh cadence does NOT remove provider feed delay."
+                if is_live
+                else f"MARKET CLOSED ({m_status.session_phase}): Live scanner paused. "
+                f"Showing completed session review for {session_date_str} ({analyzed_count}/{len(symbols)} attempted stocks analyzed)."
+            )
 
-        stale_cnt, fetch_ts, freshness, is_stale = _aggregate_provenance(res_map)
-        stocks_skipped = max(0, len(symbols) - analyzed_count - failed_count)
-        coverage = ScanCoverageMetrics(
-            universe_version=UNIVERSE_VERSION,
-            requested_universe_size=req_limit,
-            eligible_universe_size=eligible_universe_size,
-            stocks_attempted=len(symbols),
-            stocks_fetched=fetched_count,
-            stocks_analyzed=analyzed_count,
-            stocks_skipped=stocks_skipped,
-            skip_reasons=dict(skip_reasons),
-            stocks_failed=failed_count,
-            stocks_using_stale_data=stale_cnt,
-            matching_signals_count=matching_total,
-            returned_signals_count=len(returned),
-            applied_result_limit=cap_results,
-            coverage_pct=round((analyzed_count / max(1, len(symbols))) * 100.0, 2),
-            is_partial_coverage=analyzed_count < len(symbols) or len(symbols) < eligible_universe_size,
-        )
+            if analyzed_count == 0:
+                resp_status = "PROVIDER_UNAVAILABLE"
+            elif is_stale:
+                resp_status = "STALE_DATA"
+            elif not is_live:
+                resp_status = "PAUSED_CLOSED"
+            elif analyzed_count < len(symbols):
+                resp_status = "PARTIAL_RESULTS"
+            else:
+                resp_status = "OK"
 
-        next_refresh = (
-            (now_ist + timedelta(seconds=settings.INTRADAY_REFRESH_SECONDS)).strftime("%Y-%m-%d %H:%M:%S IST")
-            if is_live
-            else None
-        )
-        delay_str = (
-            f"estimated ~{caps.estimated_delay_minutes} min exchange delay"
-            if not caps.is_realtime
-            else "licensed real-time feed"
-        )
-        delay_notice = (
-            f"LIVE MARKET HOURS ({caps.display_name}, {delay_str}): Scanner refreshes every "
-            f"{settings.INTRADAY_REFRESH_SECONDS // 60} minutes. Refresh cadence does NOT remove provider feed delay."
-            if is_live
-            else f"MARKET CLOSED ({m_status.session_phase}): Live scanner paused. "
-            f"Showing completed session review for {session_date_str} ({analyzed_count}/{len(symbols)} attempted stocks analyzed)."
-        )
-
-        if analyzed_count == 0:
-            resp_status = "PROVIDER_UNAVAILABLE"
-        elif is_stale:
-            resp_status = "STALE_DATA"
-        elif not is_live:
-            resp_status = "PAUSED_CLOSED"
-        elif analyzed_count < len(symbols):
-            resp_status = "PARTIAL_RESULTS"
-        else:
-            resp_status = "OK"
-
-        resp = IntradayScannerResponse(
-            status=resp_status,  # type: ignore[arg-type]
-            scan_timestamp_ist=now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
-            fetch_timestamp_ist=fetch_ts,
-            market_status=m_status,
-            scanner_state="ACTIVE_SCANNING" if is_live else "PAUSED_MARKET_CLOSED",
-            session_date=session_date_str,
-            next_auto_refresh_ist=next_refresh,
-            data_provider=caps.display_name,
-            data_delay_minutes=caps.estimated_delay_minutes,
-            data_freshness=freshness,  # type: ignore[arg-type]
-            is_stale=is_stale,
-            total_scanned=analyzed_count,
-            active_signals_count=active_cnt,
-            completed_trades_count=completed_cnt,
-            scan_coverage=coverage,
-            validation_status=overall_val_status,
-            strategy_version=STRATEGY_ENGINE_VERSION,
-            engine_metadata=engine_meta,
-            data_delay_notice=delay_notice,
-            signals=returned,
-        )
-        market_cache.save_json_artifact(f"latest_intraday_scan_{caps.provider_id}", resp.model_dump())
-        if caps.provider_id == "yfinance":
-            market_cache.save_json_artifact("latest_intraday_scan", resp.model_dump())
-        return resp
+            resp = IntradayScannerResponse(
+                status=resp_status,  # type: ignore[arg-type]
+                scan_timestamp_ist=now_ist.strftime("%Y-%m-%d %H:%M:%S IST"),
+                fetch_timestamp_ist=fetch_ts,
+                market_status=m_status,
+                scanner_state="ACTIVE_SCANNING" if is_live else "PAUSED_MARKET_CLOSED",
+                session_date=session_date_str,
+                next_auto_refresh_ist=next_refresh,
+                data_provider=caps.display_name,
+                data_delay_minutes=caps.estimated_delay_minutes,
+                data_freshness=freshness,  # type: ignore[arg-type]
+                is_stale=is_stale,
+                total_scanned=analyzed_count,
+                active_signals_count=active_cnt,
+                completed_trades_count=completed_cnt,
+                scan_coverage=coverage,
+                validation_status=overall_val_status,
+                strategy_version=STRATEGY_ENGINE_VERSION,
+                engine_metadata=engine_meta,
+                data_delay_notice=delay_notice,
+                signals=returned,
+            )
+            market_cache.save_json_artifact(f"latest_intraday_scan_{caps.provider_id}", resp.model_dump())
+            if caps.provider_id == "yfinance":
+                market_cache.save_json_artifact("latest_intraday_scan", resp.model_dump())
+            return resp
+        finally:
+            mem = release_memory()
+            logger.info(
+                "Intraday scan finished in %.2fs (universe_limit=%d, live=%s, rss_mb=%s, peak_rss_mb=%s).",
+                time.monotonic() - t0,
+                req_limit,
+                is_live,
+                mem.get("rss_mb"),
+                mem.get("peak_rss_mb"),
+            )
 
 
 async def intraday_auto_scheduler_loop(stop_event: asyncio.Event) -> None:
     """
     Non-overlapping background scheduler respecting NSE market hours and clean cancellation.
-    Uses unified `settings.INTRADAY_SCANNER_DEFAULT_UNIVERSE_LIMIT` and skips if a prior run is still active.
+    Uses unified `settings.INTRADAY_SCANNER_DEFAULT_UNIVERSE_LIMIT`, skips if a prior run is still active,
+    and prunes expired in-memory caches + trims heap during idle closed-market ticks.
     """
     logger.info(
         "Intraday scheduler started (interval=%ds, universe_limit=%d).",
@@ -584,6 +656,12 @@ async def intraday_auto_scheduler_loop(stop_event: asyncio.Event) -> None:
                         _intraday_scheduler_running.release()
                 else:
                     logger.warning("Skipping overlapping scheduled intraday scan; prior run still active.")
+            else:
+                evicted = market_cache.prune_expired()
+                data_provider.prune_caches()
+                pruned_rl = api_rate_limiter.prune_expired()
+                if evicted["evicted_daily"] or evicted["evicted_intraday"] or pruned_rl:
+                    release_memory()
         except asyncio.CancelledError:
             raise
         except Exception as exc:

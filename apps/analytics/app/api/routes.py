@@ -44,6 +44,7 @@ from app.models.signals import (
     StockAnalysisResponse,
     SwingScannerResponse,
 )
+from app.runtime_memory import get_process_memory_mb, release_memory
 
 router = APIRouter(prefix="/api/v1", tags=["Tradedia Rule-Based Stock Analytics API"])
 
@@ -84,6 +85,8 @@ async def health_check() -> Dict[str, Any]:
         "backtest_validation_status": report.validation_status if report else "UNVALIDATED",
         "backtest_validation_note": val_reason,
         "market_status": m_status.model_dump(),
+        "memory": get_process_memory_mb(),
+        "cache_memory_entries": market_cache.stats(),
     }
 
 
@@ -418,16 +421,20 @@ async def trigger_fresh_backtest(
         "intraday_excluded_or_missing": min(sample_size, 100) - len(intra_map),
     }
 
-    return await asyncio.to_thread(
-        run_universe_backtest,
-        daily_map,
-        intra_map,
-        True,
-        num_folds,
-        walk_forward_mode,
-        None,
-        None,
-        False,
-        data_provider.provider_name,
-        exclusions,
-    )
+    try:
+        return await asyncio.to_thread(
+            run_universe_backtest,
+            daily_map,
+            intra_map,
+            True,
+            num_folds,
+            walk_forward_mode,
+            None,
+            None,
+            False,
+            data_provider.provider_name,
+            exclusions,
+        )
+    finally:
+        del daily_map, intra_map, daily_res, intra_res
+        release_memory()

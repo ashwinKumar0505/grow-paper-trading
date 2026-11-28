@@ -212,3 +212,11 @@ class MarketDataProvider(ABC):
         force_refresh: bool = False,
     ) -> FinancialsResult:
         """Fetch yearly and quarterly company financials with provenance."""
+
+    def prune_caches(self) -> None:
+        """Optional hook to evict expired in-memory provider cache entries while idle."""
+        return None
+
+    def close(self) -> None:
+        """Optional lifecycle cleanup hook closing pooled HTTP connections on shutdown."""
+        return None

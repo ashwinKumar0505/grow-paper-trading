@@ -3,8 +3,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import logging
+import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, TypeVar
+from cachetools import TTLCache
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -55,7 +57,12 @@ class YFinanceMarketDataProvider(MarketDataProvider):
     ):
         self._cache = cache or market_cache
         self._limiter = limiter or rate_limiter
-        self._failed_download_ts: Dict[str, float] = {}
+        self._fail_lock = threading.Lock()
+        self._failed_download_ts: TTLCache = TTLCache(maxsize=256, ttl=1800)
+
+    def prune_caches(self) -> None:
+        with self._fail_lock:
+            self._failed_download_ts.expire()
 
     @property
     def capabilities(self) -> ProviderCapabilities:

@@ -66,7 +66,7 @@ export function useStockDetails() {
   const inWatchlist = isStockInWatchlist(stock.symbol);
   const brandBg = BRAND_COLORS[stock.symbol] || '#E31837';
 
-  // Refresh live quote on mount and every 5 seconds while market is open
+  // Refresh live quote on mount and every 15 seconds (aligned with server QUOTE_TTL_MS) while market is open
   useEffect(() => {
     setSelectedStock(stock);
     if (!marketStatus.isOpen) return;
@@ -75,7 +75,7 @@ export function useStockDetails() {
       if (typeof document === 'undefined' || !document.hidden) {
         setSelectedStock(stock);
       }
-    }, 5000);
+    }, 15_000);
 
     return () => window.clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

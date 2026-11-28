@@ -362,3 +362,41 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - Line-count check: every new and modified TS/TSX/JS file verified `<= 200` nonblank/non-comment lines.
 - **Checks NOT Executed & Notes**:
   - Interactive live browser visual testing and post-deploy checks on Railway were not executed locally (pending commit/deploy).
+
+---
+
+## 17. Railway Infrastructure & Memory Optimization Pass (`apps/analytics` + `apps/web`, 2026-11-28)
+
+- **Observed Railway Baseline (Live Metrics via `railway_mcp`, `devoted-empathy` / `production`)**:
+  - `tradedia-analytics`: CPU avg `0.0122 vCPU` (current `0.0006`), **Memory avg `0.1607 GB` (~164.6 MiB)**, 24h max `0.1665 GB`, 7d max `0.1979 GB`.
+  - `tradedia-web`: CPU avg `0.0001 vCPU` (current `0.0000`), **Memory avg `0.0520 GB` (~53.2 MiB)**, 24h max `0.0863 GB`, 7d max `0.1559 GB`.
+- **Changes Implemented**:
+  - **Analytics (`apps/analytics`)**:
+    - Lazy provider loading in `app/data/providers/registry.py` (keeps `yfinance`, `curl_cffi`, `bs4`, `lxml`, `peewee`, `requests`, `urllib3` out of RAM under `MARKET_DATA_PROVIDER=upstox` while preserving `yfinance` rollback).
+    - Bounded `MarketDataCache` memory limits (`CACHE_MEM_DAILY_MAXSIZE=40`, `CACHE_MEM_DAILY_TTL_SECONDS=1800`, `CACHE_MEM_INTRADAY_MAXSIZE=32`), bypassed RAM population during batch scans (`cache_in_memory=False`), added closed-market session-complete disk cache reuse (`_is_closed_market_session_fresh`) to eliminate redundant off-hours/weekend Upstox downloads, removed duplicate DataFrame copies, and added `prune_expired()` / `stats()`.
+    - Chunked NIFTY 500 swing & intraday scanning (`SCANNER_BATCH_SIZE=25`, `SCANNER_MAX_WORKERS=4`, `UPSTOX_MAX_CONCURRENCY=6`) with streaming provenance aggregation, immediate chunk cleanup, `app/runtime_memory.py` (`gc.collect()` + Linux `malloc_trim(0)`), and closed-market idle pruning in `intraday_auto_scheduler_loop`.
+    - Vectorized ATR true-range (`np.fmax`), removed duplicate swing pattern evaluation, replaced O(N²) intraday trigger mask recomputation with once-per-stock causal precomputation, replaced `iterrows()` in `stock_analyzer.py` with NumPy array indexing, added mtime+size caching in `artifact_store.py`, bounded `httpx` connection pools + lifespan `close()`, bounded `SlidingWindowRateLimiter`, added additive `memory` and `cache_memory_entries` to `/api/v1/health`, and tuned `apps/analytics/Dockerfile` (`MALLOC_ARENA_MAX=2`, `MALLOC_MMAP_THRESHOLD_=131072`, `MALLOC_TRIM_THRESHOLD_=131072`, `--timeout-keep-alive 15`).
+  - **Web BFF & Docker (`apps/web`)**:
+    - Extracted pure-TS `src/lib/routePaths.ts` and updated `seoRoutes.ts` and `routeMetadata.ts` so `dist-server/server.mjs` imports only `path`, `dotenv`, `express`, `crypto`, `fs` (zero `react` / `react/jsx-runtime`).
+    - Moved 15 frontend/build-only packages from `dependencies` to `devDependencies` and synced `apps/web/package-lock.json` (`361 -> 69` production packages installed by `npm ci --omit=dev`).
+    - Fixed `DurableStore.withLock` lock-Map memory leak (`this.locks.get(key) === chain`), added conditional `{ persist }` to skip no-op 15s tick flushes, replaced full document JSON strings in `FirestoreStoreAdapter.syncedSnapshots` with 64-char SHA-256 hashes, added `boundedCache.ts` bounds + 5-min idle pruning across provider caches and rate limiters, added 10-min negative caching for unavailable Upstox fundamentals, lazy-instantiated `YahooFinanceProvider`, added single-flight overlap protection and closed-market AMO skip to `runServerBackgroundTradingTick`, exposed additive `memory` metrics in `/api/health`, and added `NODE_OPTIONS="--max-semi-space-size=4"` in `apps/web/Dockerfile`.
+  - **Frontend Polling (`apps/web/src/features/`)**:
+    - Aligned `useMarketQuotes.ts`, `useStockDetails.ts`, and `usePortfolioQuotes.ts` polling to `15_000` ms (matching server `QUOTE_TTL_MS`), scoped recurring `useMarketQuotes` live polling to `/trade*` routes with single-flight guard, stopped closed-market `usePortfolioQuotes` retries once loaded, slowed `screener/App.jsx` status poll to `60_000` ms with visibility check, and switched `useIntradayScanner.js` `auto_refresh` from `forceRefresh: true` to `false`.
+- **Measured Local Before / After Comparisons (Comparable Workloads)**:
+  - `apps/analytics` (Python 3.11 macOS, deterministic 500-stock × 500-bar NIFTY 500 swing scan yielding identical 100 signals):
+    - Startup `import app.main` `ru_maxrss`: `117.2 MB -> 99.5 MB` (`-15.1%`); `tracemalloc` startup heap: `38.2 MB -> 25.2 MB` (`-34.0%`).
+    - Peak `tracemalloc` heap during 500-stock scan: `69.1 MB -> 30.5 MB` (`-55.9%`); Peak `ru_maxrss`: `176.3 MB -> 123.9 MB` (`-29.7%`).
+    - Post-scan idle `tracemalloc` heap: `52.4 MB -> 26.2 MB` (`-50.0%`); retained daily DataFrames: `500 -> 0`.
+  - `apps/web` (`NODE_ENV=production node dist-server/server.mjs`, Node v22.14.0 macOS):
+    - Idle RSS: `68.3 MB -> 53.28 MB` (`-22.0%` default V8) and `-> 45.36 MB` (`-33.6%` with `NODE_OPTIONS="--max-semi-space-size=4"`).
+    - Production `node_modules` lockfile footprint: `361 -> 69` packages (`-80.9%` package count in runner image).
+- **Verification Executed**:
+  - `cd apps/analytics && .venv/bin/pytest tests -v`: **PASS** (56 / 56 passed, including 8 new tests in `tests/test_resource_optimization.py`).
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (114 / 114 passed, including 5 new tests in `src/utils/resourceOptimization.test.ts`).
+  - `cd apps/web && npm run build`: **PASS** (Vite SPA + `esbuild` `dist-server/server.mjs` with zero React static imports).
+  - Line-count compliance check: every new and modified TS/TSX/JS file in `apps/web` verified `<= 198` nonblank/non-comment lines.
+- **Checks NOT Executed & Notes**:
+  - Interactive browser UI verification, Docker image builds, and post-deploy Linux Railway metrics measurement were not run in this environment (post-deploy RAM/cost figures are estimates until deployed and observed in Railway).
+  - Informational Railway config observation (unchanged): `tradedia-web` production variables currently include a typo (`ORPAY_PLAN_BEGINNER_MONTHLY` instead of `RAZORPAY_PLAN_BEGINNER_MONTHLY`); review separately in Railway Variables.
+  - No commits were created and no live Railway settings were modified.

@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { IndexData, QuoteFreshness, Stock } from '../../../types/market';
 import { getIndianMarketStatus, type MarketStatus } from '../../../utils/marketHours';
 import { roundToTick } from '../../../utils/orderEngine';
 import { fetchIndices, fetchStocks } from '../services/marketData';
 
+const LIVE_QUOTE_POLL_MS = 15_000;
+const MARKET_STATUS_POLL_MS = 30_000;
+
 export function useMarketQuotes(
   setStocks: Dispatch<SetStateAction<Stock[]>>,
-  setIndices: Dispatch<SetStateAction<IndexData[]>>
+  setIndices: Dispatch<SetStateAction<IndexData[]>>,
+  pathname: string = '/trade'
 ) {
   const [marketStatus, setMarketStatus] = useState<MarketStatus>(getIndianMarketStatus());
   const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
   const [lastLiveUpdate, setLastLiveUpdate] = useState<Date | null>(null);
   const [isRefreshingLive, setIsRefreshingLive] = useState<boolean>(false);
   const [marketDataFreshness, setMarketDataFreshness] = useState<QuoteFreshness>('UNAVAILABLE');
+  const inFlightRef = useRef<boolean>(false);
+  const lastFetchAtRef = useRef<number>(0);
+  const hasInitialFetchRef = useRef<boolean>(false);
 
   const markQuotesUnavailableOrStale = useCallback(() => {
     setIsLiveConnected(false);
@@ -30,9 +37,12 @@ export function useMarketQuotes(
   }, [setStocks]);
 
   const refreshLiveMarketData = useCallback(async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setIsRefreshingLive(true);
     try {
       const now = Date.now();
+      lastFetchAtRef.current = now;
       const currentStatus = getIndianMarketStatus(now);
       setMarketStatus(currentStatus);
 
@@ -135,30 +145,42 @@ export function useMarketQuotes(
       console.warn('Market data provider fetch error, marking quotes stale/unavailable:', err);
       markQuotesUnavailableOrStale();
     } finally {
+      inFlightRef.current = false;
       setIsRefreshingLive(false);
     }
   }, [markQuotesUnavailableOrStale, setIndices, setStocks]);
 
+  const isTradingRoute = pathname === '/trade' || pathname.startsWith('/trade/');
+
   useEffect(() => {
-    refreshLiveMarketData();
+    if (!hasInitialFetchRef.current) {
+      hasInitialFetchRef.current = true;
+      void refreshLiveMarketData();
+    } else if (isTradingRoute && Date.now() - lastFetchAtRef.current >= LIVE_QUOTE_POLL_MS) {
+      void refreshLiveMarketData();
+    }
 
     const statusTimer = setInterval(() => {
       setMarketStatus(getIndianMarketStatus());
-    }, 15000);
+    }, MARKET_STATUS_POLL_MS);
 
-    if (!marketStatus.isOpen) {
+    if (!marketStatus.isOpen || !isTradingRoute) {
       return () => clearInterval(statusTimer);
     }
 
     const liveInterval = setInterval(() => {
       if (typeof document === 'undefined' || !document.hidden) {
-        refreshLiveMarketData();
+        void refreshLiveMarketData();
       }
-    }, 5000);
+    }, LIVE_QUOTE_POLL_MS);
 
     const handleVisibilityChange = () => {
-      if (typeof document !== 'undefined' && !document.hidden) {
-        refreshLiveMarketData();
+      if (
+        typeof document !== 'undefined' &&
+        !document.hidden &&
+        Date.now() - lastFetchAtRef.current >= LIVE_QUOTE_POLL_MS
+      ) {
+        void refreshLiveMarketData();
       }
     };
     if (typeof document !== 'undefined') {
@@ -172,7 +194,7 @@ export function useMarketQuotes(
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
     };
-  }, [refreshLiveMarketData, marketStatus.isOpen]);
+  }, [refreshLiveMarketData, marketStatus.isOpen, isTradingRoute]);
 
   return {
     marketStatus,

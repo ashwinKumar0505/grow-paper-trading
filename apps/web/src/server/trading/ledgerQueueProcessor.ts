@@ -29,100 +29,108 @@ export async function processAccountBackgroundQueue(params: {
   const now = params.now ?? Date.now();
   const marketStatus = getIndianMarketStatus(now, params.calendar);
 
-  return store.withLock(`user:${params.userId}`, () => {
-    const ledger = getOrCreateTradingLedger(params.userId, store, now);
-    if (ledger.processingLockUntil && ledger.processingLockUntil > now && ledger.processingInstanceId && ledger.processingInstanceId !== INSTANCE_ID) {
-      return { changed: false, ledger, toasts: [], squareOffPendingDataSymbols: ledger.squareOffPendingSymbols || [] };
-    }
-
-    ledger.processingLockUntil = now + 10000;
-    ledger.processingInstanceId = INSTANCE_ID;
-
-    try {
-      const queueRes = processOrderQueue(
-        { balance: ledger.balance, holdings: ledger.holdings, positions: ledger.positions, orders: ledger.orders, executedOrderKeys: ledger.executedOrderKeys },
-        { quotes: params.quotes, now, marketStatus, calendar: params.calendar }
-      );
-
-      let engineState: EngineState = { balance: queueRes.state.balance, holdings: queueRes.state.holdings, positions: queueRes.state.positions };
-      let nextOrders = queueRes.state.orders;
-      const nextExecutedKeys = new Set(queueRes.state.executedOrderKeys || []);
-      let changed = queueRes.changed;
-      const toasts = [...queueRes.toasts];
-      const pendingSquareOffSymbols = new Set<string>();
-
-      for (const ord of queueRes.executedOrders) {
-        ledger.executions.unshift({
-          executionId: `EXE-${crypto.randomBytes(5).toString('hex').toUpperCase()}`,
-          orderId: ord.id, userId: params.userId, symbol: ord.symbol, action: ord.action, product: ord.product,
-          quantity: ord.filledQuantity ?? ord.quantity, fillPrice: ord.executionPrice ?? ord.price,
-          charges: ord.charges ?? 0, realizedPnl: ord.realizedPnl, timestamp: now,
-        });
+  return store.withLock(
+    `user:${params.userId}`,
+    () => {
+      const hadLedger = Boolean(store.getState().tradingLedgers[params.userId]);
+      const ledger = getOrCreateTradingLedger(params.userId, store, now);
+      if (ledger.processingLockUntil && ledger.processingLockUntil > now && ledger.processingInstanceId && ledger.processingInstanceId !== INSTANCE_ID) {
+        return { changed: false, ledger, toasts: [], squareOffPendingDataSymbols: ledger.squareOffPendingSymbols || [] };
       }
 
-      for (const pos of [...engineState.positions]) {
-        if (!isPastIntradayCutoff(pos.timestamp, now, params.calendar)) continue;
-        const quote = params.quotes[pos.symbol];
-        const freshness = classifyQuoteFreshness(quote, marketStatus, now);
-        const hasAuthenticQuote =
-          quote && typeof quote.price === 'number' && Number.isFinite(quote.price) &&
-          quote.price > 0 && quote.providerAvailable !== false && freshness.status !== 'UNAVAILABLE';
+      const prevInstanceId = ledger.processingInstanceId;
+      ledger.processingLockUntil = now + 10000;
+      ledger.processingInstanceId = INSTANCE_ID;
 
-        if (!hasAuthenticQuote) {
-          pendingSquareOffSymbols.add(pos.symbol);
-          continue;
-        }
+      try {
+        const queueRes = processOrderQueue(
+          { balance: ledger.balance, holdings: ledger.holdings, positions: ledger.positions, orders: ledger.orders, executedOrderKeys: ledger.executedOrderKeys },
+          { quotes: params.quotes, now, marketStatus, calendar: params.calendar }
+        );
 
-        const sqKey = `rms_sq:${pos.id}`;
-        if (nextExecutedKeys.has(sqKey)) continue;
+        let engineState: EngineState = { balance: queueRes.state.balance, holdings: queueRes.state.holdings, positions: queueRes.state.positions };
+        let nextOrders = queueRes.state.orders;
+        const nextExecutedKeys = new Set(queueRes.state.executedOrderKeys || []);
+        let changed = queueRes.changed || !hadLedger;
+        const toasts = [...queueRes.toasts];
+        const pendingSquareOffSymbols = new Set<string>();
 
-        const fillRes = applyFill(engineState, {
-          symbol: pos.symbol, stockName: pos.stockName, action: pos.action === 'BUY' ? 'SELL' : 'BUY',
-          product: 'INTRADAY', orderType: 'MARKET', exchange: pos.exchange, quantity: pos.quantity,
-          fillPrice: quote.price, extraCharge: AUTO_SQUARE_OFF_CHARGE, timestamp: now, placedAt: now, executedAt: now,
-          idempotencyKey: sqKey, quoteFreshness: freshness.freshness,
-          note: 'Auto square-off by RMS at 3:20 PM IST · ₹59 charge applied',
-        });
-
-        if (fillRes.ok) {
-          engineState = fillRes.state;
-          nextOrders = [fillRes.order, ...nextOrders];
-          nextExecutedKeys.add(sqKey);
-          changed = true;
+        for (const ord of queueRes.executedOrders) {
           ledger.executions.unshift({
             executionId: `EXE-${crypto.randomBytes(5).toString('hex').toUpperCase()}`,
-            orderId: fillRes.order.id, userId: params.userId, symbol: fillRes.order.symbol,
-            action: fillRes.order.action, product: 'INTRADAY', quantity: fillRes.order.quantity,
-            fillPrice: quote.price, charges: fillRes.order.charges ?? 0, realizedPnl: fillRes.order.realizedPnl, timestamp: now,
-          });
-          toasts.push({
-            title: 'Intraday position auto squared-off',
-            description: `${pos.symbol} closed @ ₹${quote.price.toFixed(2)} (3:20 PM IST RMS · ₹59 fee).`,
-            type: 'info',
+            orderId: ord.id, userId: params.userId, symbol: ord.symbol, action: ord.action, product: ord.product,
+            quantity: ord.filledQuantity ?? ord.quantity, fillPrice: ord.executionPrice ?? ord.price,
+            charges: ord.charges ?? 0, realizedPnl: ord.realizedPnl, timestamp: now,
           });
         }
-      }
 
-      const prevPendingKey = JSON.stringify(ledger.squareOffPendingSymbols || []);
-      const nextPendingArr = Array.from(pendingSquareOffSymbols);
-      if (JSON.stringify(nextPendingArr) !== prevPendingKey) {
-        ledger.squareOffPendingSymbols = nextPendingArr;
-        changed = true;
-      }
+        for (const pos of [...engineState.positions]) {
+          if (!isPastIntradayCutoff(pos.timestamp, now, params.calendar)) continue;
+          const quote = params.quotes[pos.symbol];
+          const freshness = classifyQuoteFreshness(quote, marketStatus, now);
+          const hasAuthenticQuote =
+            quote && typeof quote.price === 'number' && Number.isFinite(quote.price) &&
+            quote.price > 0 && quote.providerAvailable !== false && freshness.status !== 'UNAVAILABLE';
 
-      if (changed) {
-        ledger.balance = engineState.balance;
-        ledger.holdings = engineState.holdings;
-        ledger.positions = engineState.positions;
-        ledger.orders = nextOrders;
-        ledger.executedOrderKeys = Array.from(nextExecutedKeys);
-        ledger.version += 1;
-        ledger.updatedAt = now;
-      }
+          if (!hasAuthenticQuote) {
+            pendingSquareOffSymbols.add(pos.symbol);
+            continue;
+          }
 
-      return { changed, ledger, toasts, squareOffPendingDataSymbols: nextPendingArr };
-    } finally {
-      ledger.processingLockUntil = 0;
-    }
-  });
+          const sqKey = `rms_sq:${pos.id}`;
+          if (nextExecutedKeys.has(sqKey)) continue;
+
+          const fillRes = applyFill(engineState, {
+            symbol: pos.symbol, stockName: pos.stockName, action: pos.action === 'BUY' ? 'SELL' : 'BUY',
+            product: 'INTRADAY', orderType: 'MARKET', exchange: pos.exchange, quantity: pos.quantity,
+            fillPrice: quote.price, extraCharge: AUTO_SQUARE_OFF_CHARGE, timestamp: now, placedAt: now, executedAt: now,
+            idempotencyKey: sqKey, quoteFreshness: freshness.freshness,
+            note: 'Auto square-off by RMS at 3:20 PM IST · ₹59 charge applied',
+          });
+
+          if (fillRes.ok) {
+            engineState = fillRes.state;
+            nextOrders = [fillRes.order, ...nextOrders];
+            nextExecutedKeys.add(sqKey);
+            changed = true;
+            ledger.executions.unshift({
+              executionId: `EXE-${crypto.randomBytes(5).toString('hex').toUpperCase()}`,
+              orderId: fillRes.order.id, userId: params.userId, symbol: fillRes.order.symbol,
+              action: fillRes.order.action, product: 'INTRADAY', quantity: fillRes.order.quantity,
+              fillPrice: quote.price, charges: fillRes.order.charges ?? 0, realizedPnl: fillRes.order.realizedPnl, timestamp: now,
+            });
+            toasts.push({
+              title: 'Intraday position auto squared-off',
+              description: `${pos.symbol} closed @ ₹${quote.price.toFixed(2)} (3:20 PM IST RMS · ₹59 fee).`,
+              type: 'info',
+            });
+          }
+        }
+
+        const prevPendingKey = JSON.stringify(ledger.squareOffPendingSymbols || []);
+        const nextPendingArr = Array.from(pendingSquareOffSymbols);
+        if (JSON.stringify(nextPendingArr) !== prevPendingKey) {
+          ledger.squareOffPendingSymbols = nextPendingArr;
+          changed = true;
+        }
+
+        if (changed) {
+          ledger.balance = engineState.balance;
+          ledger.holdings = engineState.holdings;
+          ledger.positions = engineState.positions;
+          ledger.orders = nextOrders;
+          ledger.executedOrderKeys = Array.from(nextExecutedKeys);
+          ledger.version += 1;
+          ledger.updatedAt = now;
+        } else {
+          ledger.processingInstanceId = prevInstanceId;
+        }
+
+        return { changed, ledger, toasts, squareOffPendingDataSymbols: nextPendingArr };
+      } finally {
+        ledger.processingLockUntil = 0;
+      }
+    },
+    { persist: (res) => res.changed }
+  );
 }

@@ -28,8 +28,15 @@ const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const state = useTradingState();
-  const market = useMarketQuotes(state.setStocks, state.setIndices);
-  usePortfolioQuotes(state.holdings, state.intradayPositions, state.orders, state.setStocks, state.watchlists);
+  const market = useMarketQuotes(state.setStocks, state.setIndices, state.pathname);
+  usePortfolioQuotes(
+    state.holdings,
+    state.intradayPositions,
+    state.orders,
+    state.setStocks,
+    state.watchlists,
+    market.marketStatus.isOpen
+  );
   useAccountSync(state);
   useTradingPersistence(state);
   const theme = useTheme(state);

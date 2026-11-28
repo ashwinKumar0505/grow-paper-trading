@@ -93,8 +93,18 @@ export class MarketDataProviderRegistry {
   constructor(env: Record<string, string | undefined> = process.env) {
     this.policies = resolveMarketDataPolicies(env);
     this.providers.set('upstox', new UpstoxMarketDataProvider({ env }));
-    this.providers.set('yahoo_finance', new YahooFinanceProvider());
     this.providers.set('disabled', new DisabledMarketDataProvider('disabled'));
+  }
+
+  private getOrInitProvider(id: ProviderId): MarketDataProvider | undefined {
+    const existing = this.providers.get(id);
+    if (existing) return existing;
+    if (id === 'yahoo_finance') {
+      const yahoo = new YahooFinanceProvider();
+      this.providers.set('yahoo_finance', yahoo);
+      return yahoo;
+    }
+    return undefined;
   }
 
   registerProvider(provider: MarketDataProvider): void {
@@ -130,7 +140,7 @@ export class MarketDataProviderRegistry {
       );
     }
 
-    const provider = this.providers.get(policy.providerId);
+    const provider = this.getOrInitProvider(policy.providerId);
     if (!provider) {
       return new DisabledMarketDataProvider(
         policy.providerId,
@@ -145,7 +155,14 @@ export class MarketDataProviderRegistry {
   }
 
   getUnderlyingYahooProvider(): YahooFinanceProvider {
-    return this.providers.get('yahoo_finance') as YahooFinanceProvider;
+    return this.getOrInitProvider('yahoo_finance') as YahooFinanceProvider;
+  }
+
+  pruneExpiredCaches(now = Date.now()): void {
+    const upstox = this.providers.get('upstox') as UpstoxMarketDataProvider | undefined;
+    upstox?.pruneExpiredCaches(now);
+    const yahoo = this.providers.get('yahoo_finance') as YahooFinanceProvider | undefined;
+    yahoo?.pruneExpiredCaches(now);
   }
 }
 

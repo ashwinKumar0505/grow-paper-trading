@@ -329,13 +329,26 @@ def evaluate_swing_strategies_at_index(
         return {}
 
     scoped = df.iloc[: idx + 1]
+    precomputed_pat_masks: Optional[Dict[str, np.ndarray]] = None
     if idx >= 60:
         tail_scoped = scoped.iloc[idx - 59 :]
         tail_idx = len(tail_scoped) - 1
-        masks = compute_swing_trigger_arrays(tail_scoped)
+        if patterns is not None:
+            any_conf = np.zeros(len(tail_scoped), dtype=bool)
+            any_conf[tail_idx] = any(
+                p.direction == "BULLISH" and p.status == "CONFIRMED" for p in patterns
+            )
+            precomputed_pat_masks = {"any_bullish_confirmed": any_conf}
+        masks = compute_swing_trigger_arrays(tail_scoped, pattern_masks=precomputed_pat_masks)
         t = {k: bool(v[tail_idx]) for k, v in masks.items()}
     else:
-        masks = compute_swing_trigger_arrays(scoped)
+        if patterns is not None:
+            any_conf = np.zeros(len(scoped), dtype=bool)
+            any_conf[idx] = any(
+                p.direction == "BULLISH" and p.status == "CONFIRMED" for p in patterns
+            )
+            precomputed_pat_masks = {"any_bullish_confirmed": any_conf}
+        masks = compute_swing_trigger_arrays(scoped, pattern_masks=precomputed_pat_masks)
         t = {k: bool(v[idx]) for k, v in masks.items()}
     row = scoped.iloc[idx]
 
@@ -419,6 +432,7 @@ def evaluate_swing_strategies_at_index(
 def evaluate_intraday_strategies_at_index(
     df: pd.DataFrame,
     idx: int = -1,
+    precomputed_masks: Optional[Dict[str, np.ndarray]] = None,
 ) -> Dict[str, Dict[str, object]]:
     """
     Evaluate all 3 intraday 15m strategies at bar `idx` using the EXACT same shared trigger engine
@@ -431,9 +445,13 @@ def evaluate_intraday_strategies_at_index(
     if idx < 15 or idx >= len(df):
         return {}
 
-    scoped = df.iloc[: idx + 1]
-    masks = compute_intraday_trigger_arrays(scoped)
-    row = scoped.iloc[idx]
+    if precomputed_masks is not None:
+        masks = precomputed_masks
+        row = df.iloc[idx]
+    else:
+        scoped = df.iloc[: idx + 1]
+        masks = compute_intraday_trigger_arrays(scoped)
+        row = scoped.iloc[idx]
 
     c = float(row["Close"])
     vwap = float(row["VWAP"]) if pd.notna(row.get("VWAP")) else c

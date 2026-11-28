@@ -13,7 +13,7 @@ import pandas as pd
 from cachetools import TTLCache
 
 from app.config import settings
-from app.data.nse_calendar import IST
+from app.data.nse_calendar import IST, MARKET_CLOSE_TIME, get_market_status
 
 
 class TokenBucketRateLimiter:
@@ -79,6 +79,34 @@ def _epoch_to_iso(epoch: float) -> Tuple[str, str]:
     return dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), dt_ist.strftime("%Y-%m-%d %H:%M:%S IST")
 
 
+def _is_closed_market_session_fresh(
+    fetched_epoch: float,
+    last_completed_candle_ts: Optional[str],
+    now_ist: Optional[datetime] = None,
+) -> bool:
+    """
+    When NSE is closed, a disk entry fetched after the latest completed session close whose
+    latest completed bar already covers `last_completed_trading_session_date` cannot receive
+    newer completed candles until the next regular trading session opens (09:15 IST).
+    """
+    if not last_completed_candle_ts:
+        return False
+    m_status = get_market_status(now_ist)
+    if m_status.is_market_open:
+        return False
+    last_completed_date_str = m_status.last_completed_trading_session_date
+    if str(last_completed_candle_ts)[:10] < last_completed_date_str:
+        return False
+    now_epoch = now_ist.timestamp() if now_ist else time.time()
+    if (now_epoch - fetched_epoch) > 7 * 86400:
+        return False
+    fetched_ist = datetime.fromtimestamp(fetched_epoch, tz=timezone.utc).astimezone(IST)
+    fetched_date_str = fetched_ist.date().isoformat()
+    if fetched_date_str > last_completed_date_str:
+        return True
+    return fetched_date_str == last_completed_date_str and fetched_ist.time() >= MARKET_CLOSE_TIME
+
+
 class MarketDataCache:
     """
     Two-tier (in-memory TTL + atomic disk CSV + JSON metadata sidecar) market-data cache.
@@ -99,17 +127,57 @@ class MarketDataCache:
         for d in (self.daily_dir, self.intraday_dir, self.meta_dir, self.artifacts_dir):
             d.mkdir(parents=True, exist_ok=True)
 
-        self._mem_daily: TTLCache = TTLCache(maxsize=600, ttl=settings.DAILY_DATA_TTL_SECONDS)
-        self._mem_intraday: TTLCache = TTLCache(maxsize=600, ttl=settings.INTRADAY_DATA_TTL_SECONDS)
+        daily_mem_ttl = min(settings.DAILY_DATA_TTL_SECONDS, settings.CACHE_MEM_DAILY_TTL_SECONDS)
+        self._mem_daily: TTLCache = TTLCache(
+            maxsize=max(1, int(settings.CACHE_MEM_DAILY_MAXSIZE)),
+            ttl=max(60, int(daily_mem_ttl)),
+        )
+        self._mem_intraday: TTLCache = TTLCache(
+            maxsize=max(1, int(settings.CACHE_MEM_INTRADAY_MAXSIZE)),
+            ttl=max(30, int(settings.INTRADAY_DATA_TTL_SECONDS)),
+        )
         self._lock = threading.Lock()
         self._key_locks: Dict[str, threading.Lock] = {}
 
     def get_key_lock(self, key: str) -> threading.Lock:
         """Return a dedicated mutex for single-flight protection on a specific cache key."""
         with self._lock:
-            if key not in self._key_locks:
-                self._key_locks[key] = threading.Lock()
-            return self._key_locks[key]
+            lock = self._key_locks.get(key)
+            if lock is None:
+                if len(self._key_locks) >= 512:
+                    stale_keys = [k for k, lk in self._key_locks.items() if not lk.locked()]
+                    for k in stale_keys[:256]:
+                        self._key_locks.pop(k, None)
+                lock = threading.Lock()
+                self._key_locks[key] = lock
+            return lock
+
+    def prune_expired(self) -> Dict[str, int]:
+        """Actively evict expired in-memory TTL entries and unlocked excess key locks."""
+        with self._lock:
+            before_daily = len(self._mem_daily)
+            before_intra = len(self._mem_intraday)
+            self._mem_daily.expire()
+            self._mem_intraday.expire()
+            if len(self._key_locks) > 128:
+                stale_keys = [k for k, lk in self._key_locks.items() if not lk.locked()]
+                for k in stale_keys:
+                    self._key_locks.pop(k, None)
+            return {
+                "evicted_daily": max(0, before_daily - len(self._mem_daily)),
+                "evicted_intraday": max(0, before_intra - len(self._mem_intraday)),
+                "remaining_daily": len(self._mem_daily),
+                "remaining_intraday": len(self._mem_intraday),
+            }
+
+    def stats(self) -> Dict[str, int]:
+        """Return lightweight counts of currently retained in-memory cache objects."""
+        with self._lock:
+            return {
+                "daily_entries": len(self._mem_daily),
+                "intraday_entries": len(self._mem_intraday),
+                "key_locks": len(self._key_locks),
+            }
 
     @staticmethod
     def build_key(
@@ -168,6 +236,8 @@ class MarketDataCache:
         provider_id: str = "yfinance",
         adjustment_policy: str = "SPLIT_AND_DIVIDEND_ADJUSTED",
         allow_stale_disk: bool = False,
+        cache_in_memory: bool = True,
+        allow_closed_market_session_reuse: bool = False,
     ) -> Tuple[Optional[pd.DataFrame], Optional[CacheEntryMeta]]:
         """
         Retrieve cached OHLCV DataFrame and metadata.
@@ -214,6 +284,9 @@ class MarketDataCache:
 
         age = time.time() - fetched_epoch
         is_expired = age > ttl
+        if is_expired and allow_closed_market_session_reuse:
+            if _is_closed_market_session_fresh(fetched_epoch, meta_dict.get("last_completed_candle_ts")):
+                is_expired = False
         if is_expired and not allow_stale_disk:
             return None, None
 
@@ -243,12 +316,13 @@ class MarketDataCache:
             is_ttl_expired=is_expired,
         )
 
-        # CRITICAL: Only cache in memory if fresh (never promote stale disk files to fresh memory)
-        if not is_expired:
+        # CRITICAL: Only cache in memory if fresh and requested (never promote stale disk files)
+        if not is_expired and cache_in_memory:
             with self._lock:
-                mem[key] = (df.copy(), meta)
+                mem[key] = (df, meta)
+            return df.copy(), meta
 
-        return df.copy(), meta
+        return df, meta
 
     def set_ohlcv(
         self,
@@ -258,8 +332,9 @@ class MarketDataCache:
         provider_id: str = "yfinance",
         adjustment_policy: str = "SPLIT_AND_DIVIDEND_ADJUSTED",
         last_completed_candle_ts: Optional[str] = None,
+        cache_in_memory: bool = True,
     ) -> CacheEntryMeta:
-        """Persist validated OHLCV DataFrame atomically to memory and disk with sidecar metadata."""
+        """Persist validated OHLCV DataFrame atomically to disk (and bounded memory when requested)."""
         clean = symbol.strip().upper().replace(".NS", "")
         key = self.build_key(provider_id, clean, interval, adjustment_policy)
         fetched_epoch = time.time()
@@ -275,14 +350,15 @@ class MarketDataCache:
             fetched_at_utc=utc_iso,
             fetched_at_ist=ist_iso,
             last_completed_candle_ts=last_ts,
-            cache_layer="MEMORY_CACHE",
+            cache_layer="MEMORY_CACHE" if cache_in_memory else "DISK_CACHE_FRESH",
             is_ttl_expired=False,
         )
 
         csv_path, meta_path, _ = self._paths_for(provider_id, clean, interval, adjustment_policy)
-        mem = self._mem_store_for(interval)
-        with self._lock:
-            mem[key] = (df.copy(), meta)
+        if cache_in_memory:
+            mem = self._mem_store_for(interval)
+            with self._lock:
+                mem[key] = (df.copy(), meta)
 
         try:
             csv_text = df.to_csv()

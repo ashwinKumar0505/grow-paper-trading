@@ -117,6 +117,12 @@ class NSEMarketDataProvider:
     def fetch_financials_result(self, symbol: str, force_refresh: bool = False) -> FinancialsResult:
         return self._provider.fetch_financials_result(symbol=symbol, force_refresh=force_refresh)
 
+    def prune_caches(self) -> None:
+        self._provider.prune_caches()
+
+    def close(self) -> None:
+        self._provider.close()
+
     # Backward-compatible DataFrame-returning wrappers
     def fetch_daily_ohlcv(
         self,

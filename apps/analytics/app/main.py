@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import router
 from app.config import settings
 from app.data.nse_calendar import get_now_ist
+from app.data.provider import data_provider
 from app.data.providers.base import ProviderError
 from app.engine.scanner import intraday_auto_scheduler_loop
 from app.models.common import APIErrorResponse
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI):
                 await scheduler_task
             except asyncio.CancelledError:
                 pass
+        data_provider.close()
         logger.info("Tradedia Analytics Backend shut down cleanly.")
 
 

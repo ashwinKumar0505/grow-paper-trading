@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   createEmptyStore,
   type DurableAuditEntry, type DurableBillingItem, type DurableOtpRecord,
@@ -95,6 +96,10 @@ function hydrateLedger(uid: string, d: Record<string, unknown>): DurableTradingL
   };
 }
 
+function hashSnapshot(data: Record<string, unknown>): string {
+  return crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
+}
+
 export class FirestoreStoreAdapter {
   private client: FirestoreRestClient;
   private syncedSnapshots = new Map<string, string>();
@@ -175,7 +180,7 @@ export class FirestoreStoreAdapter {
 
     this.syncedSnapshots.clear();
     for (const [key, entry] of buildDesiredDocs(state, now)) {
-      this.syncedSnapshots.set(key, JSON.stringify(entry.data));
+      this.syncedSnapshots.set(key, hashSnapshot(entry.data));
     }
     return state;
   }
@@ -186,9 +191,9 @@ export class FirestoreStoreAdapter {
     const nextSnapshots = new Map<string, string>();
 
     for (const [key, entry] of desired) {
-      const serialized = JSON.stringify(entry.data);
-      nextSnapshots.set(key, serialized);
-      if (this.syncedSnapshots.get(key) !== serialized) {
+      const digest = hashSnapshot(entry.data);
+      nextSnapshots.set(key, digest);
+      if (this.syncedSnapshots.get(key) !== digest) {
         ops.push({ type: 'set', collection: entry.collection, docId: entry.docId, data: entry.data });
       }
     }

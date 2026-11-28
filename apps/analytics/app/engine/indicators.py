@@ -69,7 +69,10 @@ def compute_indicators(df: pd.DataFrame, is_intraday: bool = False) -> pd.DataFr
     tr1 = high - low
     tr2 = (high - prev_close).abs()
     tr3 = (low - prev_close).abs()
-    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    tr = pd.Series(
+        np.fmax(tr1.to_numpy(), np.fmax(tr2.to_numpy(), tr3.to_numpy())),
+        index=out.index,
+    )
     out["ATR_14"] = tr.ewm(alpha=1.0 / 14.0, min_periods=10, adjust=False).mean()
     out["ATR_Pct"] = (out["ATR_14"] / close.replace(0.0, np.nan)) * 100.0
 

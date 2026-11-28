@@ -1,12 +1,16 @@
 import path from 'path';
 import dotenv from 'dotenv';
 import express from 'express';
-import { createExpressApp, runServerBackgroundTradingTick } from './src/server/app';
+import {
+  createExpressApp,
+  pruneServerIdleCaches,
+  runServerBackgroundTradingTick,
+} from './src/server/app';
 import { marketDataRegistry } from './src/server/providers/providerRegistry';
 import { createProductionPageMiddleware } from './src/server/seo/seoRoutes';
 import { defaultStore } from './src/server/storage/durableStore';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 marketDataRegistry.refreshPolicies(process.env);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
@@ -18,6 +22,12 @@ const bgTimer = setInterval(() => {
   runServerBackgroundTradingTick(defaultStore, Date.now()).catch(() => {});
 }, 15000);
 bgTimer.unref?.();
+
+// Periodic idle cache & rate-limit eviction to keep long-running RSS flat
+const cachePruneTimer = setInterval(() => {
+  pruneServerIdleCaches(defaultStore, Date.now());
+}, 5 * 60_000);
+cachePruneTimer.unref?.();
 
 async function startServer() {
   await defaultStore.init(process.env);
@@ -46,6 +56,7 @@ async function startServer() {
   const shutdown = (signal: string) => {
     console.log(`Received ${signal}, shutting down Tradedia server gracefully...`);
     clearInterval(bgTimer);
+    clearInterval(cachePruneTimer);
     defaultStore
       .flush()
       .catch((err) => console.error('Shutdown flush error:', err))

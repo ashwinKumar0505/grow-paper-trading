@@ -55,12 +55,24 @@ class UpstoxHttpClient:
         self._client = httpx.Client(
             base_url=self._base_url,
             timeout=httpx.Timeout(connect=min(5.0, self._timeout), read=self._timeout, write=5.0, pool=5.0),
+            limits=httpx.Limits(
+                max_connections=max(4, int(settings.HTTPX_MAX_CONNECTIONS)),
+                max_keepalive_connections=max(1, int(settings.HTTPX_MAX_KEEPALIVE_CONNECTIONS)),
+                keepalive_expiry=float(settings.HTTPX_KEEPALIVE_EXPIRY_SECONDS),
+            ),
             transport=transport,
         )
         self._minute_lock = threading.Lock()
         self._minute_window: Deque[float] = deque()
         self._auth_lock = threading.Lock()
         self._auth_failure: Optional[Dict[str, Any]] = None
+
+    def close(self) -> None:
+        """Close the pooled httpx Client cleanly on shutdown."""
+        try:
+            self._client.close()
+        except Exception:
+            pass
 
     @staticmethod
     def get_analytics_token() -> str:

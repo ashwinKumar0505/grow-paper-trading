@@ -35,9 +35,12 @@ class Settings(BaseSettings):
     UPSTOX_ANALYTICS_TOKEN: str = ""
     UPSTOX_BASE_URL: str = "https://api.upstox.com"
     UPSTOX_TIMEOUT_SECONDS: float = 10.0
-    UPSTOX_MAX_CONCURRENCY: int = 12
+    UPSTOX_MAX_CONCURRENCY: int = 6
     UPSTOX_RATE_LIMIT_PER_MINUTE: int = 450
     UPSTOX_COMMERCIAL_REDISTRIBUTION_APPROVED: bool = False
+    HTTPX_MAX_CONNECTIONS: int = 16
+    HTTPX_MAX_KEEPALIVE_CONNECTIONS: int = 4
+    HTTPX_KEEPALIVE_EXPIRY_SECONDS: float = 30.0
 
     # Legacy / other vendor credential placeholders (never commit real secrets)
     UPSTOX_API_KEY: str = ""
@@ -53,7 +56,8 @@ class Settings(BaseSettings):
     TRUEDATA_PASSWORD: str = ""
 
     # Scanner & scheduler policy
-    SCANNER_MAX_WORKERS: int = 12
+    SCANNER_MAX_WORKERS: int = 4
+    SCANNER_BATCH_SIZE: int = 25
     SWING_SCANNER_DEFAULT_UNIVERSE_LIMIT: int = 500
     INTRADAY_SCANNER_DEFAULT_UNIVERSE_LIMIT: int = 100
     SCANNER_DEFAULT_UNIVERSE_LIMIT: int = 100
@@ -68,9 +72,12 @@ class Settings(BaseSettings):
 
     # Caching & upstream rate limiting
     CACHE_DIR: str = str(Path(__file__).resolve().parent.parent / "data_cache")
-    DAILY_DATA_TTL_SECONDS: int = 14400  # 4 hours
+    DAILY_DATA_TTL_SECONDS: int = 14400  # 4 hours (disk cache TTL)
     INTRADAY_DATA_TTL_SECONDS: int = 240  # 4 minutes
     FINANCIALS_TTL_SECONDS: int = 86400  # 24 hours
+    CACHE_MEM_DAILY_MAXSIZE: int = 40
+    CACHE_MEM_DAILY_TTL_SECONDS: int = 1800  # 30 minutes in RAM; disk keeps full 4h TTL
+    CACHE_MEM_INTRADAY_MAXSIZE: int = 32
     RATE_LIMIT_REQUESTS_PER_SECOND: float = 25.0
 
     # NSE Delivery (Swing) Transaction Cost Model (one-way & asymmetric components, %)

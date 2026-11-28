@@ -1,6 +1,7 @@
 """Backtest Artifact Versioning, Compatibility Verification, and Honest Unvalidated Fallbacks."""
 
 from datetime import datetime, timezone
+import threading
 from typing import Any, Dict, Optional, Tuple
 
 from app.config import settings
@@ -20,6 +21,10 @@ from app.models.backtest import ArtifactMetadata, BacktestReportResponse
 from app.models.common import AnalysisEngineMetadata
 
 ARTIFACT_SCHEMA_VERSION = "2.0.0"
+
+_report_cache_lock = threading.Lock()
+_report_cache_key: Optional[Tuple[Any, ...]] = None
+_report_cache_val: Tuple[Optional[BacktestReportResponse], Optional[str]] = (None, None)
 
 
 def build_cost_model_dict() -> Dict[str, Any]:
@@ -91,20 +96,57 @@ def get_validated_backtest_report(
     active_provider_id: Optional[str] = None,
 ) -> Tuple[Optional[BacktestReportResponse], Optional[str]]:
     """Load persisted backtest report ONLY if provider, schema, strategy hash, and config are compatible."""
+    global _report_cache_key, _report_cache_val
     expected_provider = (active_provider_id or settings.MARKET_DATA_PROVIDER).strip().lower()
-    raw = market_cache.load_json_artifact(backtest_artifact_name(expected_provider))
-    if not raw and expected_provider == "yfinance":
-        raw = market_cache.load_json_artifact("backtest_report")
-    if not raw:
-        return None, f"No backtest report artifact exists on disk for provider '{expected_provider}'."
-    try:
-        report = BacktestReportResponse(**raw)
-    except Exception as exc:
-        return None, f"Existing backtest artifact failed schema validation (legacy/incompatible): {exc}"
-    ok, reason = check_artifact_compatibility(report, active_provider_id=expected_provider)
-    if not ok:
-        return None, reason
-    return report, None
+    primary_name = backtest_artifact_name(expected_provider)
+    primary_path = market_cache.artifacts_dir / f"{primary_name}.json"
+    legacy_path = (market_cache.artifacts_dir / "backtest_report.json") if expected_provider == "yfinance" else None
+
+    target_name: Optional[str] = None
+    target_stat: Optional[Tuple[int, int]] = None
+    if primary_path.exists():
+        st = primary_path.stat()
+        target_name = primary_name
+        target_stat = (st.st_mtime_ns, st.st_size)
+    elif legacy_path is not None and legacy_path.exists():
+        st = legacy_path.stat()
+        target_name = "backtest_report"
+        target_stat = (st.st_mtime_ns, st.st_size)
+
+    cache_key = (
+        str(market_cache.artifacts_dir),
+        expected_provider,
+        settings.PRICE_ADJUSTMENT_POLICY,
+        STRATEGY_ENGINE_VERSION,
+        target_name,
+        target_stat,
+    )
+    with _report_cache_lock:
+        if _report_cache_key == cache_key:
+            return _report_cache_val
+
+    if target_name is None:
+        result: Tuple[Optional[BacktestReportResponse], Optional[str]] = (
+            None,
+            f"No backtest report artifact exists on disk for provider '{expected_provider}'.",
+        )
+    else:
+        raw = market_cache.load_json_artifact(target_name)
+        if not raw:
+            result = (None, f"No backtest report artifact exists on disk for provider '{expected_provider}'.")
+        else:
+            try:
+                report = BacktestReportResponse(**raw)
+            except Exception as exc:
+                result = (None, f"Existing backtest artifact failed schema validation (legacy/incompatible): {exc}")
+            else:
+                ok, reason = check_artifact_compatibility(report, active_provider_id=expected_provider)
+                result = (report, None) if ok else (None, reason)
+
+    with _report_cache_lock:
+        _report_cache_key = cache_key
+        _report_cache_val = result
+    return result
 
 
 def build_unvalidated_backtest_report(reason: str) -> BacktestReportResponse:

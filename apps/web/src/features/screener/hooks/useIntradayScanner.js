@@ -117,8 +117,9 @@ export function useIntradayScanner(marketStatus) {
   const secondsLeft = Math.max(0, Math.ceil((lastAt + interval - now) / 1000));
 
   useEffect(() => {
-    if (isMarketOpen && planConfig.intradayAutoRefresh && scan && secondsLeft === 0 && !loadingRef.current) {
-      fetchSignals(true, 'auto_refresh');
+    const isVisible = typeof document === 'undefined' || !document.hidden;
+    if (isMarketOpen && planConfig.intradayAutoRefresh && scan && secondsLeft === 0 && !loadingRef.current && isVisible) {
+      fetchSignals(false, 'auto_refresh');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMarketOpen, planConfig.intradayAutoRefresh, secondsLeft]);
