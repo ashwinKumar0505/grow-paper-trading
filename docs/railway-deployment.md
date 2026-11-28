@@ -77,8 +77,10 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
    - `RAZORPAY_KEY_SECRET=...`
    - `RAZORPAY_WEBHOOK_SECRET=...`
    - `VITE_GA_MEASUREMENT_ID=G-NTTB773KTH` *(production Google Analytics 4 Measurement ID — baked into the Vite bundle at Docker build time via `ARG VITE_GA_MEASUREMENT_ID`; leave unset in staging/local dev so analytics stays disabled)*
+   - `VITE_GOOGLE_ADS_ID=AW-18600529507` *(production Google Ads conversion ID — reuses the existing `gtag.js` tag; leave unset in staging/local dev)*
+   - `VITE_GOOGLE_ADS_SIGNUP_LABEL=ZG6OCMS0hMEdEOOctqVF` *(production Google Ads signup conversion label; leave unset in staging/local dev)*
 
-> **Build-time Vite variables:** `VITE_GA_MEASUREMENT_ID` is read during `vite build` inside `apps/web/Dockerfile`. After adding or changing it in Railway Variables, trigger a redeploy of `tradedia-web` so the updated client bundle is built. Analytics only loads in production builds (`import.meta.env.PROD`) after the user grants consent.
+> **Build-time Vite variables:** `VITE_GA_MEASUREMENT_ID`, `VITE_GOOGLE_ADS_ID`, and `VITE_GOOGLE_ADS_SIGNUP_LABEL` are read during `vite build` inside `apps/web/Dockerfile`. After adding or changing them in Railway Variables, trigger a redeploy of `tradedia-web` so the updated client bundle is built. Tracking only loads in production builds (`import.meta.env.PROD`) after the user grants consent for the relevant category (`analytics_storage` or `ad_storage` / `ad_user_data`).
 >
 > Do **not** set `VITE_SCREENER_API_URL` in production — leaving it unset ensures browsers always call same-origin `/api/v1/*` through Express.
 
@@ -91,6 +93,7 @@ In the Railway Dashboard, click **New Project → Deploy from GitHub Repo** and 
 3. **Razorpay Dashboard → Settings → Webhooks**: add `https://<your-domain>/api/payments/webhook` with `RAZORPAY_WEBHOOK_SECRET` and enable payment/subscription events.
 4. **Resend Dashboard → Domains**: verify `tradedia.in` so `OTP_FROM_EMAIL` can send verification codes to all users (not just your Resend test email).
 5. **Google Analytics 4 Admin → Data Streams → Web Stream (`G-NTTB773KTH`) → Enhanced measurement**: click the gear icon → under **Page views → Show advanced settings**, disable **"Page changes based on browser history events"** so GA4 does not emit unsanitized duplicate history `page_view` events alongside Tradedia's consent-gated, URL-sanitized SPA page tracker.
+6. **Google Ads → Goals → Conversions → Settings → Enhanced conversions**: turn on **Enhanced conversions** and choose **Google tag → Edit code** (manual code-based collection, *not* Automatic detection). Tradedia supplies `sha256_email_address` via `gtag('set', 'user_data', ...)` strictly on consented, verified new signups.
 
 ---
 

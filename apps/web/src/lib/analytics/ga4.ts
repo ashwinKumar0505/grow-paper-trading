@@ -1,24 +1,21 @@
-import { getAnalyticsConsent } from './consent';
+import { getAdMeasurementConsent, getAnalyticsConsent, getConsentPreferences } from './consent';
+import { getGoogleAdsConfig } from './googleAdsConfig';
 import {
-  isValidEventName,
-  isValidMeasurementId,
-  sanitizeEventParams,
-  sanitizePageLocation,
+  __resetGoogleTagRuntimeForTests, ensureGoogleTagBootstrapped,
+  hasGoogleTagScriptLoadFailed, isGoogleTagBootstrapped,
+} from './googleTagRuntime';
+import {
+  isValidEventName, isValidMeasurementId, sanitizeEventParams, sanitizePageLocation,
 } from './sanitize';
 import type {
-  AnalyticsConfig,
-  AnalyticsConsentStatus,
-  AnalyticsEventParams,
-  GtagFunction,
+  AnalyticsConfig, AnalyticsConsentStatus, AnalyticsEventParams, ConsentPreferences,
 } from './types';
 
-const GTAG_SCRIPT_ATTR = 'data-tradedia-ga4';
-
 let configOverride: AnalyticsConfig | null = null;
-let initializedMeasurementId: string | null = null;
-let scriptInjectedForId: string | null = null;
-let scriptLoadFailed = false;
+let configuredGa4Id: string | null = null;
+let configuredAdsId: string | null = null;
 let lastTrackedPageKey: string | null = null;
+let lastAppliedConsentKey: string | null = null;
 
 function readRuntimeEnv(): Record<string, unknown> {
   try {
@@ -52,116 +49,125 @@ export function isAnalyticsEligible(): boolean {
   return getAnalyticsConfig().enabled;
 }
 
-function ensureGtagFunction(): GtagFunction | null {
-  if (typeof window === 'undefined') return null;
-  if (!Array.isArray(window.dataLayer)) {
-    window.dataLayer = [];
-  }
-  if (typeof window.gtag !== 'function') {
-    const queuedGtag: GtagFunction = function gtag() {
-      window.dataLayer?.push(arguments);
-    };
-    window.gtag = queuedGtag;
-  }
-  return window.gtag;
+export function isTrackingEligible(): boolean {
+  return getAnalyticsConfig().enabled || getGoogleAdsConfig().tagEnabled;
 }
 
-function injectGtagScript(measurementId: string): void {
-  if (typeof document === 'undefined' || scriptInjectedForId === measurementId) return;
-  const existing = document.querySelector(`script[${GTAG_SCRIPT_ATTR}="${measurementId}"]`);
-  if (existing) {
-    scriptInjectedForId = measurementId;
-    return;
-  }
-
-  const script = document.createElement('script');
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
-  script.setAttribute(GTAG_SCRIPT_ATTR, measurementId);
-  script.onerror = () => {
-    scriptLoadFailed = true;
-  };
-  (document.head || document.documentElement).appendChild(script);
-  scriptInjectedForId = measurementId;
-}
-
-function ensureInitialized(measurementId: string): boolean {
-  if (scriptLoadFailed || typeof window === 'undefined') return false;
-  const gtag = ensureGtagFunction();
-  if (!gtag) return false;
-
-  const disableKey = `ga-disable-${measurementId}` as const;
-  window[disableKey] = false;
-
-  if (initializedMeasurementId !== measurementId) {
-    gtag('consent', 'default', {
-      analytics_storage: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
-    injectGtagScript(measurementId);
-    gtag('js', new Date());
-    gtag('consent', 'update', {
-      analytics_storage: 'granted',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
-    gtag('config', measurementId, {
-      send_page_view: false,
-      allow_google_signals: false,
-      allow_ad_personalization_signals: false,
-      anonymize_ip: true,
-    });
-    initializedMeasurementId = measurementId;
-  } else {
-    gtag('consent', 'update', {
-      analytics_storage: 'granted',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
-  }
-
-  return true;
-}
-
-export function applyAnalyticsConsent(status: AnalyticsConsentStatus): void {
+export function applyConsentPreferences(preferences: ConsentPreferences): void {
   try {
-    const config = getAnalyticsConfig();
-    if (!config.enabled || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
+    const gaConfig = getAnalyticsConfig();
+    const adsConfig = getGoogleAdsConfig();
+    if (!gaConfig.enabled && !adsConfig.tagEnabled) return;
 
-    const disableKey = `ga-disable-${config.measurementId}` as const;
+    const allowAnalytics = gaConfig.enabled && preferences.analytics === 'granted';
+    const allowAds = adsConfig.tagEnabled && preferences.adMeasurement === 'granted';
+    const bootstrapped = isGoogleTagBootstrapped();
 
-    if (status === 'granted') {
-      ensureInitialized(config.measurementId);
-      return;
+    if (gaConfig.enabled) {
+      const disableKey = `ga-disable-${gaConfig.measurementId}` as const;
+      if (allowAnalytics) window[disableKey] = false;
+      else if (preferences.analytics === 'denied' || allowAds || bootstrapped) window[disableKey] = true;
     }
 
-    lastTrackedPageKey = null;
+    if (adsConfig.tagEnabled) {
+      const adsDisableKey = `ga-disable-${adsConfig.conversionId}` as const;
+      if (allowAds) window[adsDisableKey] = false;
+      else if (preferences.adMeasurement === 'denied' || allowAnalytics || bootstrapped) window[adsDisableKey] = true;
+    }
 
-    if (status === 'denied') {
-      window[disableKey] = true;
-      if (initializedMeasurementId === config.measurementId && typeof window.gtag === 'function') {
+    if (!allowAnalytics) lastTrackedPageKey = null;
+
+    const consentKey = `${allowAnalytics ? 1 : 0}:${allowAds ? 1 : 0}`;
+    if (!allowAds && bootstrapped && typeof window.gtag === 'function') {
+      window.gtag('set', 'user_data', null);
+    }
+
+    if (!allowAnalytics && !allowAds) {
+      if (bootstrapped && typeof window.gtag === 'function' && lastAppliedConsentKey !== consentKey) {
         window.gtag('consent', 'update', {
           analytics_storage: 'denied',
           ad_storage: 'denied',
           ad_user_data: 'denied',
           ad_personalization: 'denied',
         });
+        lastAppliedConsentKey = consentKey;
       }
+      return;
+    }
+
+    // Reuse the existing GA4 global Google tag whenever configured; never load a second gtag.js.
+    const primaryTagId = gaConfig.enabled ? gaConfig.measurementId : adsConfig.conversionId;
+    const gtag = ensureGoogleTagBootstrapped(primaryTagId);
+    if (!gtag) return;
+
+    if (lastAppliedConsentKey !== consentKey) {
+      gtag('consent', 'update', {
+        analytics_storage: allowAnalytics ? 'granted' : 'denied',
+        ad_storage: allowAds ? 'granted' : 'denied',
+        ad_user_data: allowAds ? 'granted' : 'denied',
+        ad_personalization: 'denied',
+      });
+      lastAppliedConsentKey = consentKey;
+    }
+
+    if (allowAnalytics && configuredGa4Id !== gaConfig.measurementId) {
+      gtag('config', gaConfig.measurementId, {
+        send_page_view: false,
+        allow_google_signals: false,
+        allow_ad_personalization_signals: false,
+        anonymize_ip: true,
+      });
+      configuredGa4Id = gaConfig.measurementId;
+    }
+
+    if (allowAds && configuredAdsId !== adsConfig.conversionId) {
+      gtag('config', adsConfig.conversionId, {
+        allow_enhanced_conversions: true,
+        allow_ad_personalization_signals: false,
+      });
+      configuredAdsId = adsConfig.conversionId;
     }
   } catch {
-    // Analytics consent updates must never impact application execution.
+    // Consent updates must never impact application execution.
+  }
+}
+
+export function applyAnalyticsConsent(status: AnalyticsConsentStatus): void {
+  applyConsentPreferences({
+    analytics: status,
+    adMeasurement: getAdMeasurementConsent(),
+  });
+}
+
+export function ensureGoogleAdsReady(): boolean {
+  try {
+    const adsConfig = getGoogleAdsConfig();
+    if (!adsConfig.tagEnabled || hasGoogleTagScriptLoadFailed() || typeof window === 'undefined') return false;
+    if (getAdMeasurementConsent() !== 'granted') return false;
+    applyConsentPreferences(getConsentPreferences());
+    return (
+      isGoogleTagBootstrapped() &&
+      configuredAdsId === adsConfig.conversionId &&
+      !hasGoogleTagScriptLoadFailed() &&
+      typeof window.gtag === 'function'
+    );
+  } catch {
+    return false;
   }
 }
 
 function canSendAnalytics(): boolean {
   const config = getAnalyticsConfig();
-  if (!config.enabled || scriptLoadFailed || typeof window === 'undefined') return false;
+  if (!config.enabled || hasGoogleTagScriptLoadFailed() || typeof window === 'undefined') return false;
   if (getAnalyticsConsent() !== 'granted') return false;
-  return ensureInitialized(config.measurementId);
+  applyConsentPreferences(getConsentPreferences());
+  return (
+    isGoogleTagBootstrapped() &&
+    configuredGa4Id === config.measurementId &&
+    !hasGoogleTagScriptLoadFailed() &&
+    typeof window.gtag === 'function'
+  );
 }
 
 export function trackPageView(input?: {
@@ -209,8 +215,9 @@ export function __setAnalyticsConfigForTests(config: AnalyticsConfig | null): vo
 
 export function __resetAnalyticsRuntimeForTests(): void {
   configOverride = null;
-  initializedMeasurementId = null;
-  scriptInjectedForId = null;
-  scriptLoadFailed = false;
+  configuredGa4Id = null;
+  configuredAdsId = null;
   lastTrackedPageKey = null;
+  lastAppliedConsentKey = null;
+  __resetGoogleTagRuntimeForTests();
 }

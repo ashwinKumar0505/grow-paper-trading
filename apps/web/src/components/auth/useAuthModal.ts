@@ -9,9 +9,11 @@ import {
   type FirebaseUser,
 } from '../../lib/firebase';
 import { normalizeEmail } from '../../features/virtual-trading/utils/userProfileSync';
+import { canRequestSignupConversionClaim } from '../../lib/analytics';
 import {
   authenticateEmailPasswordAccount,
-  exchangeFirebaseServerSession,
+  dispatchVerifiedSignupConversion,
+  exchangeFirebaseServerSessionDetails,
   mapFirebaseAuthError,
   registerEmailPasswordAccount,
   resendEmailVerificationLink,
@@ -62,16 +64,21 @@ export function useAuthModal() {
   }, [verificationPendingEmail, resendTimer]);
 
   const completeEmailSignIn = async (fbUser: FirebaseUser, fallbackEmail: string) => {
+    if (!fbUser.emailVerified) return;
     const userEmail = fbUser.email ? normalizeEmail(fbUser.email) : fallbackEmail;
     const idToken = await fbUser.getIdToken(true);
-    const canonicalUid = await exchangeFirebaseServerSession({
+    const session = await exchangeFirebaseServerSessionDetails({
       idToken, fallbackUid: fbUser.uid, displayName: fbUser.displayName || name.trim() || undefined,
       photoURL: fbUser.photoURL, authProvider: 'email',
+      claimSignupConversion: canRequestSignupConversionClaim(),
     });
     const displayName = fbUser.displayName || name.trim() || userEmail.split('@')[0];
     await signInUser({
-      uid: canonicalUid, name: displayName, email: userEmail,
+      uid: session.uid, name: displayName, email: userEmail,
       authProvider: 'email', avatar: fbUser.photoURL || undefined,
+    });
+    void dispatchVerifiedSignupConversion(session, {
+      verifiedEmail: fbUser.emailVerified ? fbUser.email : null,
     });
   };
 
@@ -93,17 +100,21 @@ export function useAuthModal() {
         return;
       }
       const idToken = await fbUser.getIdToken();
-      const canonicalUid = await exchangeFirebaseServerSession({
+      const session = await exchangeFirebaseServerSessionDetails({
         idToken, fallbackUid: fbUser.uid, displayName: fbUser.displayName,
         photoURL: fbUser.photoURL, authProvider: 'google',
+        claimSignupConversion: fbUser.emailVerified !== false && canRequestSignupConversionClaim(),
       });
       const displayName = fbUser.displayName || userEmail.split('@')[0];
       const avatar = fbUser.photoURL || undefined;
       if (isSignUp) {
-        await signUpUser({ uid: canonicalUid, name: displayName, email: userEmail, authProvider: 'google', avatar, initialCash: 100000 });
+        await signUpUser({ uid: session.uid, name: displayName, email: userEmail, authProvider: 'google', avatar, initialCash: 100000 });
       } else {
-        await signInUser({ uid: canonicalUid, name: displayName, email: userEmail, authProvider: 'google', avatar });
+        await signInUser({ uid: session.uid, name: displayName, email: userEmail, authProvider: 'google', avatar });
       }
+      void dispatchVerifiedSignupConversion(session, {
+        verifiedEmail: fbUser.emailVerified === true ? fbUser.email : null,
+      });
     } catch (popupErr) {
       setErrorMsg(mapFirebaseAuthError(popupErr, 'google'));
     } finally {

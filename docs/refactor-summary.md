@@ -400,3 +400,35 @@ Per `AGENTS.md`, the only files in the repository exceeding 200 nonblank/non-com
   - Interactive browser UI verification, Docker image builds, and post-deploy Linux Railway metrics measurement were not run in this environment (post-deploy RAM/cost figures are estimates until deployed and observed in Railway).
   - Informational Railway config observation (unchanged): `tradedia-web` production variables currently include a typo (`ORPAY_PLAN_BEGINNER_MONTHLY` instead of `RAZORPAY_PLAN_BEGINNER_MONTHLY`); review separately in Railway Variables.
   - No commits were created and no live Railway settings were modified.
+
+---
+
+## 18. Google Ads Signup Conversion Tracking & Consent Mode v2 (`VITE_GOOGLE_ADS_ID` / `VITE_GOOGLE_ADS_SIGNUP_LABEL`, 2026-11-28)
+
+- **Architecture & Tag Reuse**:
+  - Reused the existing single `gtag.js` tag (`apps/web/src/lib/analytics/googleTagRuntime.ts` + `ga4.ts`) without installing GTM or a second `gtag.js` script.
+  - Added production-only env configuration (`googleAdsConfig.ts`: `VITE_GOOGLE_ADS_ID`, `VITE_GOOGLE_ADS_SIGNUP_LABEL`) and reusable conversion tracking (`googleAds.ts`: `trackGoogleAdsConversion`, `trackGoogleAdsSignupConversion`, `recordVerifiedSignupConversion`) sending nominal value `1.0` `INR`, opaque `transaction_id`, and zero PII.
+  - Preserved all existing GA4 page views, domain events, and URL/parameter sanitization.
+- **Consent Mode v2 (Independent Toggles)**:
+  - Upgraded `consent.ts` (`version: 2`) so **Analytics** controls `analytics_storage`, **Advertising Measurement** controls `ad_storage` and `ad_user_data`, all categories default to `denied`, and `ad_personalization` stays permanently `denied`.
+  - Legacy `version: 1` records (`{ status: 'granted' }`) migrate to `{ analytics: 'granted', adMeasurement: 'denied' }` so existing users are never automatically opted into advertising measurement.
+  - Updated `AnalyticsConsentBanner.tsx`, `AnalyticsPreferenceControl.tsx`, `LegalPageContent.tsx`, `crawlerMarkup.ts`, `LandingFooter.tsx`, and `TradingWorkspace.tsx` with Accept All, Reject All, Customize Preferences, and updated cookie/Privacy Policy disclosures.
+- **Backend-Confirmed New Account Detection, Retry Safety & Multi-Instance Atomicity**:
+  - Extended `DurableUserAccount` (`durableTypes.ts`), `FirestoreRestClient` (`getDocument` + `createDocumentIfAbsent` with `currentDocument: { exists: false }`), `FirestoreStoreAdapter`, and `DurableStore` with persisted `signupConversionId` (deterministic HMAC-SHA256 opaque `scv_<32-hex>` ID shared across replicas) and `signupConversionClaimedAt`.
+  - Extracted `signupConversionService.ts` (`getPendingSignupConversion`, `claimNewAccountSignupConversion`, `toPublicUserAccount`) so `/api/auth/firebase-session`, `/api/auth/google-session`, and `/api/auth/verify-otp` perform a non-destructive eligibility check when `claimSignupConversion: true`, and `/api/auth/confirm-signup-conversion` atomically finalizes the claim across both single-process (`store.withLock`) and multi-instance Firestore (`exists: false`) only after `gtag('event', 'conversion', ...)` dispatches.
+  - Gated frontend `claimSignupConversion` behind `canRequestSignupConversionClaim()` (Advertising Measurement consent + production config + no script load error) in `authModalService.ts`, `signupConversionClient.ts`, and `useAuthModal.ts`, added symmetric `ga-disable-AW-...` handling on consent withdrawal in `ga4.ts`, and confirmed zero extra Firestore ops for existing or non-consented users.
+- **Enhanced Conversions for Web (Manual Code-Based `gtag.js`)**:
+  - Added `apps/web/src/lib/analytics/enhancedConversions.ts` implementing Google's official email normalization (trim + lowercase, stripping `.` before `@` on `gmail.com` / `googlemail.com` only while preserving `+` suffixes) and ephemeral Web Crypto `SHA-256` lowercase hex hashing.
+  - Enabled `allow_enhanced_conversions: true` on the Google Ads `config` in `ga4.ts` (while keeping `allow_ad_personalization_signals: false`, GA4 untouched, and `ad_personalization: 'denied'` permanently).
+  - Updated `googleAds.ts`, `signupConversionClient.ts`, and `useAuthModal.ts` to re-verify Advertising Measurement consent immediately after asynchronous SHA-256 hashing, pass only the verified Firebase email (`fbUser.email` when `emailVerified === true`) as `gtag('set', 'user_data', { sha256_email_address })` strictly before the consented signup `conversion` event, and immediately clear `gtag('set', 'user_data', null)` in `finally` (and on consent withdrawal) so hashes are never persisted, logged, or leaked to GA4 or unrelated conversions.
+  - Updated `AnalyticsConsentBanner.tsx`, `AnalyticsPreferenceControl.tsx`, `LegalPageContent.tsx`, `crawlerMarkup.ts`, and `docs/railway-deployment.md` to disclose one-way SHA-256 hashed verified email sharing for advertising measurement.
+- **Deployment Config & Tests**:
+  - Updated `apps/web/.env.example`, `apps/web/Dockerfile`, `compose.yaml`, and `docs/railway-deployment.md`.
+  - Added 9 comprehensive regression test suites in `apps/web/src/utils/googleAdsConversion.test.ts` (including Enhanced Conversions email normalization preserving plus-addressing, SHA-256 hashing, mid-hash consent withdrawal abort, strict `user_data` lifecycle & `null` reset, non-persistence, multi-instance Firestore contention, unconsented signup preservation, blocked-script/interrupted-callback retry reuse, and immediate withdrawal).
+- **Verification**:
+  - `cd apps/web && npm run lint` (`tsc --noEmit`; ESLint is not configured): **PASS** (0 errors).
+  - `cd apps/web && npm test`: **PASS** (123 / 123 passed).
+  - `cd apps/web && npm run build`: **PASS** (verified Vite static env inlining with `VITE_GA_MEASUREMENT_ID`, `VITE_GOOGLE_ADS_ID`, and `VITE_GOOGLE_ADS_SIGNUP_LABEL` set, plus clean default build).
+  - Oversized file note: `apps/web/src/components/auth/useAuthModal.ts` was pre-existing at 213 nonblank lines and is 224 after wiring verified signup conversion + verified email pass-through without refactoring unrelated auth modal handlers; all other new/modified application TS/TSX files are `<= 200` nonblank/non-comment lines.
+- **Checks NOT Executed**:
+  - Live browser verification with Google Tag Assistant against production Railway deploy was not executed locally; no commits were created and no Railway variables were modified directly.

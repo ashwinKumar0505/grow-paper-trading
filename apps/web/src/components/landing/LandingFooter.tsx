@@ -1,12 +1,12 @@
 import {
-  isAnalyticsEligible,
+  isTrackingEligible,
   openAnalyticsPreferences,
   trackProductNavigation,
 } from '../../lib/analytics';
 import { AppLink, usePathname } from '../../lib/navigation';
 import { BrandLogo } from '../BrandLogo';
 export function LandingFooter() {
-const analyticsEligible = isAnalyticsEligible();
+const trackingEligible = isTrackingEligible();
 const pathname = usePathname();
 const trackFooterGuide = (targetPage: string) =>
   trackProductNavigation({ sourcePage: pathname, targetPage, navLocation: 'footer' });
@@ -112,13 +112,13 @@ return (
               <AppLink href="/contact" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
                 Contact
               </AppLink>
-              {analyticsEligible && (
+              {trackingEligible && (
                 <button
                   type="button"
                   onClick={openAnalyticsPreferences}
                   className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors cursor-pointer"
                 >
-                  Analytics Preferences
+                  Cookie Preferences
                 </button>
               )}
             </div>

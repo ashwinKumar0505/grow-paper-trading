@@ -27,6 +27,8 @@ export interface DurableUserAccount {
   lastSubscriptionEventTs?: number;
   paidTopUpCredit: number;
   usageQuota: UserUsageQuota;
+  signupConversionId?: string;
+  signupConversionClaimedAt?: number;
   createdAt: number;
   updatedAt: number;
 }

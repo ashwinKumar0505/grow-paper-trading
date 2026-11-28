@@ -125,6 +125,57 @@ export class FirestoreRestClient {
     return docs;
   }
 
+  async getDocument(collection: string, docId: string): Promise<FirestoreDocument | null> {
+    const token = await this.getAccessToken();
+    const url = `${this.baseUrl}/${encodeURIComponent(collection)}/${encodeURIComponent(docId)}`;
+    const res = await this.fetchFn(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Firestore get '${collection}/${docId}' failed (HTTP ${res.status}): ${text.slice(0, 200)}`);
+    }
+    return (await res.json()) as FirestoreDocument;
+  }
+
+  async createDocumentIfAbsent(
+    collection: string,
+    docId: string,
+    data: Record<string, unknown>
+  ): Promise<'created' | 'already_exists'> {
+    const token = await this.getAccessToken();
+    const commitUrl = `${this.baseUrl}:commit`;
+    const docName = `${this.documentRootPath}/${collection}/${docId}`;
+    const res = await this.fetchFn(commitUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        writes: [
+          {
+            update: { name: docName, fields: encodeFirestoreFields(data) },
+            currentDocument: { exists: false },
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.ok) return 'created';
+    const text = await res.text().catch(() => '');
+    if (
+      res.status === 409 ||
+      (res.status === 400 && /ALREADY_EXISTS|FAILED_PRECONDITION/i.test(text))
+    ) {
+      return 'already_exists';
+    }
+    throw new Error(`Firestore atomic create '${collection}/${docId}' failed (HTTP ${res.status}): ${text.slice(0, 200)}`);
+  }
+
   async commitWrites(ops: FirestoreWriteOp[]): Promise<void> {
     if (ops.length === 0) return;
     const token = await this.getAccessToken();

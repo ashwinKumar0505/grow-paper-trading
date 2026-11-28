@@ -58,6 +58,8 @@ export class DurableStore {
     return 'memory';
   }
 
+  getFirestoreClient(): FirestoreRestClient | null { return this.firestoreAdapter?.getClient() ?? null; }
+
   async init(env: Record<string, string | undefined> = process.env): Promise<void> {
     if (this.initialized) return;
     if (!this.firestoreAdapter && !this.inMemoryOnly) {

@@ -3,6 +3,9 @@ import { canonicalPath, getLearnPatternSlugFromPath } from '../navigation';
 import type { AnalyticsPrimitive, SanitizedPageData } from './types';
 
 const GA4_MEASUREMENT_ID_RE = /^G-[A-Z0-9]{6,20}$/i;
+const GOOGLE_ADS_ID_RE = /^AW-\d{6,20}$/i;
+const GOOGLE_ADS_LABEL_RE = /^[A-Za-z0-9_-]{6,64}$/;
+const OPAQUE_CONVERSION_ID_RE = /^[A-Za-z0-9_-]{12,64}$/;
 const GA4_EVENT_NAME_RE = /^[a-z][a-z0-9_]{0,39}$/;
 
 const ALLOWED_STATIC_ROUTES = new Set<string>([
@@ -75,6 +78,22 @@ const CONTROL_CHARS_RE = /[\u0000-\u001F\u007F]/g;
 export function isValidMeasurementId(value: string | undefined | null): boolean {
   if (typeof value !== 'string') return false;
   return GA4_MEASUREMENT_ID_RE.test(value.trim());
+}
+
+export function isValidGoogleAdsId(value: string | undefined | null): boolean {
+  if (typeof value !== 'string') return false;
+  return GOOGLE_ADS_ID_RE.test(value.trim());
+}
+
+export function isValidGoogleAdsLabel(value: string | undefined | null): boolean {
+  if (typeof value !== 'string') return false;
+  return GOOGLE_ADS_LABEL_RE.test(value.trim());
+}
+
+export function isValidConversionTransactionId(value: string | undefined | null): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return OPAQUE_CONVERSION_ID_RE.test(trimmed) && !containsSensitiveValue(trimmed);
 }
 
 export function isValidEventName(name: string): boolean {

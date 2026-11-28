@@ -77,6 +77,9 @@ function hydrateUser(uid: string, d: Record<string, unknown>): DurableUserAccoun
     subscriptionStatus: (d.subscriptionStatus as DurableUserAccount['subscriptionStatus']) || 'active',
     subscriptionAutoPay: Boolean(d.subscriptionAutoPay),
     paidTopUpCredit: typeof d.paidTopUpCredit === 'number' ? d.paidTopUpCredit : 0,
+    signupConversionId: typeof d.signupConversionId === 'string' ? d.signupConversionId : undefined,
+    signupConversionClaimedAt:
+      typeof d.signupConversionClaimedAt === 'number' ? d.signupConversionClaimedAt : undefined,
   };
 }
 
@@ -106,6 +109,10 @@ export class FirestoreStoreAdapter {
 
   constructor(client: FirestoreRestClient) {
     this.client = client;
+  }
+
+  getClient(): FirestoreRestClient {
+    return this.client;
   }
 
   async loadAll(now = Date.now()): Promise<StoreSchema> {

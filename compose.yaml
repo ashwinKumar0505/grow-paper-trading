@@ -30,6 +30,8 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+        VITE_GOOGLE_ADS_ID: ${VITE_GOOGLE_ADS_ID:-}
+        VITE_GOOGLE_ADS_SIGNUP_LABEL: ${VITE_GOOGLE_ADS_SIGNUP_LABEL:-}
     ports:
       - "3000:3000"
     environment:

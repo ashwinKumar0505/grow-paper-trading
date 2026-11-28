@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useTrading } from '../../../context/TradingContext';
-import { isAnalyticsEligible, openAnalyticsPreferences } from '../../../lib/analytics';
+import { isTrackingEligible, openAnalyticsPreferences } from '../../../lib/analytics';
 import { AppLink, getTradeStockSymbolFromPath, usePathname } from '../../../lib/navigation';
 import { ExploreView } from './ExploreView';
 import { HoldingsView } from './HoldingsView';
@@ -48,7 +48,7 @@ const MainContent: React.FC = () => {
 
 export default function TradingWorkspace() {
   const { setShowLandingPage, setCurrentTab } = useTrading();
-  const analyticsEligible = isAnalyticsEligible();
+  const trackingEligible = isTrackingEligible();
   return (
     <div className="min-h-[calc(100dvh-var(--workspace-header-height))] w-full max-w-full overflow-x-hidden bg-[#F8F9FA] dark:bg-[#0B1310] text-[#1E2229] dark:text-[#E2E8F0] transition-colors flex flex-col font-sans">
       {/* Trading-specific tools sit below the shared workspace header. */}
@@ -95,13 +95,13 @@ export default function TradingWorkspace() {
             <AppLink href="/contact" className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors">
               Contact
             </AppLink>
-            {analyticsEligible && (
+            {trackingEligible && (
               <button
                 type="button"
                 onClick={openAnalyticsPreferences}
                 className="hover:text-[#00B386] dark:hover:text-[#00D09C] transition-colors cursor-pointer"
               >
-                Analytics Preferences
+                Cookie Preferences
               </button>
             )}
           </div>

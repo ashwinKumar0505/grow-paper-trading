@@ -1,5 +1,13 @@
-import { trackSignUp } from '../../lib/analytics';
+import {
+  canRequestSignupConversionClaim,
+  trackSignUp,
+  type SignupConversionPayload,
+} from '../../lib/analytics';
 import { setStoredSessionToken } from '../../lib/authSession';
+export {
+  confirmSignupConversionWithBackend,
+  dispatchVerifiedSignupConversion,
+} from './signupConversionClient';
 import {
   auth,
   createUserWithEmailAndPassword,
@@ -58,14 +66,27 @@ export function mapGoogleAuthError(err: unknown): string {
   return mapFirebaseAuthError(err, 'google');
 }
 
-export async function exchangeFirebaseServerSession(params: {
+export interface FirebaseServerSessionResult {
+  uid: string;
+  isNewAccount: boolean;
+  signupConversion: SignupConversionPayload | null;
+  sessionToken?: string;
+}
+
+export async function exchangeFirebaseServerSessionDetails(params: {
   idToken: string;
   fallbackUid: string;
   displayName?: string | null;
   photoURL?: string | null;
   authProvider?: 'google' | 'email';
-}): Promise<string> {
+  claimSignupConversion?: boolean;
+}): Promise<FirebaseServerSessionResult> {
   let canonicalUid = params.fallbackUid;
+  let isNewAccount = false;
+  let signupConversion: SignupConversionPayload | null = null;
+  let sessionToken: string | undefined;
+  const shouldRequestClaim =
+    params.claimSignupConversion === true && canRequestSignupConversionClaim();
   try {
     const sessionRes = await fetch('/api/auth/firebase-session', {
       method: 'POST',
@@ -77,19 +98,54 @@ export async function exchangeFirebaseServerSession(params: {
         name: params.displayName,
         avatar: params.photoURL,
         authProvider: params.authProvider,
+        claimSignupConversion: shouldRequestClaim,
       }),
     });
     if (sessionRes.ok) {
-      const sessionData = (await sessionRes.json()) as { sessionToken?: string; uid?: string };
-      setStoredSessionToken(sessionData.sessionToken || params.idToken);
+      const sessionData = (await sessionRes.json()) as {
+        sessionToken?: string;
+        uid?: string;
+        isNewAccount?: boolean;
+        signupConversion?: SignupConversionPayload | null;
+      };
+      sessionToken = sessionData.sessionToken || params.idToken;
+      setStoredSessionToken(sessionToken);
       if (sessionData.uid) canonicalUid = sessionData.uid;
+      isNewAccount = sessionData.isNewAccount === true;
+      if (
+        sessionData.signupConversion?.eligible === true &&
+        typeof sessionData.signupConversion.conversionId === 'string' &&
+        sessionData.signupConversion.conversionId.length > 0
+      ) {
+        signupConversion = {
+          eligible: true,
+          conversionId: sessionData.signupConversion.conversionId,
+          method:
+            sessionData.signupConversion.method === 'google' ||
+            sessionData.signupConversion.method === 'email'
+              ? sessionData.signupConversion.method
+              : params.authProvider || 'email',
+        };
+      }
     } else {
       setStoredSessionToken(params.idToken);
     }
   } catch {
     setStoredSessionToken(params.idToken);
   }
-  return canonicalUid;
+  return { uid: canonicalUid, isNewAccount, signupConversion, sessionToken };
+}
+
+export async function exchangeFirebaseServerSession(params: {
+  idToken: string;
+  fallbackUid: string;
+  displayName?: string | null;
+  photoURL?: string | null;
+  authProvider?: 'google' | 'email';
+  claimSignupConversion?: boolean;
+}): Promise<string> {
+  const result = await exchangeFirebaseServerSessionDetails(params);
+  return result.uid;
 }
 
 export async function exchangeGoogleServerSession(params: {

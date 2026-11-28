@@ -125,6 +125,7 @@ export async function verifyBearerToken(
         email,
         name: String(payload.name || email.split('@')[0]),
         authProvider: payload.provider === 'google' ? 'google' : 'email',
+        emailVerified: true,
         tokenId: jti,
         expiresAt: exp,
       };
@@ -177,6 +178,7 @@ export async function verifyBearerToken(
       email: canonical.email,
       name: canonical.name,
       authProvider,
+      emailVerified: payload.email_verified === true,
       tokenId: `fb_${sub}_${expSec}`,
       expiresAt: expSec * 1000,
     };

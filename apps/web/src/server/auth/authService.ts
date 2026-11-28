@@ -2,7 +2,15 @@ import crypto from 'crypto';
 import { getCurrentMonthKey, getTodayKey } from '../../lib/subscription';
 import type { DurableStore, DurableUserAccount } from '../storage/durableStore';
 import { defaultStore } from '../storage/durableStore';
+import { generateOpaqueSignupConversionId } from './signupConversionService';
 
+export {
+  claimNewAccountSignupConversion,
+  generateOpaqueSignupConversionId,
+  getPendingSignupConversion,
+  SIGNUP_CONVERSION_CLAIM_WINDOW_MS,
+  toPublicUserAccount,
+} from './signupConversionService';
 export {
   issueSessionToken,
   revokeSessionToken,
@@ -24,6 +32,7 @@ export interface VerifiedAuthIdentity {
   email: string;
   name: string;
   authProvider: 'google' | 'email';
+  emailVerified?: boolean;
   tokenId: string;
   expiresAt: number;
 }
@@ -140,6 +149,7 @@ export function resolveOrCreateCanonicalUser(
       portfolioResetsThisMonth: 0,
       lastAutoResetMonth: getCurrentMonthKey(),
     },
+    signupConversionId: generateOpaqueSignupConversionId(uid),
     createdAt: now,
     updatedAt: now,
   };

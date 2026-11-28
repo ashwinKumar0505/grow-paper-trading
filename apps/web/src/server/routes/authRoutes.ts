@@ -1,8 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  issueSessionToken,
-  resolveOrCreateCanonicalUser,
-  revokeSessionToken,
+  claimNewAccountSignupConversion, getPendingSignupConversion, issueSessionToken,
+  resolveOrCreateCanonicalUser, revokeSessionToken, toPublicUserAccount,
   tryCreateFirebaseCustomToken,
 } from '../auth/authService';
 import { createAndSendEmailOtp, verifyEmailOtpAndCreateSession } from '../auth/otpService';
@@ -44,7 +43,7 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
     }
   });
 
-  router.post('/auth/verify-otp', authRateLimiter, (req: Request, res: Response) => {
+  router.post('/auth/verify-otp', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const result = verifyEmailOtpAndCreateSession({
         email: req.body?.email,
@@ -57,27 +56,24 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
         return;
       }
       const ledger = getOrCreateTradingLedger(result.uid!, store);
+      const signupClaim =
+        req.body?.claimSignupConversion === true
+          ? await getPendingSignupConversion({ uid: result.uid!, store })
+          : { eligible: false, conversionId: null };
       res.status(200).json({
-        success: true,
-        uid: result.uid,
-        email: result.email,
-        name: result.name,
-        sessionToken: result.sessionToken,
-        firebaseCustomToken: result.firebaseCustomToken,
-        expiresAt: result.expiresAt,
-        user: result.user,
-        portfolio: {
-          balance: ledger.balance,
-          initialBalance: ledger.initialBalance,
-          paidTopUpCredit: ledger.paidTopUpCredit,
-        },
+        success: true, uid: result.uid, email: result.email, name: result.name,
+        sessionToken: result.sessionToken, firebaseCustomToken: result.firebaseCustomToken,
+        expiresAt: result.expiresAt, isNewAccount: signupClaim.eligible,
+        signupConversion: { eligible: signupClaim.eligible, conversionId: signupClaim.conversionId, method: 'email' as const },
+        user: result.user ? toPublicUserAccount(result.user) : result.user,
+        portfolio: { balance: ledger.balance, initialBalance: ledger.initialBalance, paidTopUpCredit: ledger.paidTopUpCredit },
       });
     } catch (err) {
       res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'OTP verification failed.') });
     }
   });
 
-  const handleFirebaseSession = (req: AuthenticatedRequest, res: Response) => {
+  const handleFirebaseSession = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const authUser = req.authUser!;
       const requestedProvider =
@@ -102,21 +98,18 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
       });
       const firebaseCustomToken = tryCreateFirebaseCustomToken(userAccount.uid, userAccount.email);
       const ledger = getOrCreateTradingLedger(userAccount.uid, store);
+      const shouldClaimSignup = req.body?.claimSignupConversion === true && authUser.emailVerified === true;
+      const signupClaim = shouldClaimSignup
+        ? await getPendingSignupConversion({ uid: userAccount.uid, store })
+        : { eligible: false, conversionId: null };
 
       res.json({
-        success: true,
-        uid: userAccount.uid,
-        email: userAccount.email,
-        name: userAccount.name,
-        sessionToken: session.token,
-        firebaseCustomToken,
-        expiresAt: session.expiresAt,
-        user: userAccount,
-        portfolio: {
-          balance: ledger.balance,
-          initialBalance: ledger.initialBalance,
-          paidTopUpCredit: ledger.paidTopUpCredit,
-        },
+        success: true, uid: userAccount.uid, email: userAccount.email, name: userAccount.name,
+        sessionToken: session.token, firebaseCustomToken, expiresAt: session.expiresAt,
+        isNewAccount: signupClaim.eligible,
+        signupConversion: { eligible: signupClaim.eligible, conversionId: signupClaim.conversionId, method: requestedProvider },
+        user: toPublicUserAccount(userAccount),
+        portfolio: { balance: ledger.balance, initialBalance: ledger.initialBalance, paidTopUpCredit: ledger.paidTopUpCredit },
       });
     } catch (err) {
       res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'Failed to establish Firebase session.') });
@@ -125,6 +118,21 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
 
   router.post('/auth/firebase-session', authRateLimiter, requireAuth, handleFirebaseSession);
   router.post('/auth/google-session', authRateLimiter, requireAuth, handleFirebaseSession);
+
+  router.post('/auth/confirm-signup-conversion', authRateLimiter, requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const authUser = req.authUser!;
+      if (authUser.emailVerified !== true) {
+        res.status(403).json({ success: false, confirmed: false, alreadyClaimed: false });
+        return;
+      }
+      const conversionId = typeof req.body?.conversionId === 'string' ? req.body.conversionId.trim() : undefined;
+      const result = await claimNewAccountSignupConversion({ uid: authUser.uid, conversionId, store });
+      res.json({ success: true, confirmed: result.eligible, alreadyClaimed: !result.eligible });
+    } catch (err) {
+      res.status(500).json({ success: false, message: sanitizeErrorMessage(err, 'Unable to confirm signup conversion.') });
+    }
+  });
 
   router.post('/auth/logout', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const authUser = req.authUser!;
@@ -142,7 +150,7 @@ export function createAuthRouter(store: DurableStore = defaultStore): Router {
     const ledger = getOrCreateTradingLedger(userAccount.uid, store);
     res.json({
       success: true,
-      user: { ...userAccount, subscriptionTier: tier },
+      user: { ...toPublicUserAccount(userAccount), subscriptionTier: tier },
       entitlements: plan,
       ledger,
     });

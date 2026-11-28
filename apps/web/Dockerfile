@@ -17,8 +17,10 @@ ARG VITE_FIREBASE_APP_ID
 ARG VITE_FIREBASE_MEASUREMENT_ID
 ARG VITE_FIREBASE_DATABASE_ID
 
-# Google Analytics 4 measurement ID (build-time Vite env var; enabled only in production after user consent)
+# Google Analytics 4 & Google Ads conversion tracking (build-time Vite env vars; enabled only in production after consent)
 ARG VITE_GA_MEASUREMENT_ID
+ARG VITE_GOOGLE_ADS_ID
+ARG VITE_GOOGLE_ADS_SIGNUP_LABEL
 
 RUN npm run build
 

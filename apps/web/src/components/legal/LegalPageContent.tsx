@@ -65,10 +65,24 @@ export const LegalPageContent: React.FC<LegalPageContentProps> = ({ kind }) => {
             </p>
           </section>
           <section className="space-y-2">
-            <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Product Analytics &amp; Consent</h2>
+            <h2 className="text-base font-bold text-[#15241D] dark:text-white">3. Cookies, Analytics &amp; Advertising Measurement</h2>
             <p>
-              In production, and only after you grant consent, Tradedia uses Google Analytics 4 with IP anonymization and disabled advertising signals to measure aggregate page navigation and feature usage (such as screener runs, pattern lessons, quiz completions, and subscription plan selections). Page URLs and query parameters are sanitized before transmission, and we never send personal information, authentication tokens, payment identifiers, wallet balances, or individual stock trade details to analytics.
+              In production, Tradedia uses Google Consent Mode v2 with all optional storage categories denied by default. No Google tag loads until you explicitly grant consent to at least one category below. Users who previously opted into Analytics only are never automatically opted into Advertising Measurement.
             </p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>Essential Storage:</strong> Browser storage strictly required for signed-in session persistence, theme selection, your saved consent preferences (<code className="font-mono text-xs">tradedia_analytics_consent_v1</code>), and local conversion deduplication keys (<code className="font-mono text-xs">tradedia_ads_conversions_v1</code>).
+              </li>
+              <li>
+                <strong>Product Analytics (<code className="font-mono text-xs">analytics_storage</code>):</strong> Optional Google Analytics 4 cookies (<code className="font-mono text-xs">_ga</code>, <code className="font-mono text-xs">_ga_*</code>) with IP anonymization and sanitized URLs/query parameters to measure aggregate navigation and feature usage.
+              </li>
+              <li>
+                <strong>Advertising Measurement &amp; Enhanced Conversions (<code className="font-mono text-xs">ad_storage</code>, <code className="font-mono text-xs">ad_user_data</code>):</strong> Optional Google Ads conversion measurement reusing the same Google tag (including click-attribution cookies such as <code className="font-mono text-xs">_gcl_aw</code>) to count backend-verified new-account signups using a random, opaque <code className="font-mono text-xs">transaction_id</code> and nominal INR value. When explicitly consented, Tradedia also hashes your verified account email address one-way in your browser using <strong>SHA-256</strong> (<code className="font-mono text-xs">sha256_email_address</code>) and shares only that hash with Google Ads for Enhanced Conversions matching; the hash is cleared immediately after dispatch, never stored in browser storage, databases, or logs, and never sent to Google Analytics 4 or unrelated events.
+              </li>
+              <li>
+                <strong>No Raw Personal Data &amp; No Ad Personalization (<code className="font-mono text-xs">ad_personalization</code>):</strong> Ad personalization is permanently denied. We never transmit plain-text email addresses, names, phone numbers, Firebase UIDs, authentication tokens, Razorpay payment IDs, wallet balances, or individual trades to Google Analytics or Google Ads.
+              </li>
+            </ul>
             <AnalyticsPreferenceControl />
           </section>
           <section className="space-y-2">

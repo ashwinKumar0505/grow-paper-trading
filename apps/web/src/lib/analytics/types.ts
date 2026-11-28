@@ -1,9 +1,16 @@
 export type AnalyticsConsentStatus = 'unset' | 'granted' | 'denied';
 
+export interface ConsentPreferences {
+  analytics: AnalyticsConsentStatus;
+  adMeasurement: AnalyticsConsentStatus;
+}
+
 export interface AnalyticsConsentRecord {
-  status: 'granted' | 'denied';
+  status?: 'granted' | 'denied';
+  analytics?: 'granted' | 'denied';
+  adMeasurement?: 'granted' | 'denied';
   updatedAt: number;
-  version: 1;
+  version: 1 | 2;
 }
 
 export type AnalyticsPrimitive = string | number | boolean;
@@ -14,6 +21,32 @@ export interface AnalyticsConfig {
   measurementId: string;
   isProduction: boolean;
   enabled: boolean;
+}
+
+export interface GoogleAdsConfig {
+  conversionId: string;
+  signupLabel: string;
+  isProduction: boolean;
+  tagEnabled: boolean;
+  signupEnabled: boolean;
+}
+
+export interface GoogleAdsConversionInput {
+  conversionLabel: string;
+  transactionId: string;
+  value?: number;
+  currency?: string;
+  sha256Email?: string | null;
+}
+
+export interface EnhancedConversionUserData {
+  sha256_email_address: string;
+}
+
+export interface SignupConversionPayload {
+  eligible: boolean;
+  conversionId: string | null;
+  method: AuthAnalyticsMethod;
 }
 
 export interface SanitizedPageData {
@@ -96,6 +129,8 @@ export type GtagFunction = (...args: unknown[]) => void;
 declare global {
   interface ImportMetaEnv {
     readonly VITE_GA_MEASUREMENT_ID?: string;
+    readonly VITE_GOOGLE_ADS_ID?: string;
+    readonly VITE_GOOGLE_ADS_SIGNUP_LABEL?: string;
   }
 
   interface Window {
